@@ -92,6 +92,47 @@ function RatioTooltip({ active, payload, label }: any) {
   );
 }
 
+function IndexTooltip({ active, payload, label }: any) {
+  if (!active || !payload) return null;
+  return (
+    <div
+      className="rounded-lg px-4 py-3 text-xs"
+      style={{
+        background: "var(--bg-tooltip)",
+        border: "1px solid var(--border)",
+        backdropFilter: "blur(10px)",
+      }}
+    >
+      <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>
+        {label}
+      </p>
+      {payload.map((entry: any, i: number) => {
+        const val = entry.value as number;
+        const change = val - 100;
+        const changeStr = `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
+        return (
+          <div key={i} className="flex items-center gap-2 py-0.5">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ background: entry.color }}
+            />
+            <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
+            <span className="font-medium tabular-nums" style={{ color: entry.color }}>
+              {val.toFixed(1)}
+            </span>
+            <span
+              className="text-[9px] tabular-nums"
+              style={{ color: change >= 0 ? "var(--accent-green)" : "var(--accent-red)" }}
+            >
+              ({changeStr})
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TimeRangeSelector({
   range,
   onChange,
@@ -210,6 +251,22 @@ export default function Dashboard() {
     const values = filteredData.map((d) => d[denomRatio] as number);
     return values.reduce((s, v) => s + v, 0) / values.length;
   }, [filteredData, denomRatio]);
+
+  // Indexed data for Panorama General (base 100 = first point of filtered range)
+  const indexedData = useMemo(() => {
+    if (filteredData.length === 0) return [];
+    const base = filteredData[0];
+    const keys: (keyof RatioDataPoint)[] = ["btcM2", "goldM2", "silverM2", "sp500M2", "realEstateM2"];
+    return filteredData.map((d) => {
+      const row: Record<string, string | number> = { date: d.date };
+      for (const k of keys) {
+        const baseVal = base[k] as number;
+        const curVal = d[k] as number;
+        row[`${k}_idx`] = baseVal > 0 ? (curVal / baseVal) * 100 : 100;
+      }
+      return row;
+    });
+  }, [filteredData]);
 
   // X-axis ticks
   const xTicks = useMemo(() => {
@@ -498,12 +555,12 @@ export default function Dashboard() {
       {/* ========== SECTION 4: Multi-ratio overlay ========== */}
       <ChartSection
         title="Panorama General — Todos los activos ÷ Denominador"
-        subtitle="Vista comparativa de todos los activos normalizados por liquidez global. Base 100 = inicio del período seleccionado."
+        subtitle="Vista comparativa indexada (Base 100 = inicio del período). Muestra qué activos ganaron o perdieron valor real relativo a la liquidez global."
         delay={3}
       >
         <div className="h-[280px] sm:h-[360px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <LineChart data={indexedData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -517,14 +574,25 @@ export default function Dashboard() {
                 tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v: number) => formatRatio(v)}
+                tickFormatter={(v: number) => `${v.toFixed(0)}`}
               />
-              <Tooltip content={<RatioTooltip />} />
-              <Line type="monotone" dataKey="btcM2" name="BTC ÷ M2" stroke={COLORS.amber} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="goldM2" name="Oro ÷ M2" stroke={COLORS.gold} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="sp500M2" name="S&P 500 ÷ M2" stroke={COLORS.blue} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="silverM2" name="Plata ÷ M2" stroke={COLORS.muted} strokeWidth={1} dot={false} strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="realEstateM2" name="Real Estate ÷ M2" stroke={COLORS.purple} strokeWidth={1} dot={false} strokeDasharray="4 2" />
+              <Tooltip content={<IndexTooltip />} />
+              <ReferenceLine
+                y={100}
+                stroke={COLORS.muted}
+                strokeDasharray="6 4"
+                label={{
+                  value: "Base 100",
+                  position: "insideTopRight",
+                  fill: "var(--text-muted)",
+                  fontSize: 9,
+                }}
+              />
+              <Line type="monotone" dataKey="btcM2_idx" name="BTC" stroke={COLORS.amber} strokeWidth={1.5} dot={false} />
+              <Line type="monotone" dataKey="goldM2_idx" name="Oro" stroke={COLORS.gold} strokeWidth={1.5} dot={false} />
+              <Line type="monotone" dataKey="sp500M2_idx" name="S&P 500" stroke={COLORS.blue} strokeWidth={1.5} dot={false} />
+              <Line type="monotone" dataKey="silverM2_idx" name="Plata" stroke={COLORS.muted} strokeWidth={1} dot={false} strokeDasharray="4 2" />
+              <Line type="monotone" dataKey="realEstateM2_idx" name="Real Estate" stroke={COLORS.purple} strokeWidth={1} dot={false} strokeDasharray="4 2" />
             </LineChart>
           </ResponsiveContainer>
         </div>
