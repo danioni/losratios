@@ -31,6 +31,8 @@
     --accent-amber-border: rgba(255, 170, 0, 0.2);
     --accent-gold-bg: rgba(255, 215, 0, 0.08);
     --accent-gold-border: rgba(255, 215, 0, 0.2);
+    --accent-cyan-bg: rgba(0, 221, 255, 0.08);
+    --accent-cyan-border: rgba(0, 221, 255, 0.2);
     --card-glass-bg: linear-gradient(145deg, rgba(16, 16, 26, 0.9), rgba(10, 10, 18, 0.7));
     --card-glass-hover-bg: linear-gradient(145deg, rgba(20, 20, 34, 0.9), rgba(14, 14, 24, 0.7));
     --card-glass-hover-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 255, 136, 0.05);
@@ -69,6 +71,8 @@
     --accent-amber-border: rgba(187, 119, 0, 0.2);
     --accent-gold-bg: rgba(184, 150, 15, 0.06);
     --accent-gold-border: rgba(184, 150, 15, 0.15);
+    --accent-cyan-bg: rgba(0, 136, 170, 0.08);
+    --accent-cyan-border: rgba(0, 136, 170, 0.2);
     --card-glass-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(248, 248, 250, 0.7));
     --card-glass-hover-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(245, 245, 248, 0.8));
     --card-glass-hover-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 137, 90, 0.08);
@@ -222,27 +226,7 @@ body::before {
     border: 1px solid var(--accent-gold-border);
   }
 
-  .signal-badge-acumular {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: var(--accent-green-bg);
-    border: 1px solid var(--accent-green-border);
-  }
-
-  .signal-badge-neutral {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: var(--controls-bg);
-    border: 1px solid var(--border);
-  }
-
-  .signal-badge-extendido {
+  .signal-badge-rezagado {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -252,7 +236,27 @@ body::before {
     border: 1px solid var(--accent-amber-border);
   }
 
-  .signal-badge-sobrecomprado {
+  .signal-badge-alineado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--accent-green-bg);
+    border: 1px solid var(--accent-green-border);
+  }
+
+  .signal-badge-adelantado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--accent-cyan-bg);
+    border: 1px solid var(--accent-cyan-border);
+  }
+
+  .signal-badge-divergente {
     display: inline-flex;
     align-items: center;
     gap: 6px;

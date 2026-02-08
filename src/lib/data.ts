@@ -38,6 +38,7 @@ export interface AssetDataPoint {
   realEstateMcap: number;
   bondsMcap: number;
   cryptoMcap: number;  // total crypto
+  m2Global: number;    // M2 Global proxy (trillions USD)
 }
 
 // Ratio within a class
@@ -78,7 +79,7 @@ export interface DominanceDataPoint {
 // ============================================================
 // SEMÁFORO DE ASSET CLASSES
 // ============================================================
-export type SignalLevel = "acumular" | "neutral" | "extendido" | "sobrecomprado";
+export type SignalLevel = "adelantado" | "alineado" | "rezagado" | "divergente";
 
 export interface AssetClassMetric {
   label: string;
@@ -92,8 +93,11 @@ export interface AssetClassSignal {
   icon: string;
   signal: SignalLevel;
   compositeZScore: number;
+  nominalZScore: number;
+  debasementDelta: number;
   metrics: AssetClassMetric[];
   narrative: string;
+  actionSignal: string;
 }
 
 // ============================================================
@@ -450,19 +454,19 @@ export interface RotationSignal {
 // HISTORICAL ANCHORS (2014-2026)
 // ============================================================
 const anchors: AssetDataPoint[] = [
-  { date: "2014", gold: 1266, silver: 19.1, oil: 53, copper: 2.88, sp500: 2059, nasdaq: 4736, msciWorld: 1710, tesla: 44, caseShiller: 171, btc: 320, eth: 0.3, sol: 0, btcMcap: 0.005, ethMcap: 0, solMcap: 0, goldMcap: 7.5, silverMcap: 0.5, equitiesMcap: 65, realEstateMcap: 220, bondsMcap: 100, cryptoMcap: 0.006 },
-  { date: "2015", gold: 1160, silver: 15.7, oil: 37, copper: 2.13, sp500: 2044, nasdaq: 5007, msciWorld: 1663, tesla: 43, caseShiller: 179, btc: 430, eth: 0.9, sol: 0, btcMcap: 0.007, ethMcap: 0.0001, solMcap: 0, goldMcap: 7.0, silverMcap: 0.4, equitiesMcap: 67, realEstateMcap: 230, bondsMcap: 105, cryptoMcap: 0.008 },
-  { date: "2016", gold: 1251, silver: 17.1, oil: 54, copper: 2.50, sp500: 2239, nasdaq: 5383, msciWorld: 1751, tesla: 42, caseShiller: 189, btc: 960, eth: 8, sol: 0, btcMcap: 0.015, ethMcap: 0.001, solMcap: 0, goldMcap: 7.6, silverMcap: 0.5, equitiesMcap: 70, realEstateMcap: 240, bondsMcap: 110, cryptoMcap: 0.018 },
-  { date: "2017", gold: 1303, silver: 17.1, oil: 60, copper: 3.26, sp500: 2674, nasdaq: 6903, msciWorld: 2103, tesla: 62, caseShiller: 200, btc: 14000, eth: 725, sol: 0, btcMcap: 0.23, ethMcap: 0.07, solMcap: 0, goldMcap: 7.8, silverMcap: 0.5, equitiesMcap: 80, realEstateMcap: 260, bondsMcap: 115, cryptoMcap: 0.6 },
-  { date: "2018", gold: 1282, silver: 15.5, oil: 45, copper: 2.63, sp500: 2507, nasdaq: 6635, msciWorld: 1884, tesla: 60, caseShiller: 211, btc: 3800, eth: 133, sol: 0, btcMcap: 0.066, ethMcap: 0.014, solMcap: 0, goldMcap: 7.7, silverMcap: 0.4, equitiesMcap: 75, realEstateMcap: 270, bondsMcap: 115, cryptoMcap: 0.13 },
-  { date: "2019", gold: 1517, silver: 17.9, oil: 61, copper: 2.80, sp500: 3231, nasdaq: 8973, msciWorld: 2358, tesla: 84, caseShiller: 220, btc: 7200, eth: 130, sol: 0.2, btcMcap: 0.13, ethMcap: 0.014, solMcap: 0.00005, goldMcap: 9.0, silverMcap: 0.5, equitiesMcap: 88, realEstateMcap: 280, bondsMcap: 120, cryptoMcap: 0.19 },
-  { date: "2020", gold: 1898, silver: 26.5, oil: 49, copper: 3.52, sp500: 3756, nasdaq: 12888, msciWorld: 2690, tesla: 705, caseShiller: 239, btc: 28900, eth: 737, sol: 1.5, btcMcap: 0.54, ethMcap: 0.086, solMcap: 0.0005, goldMcap: 11.5, silverMcap: 0.7, equitiesMcap: 95, realEstateMcap: 290, bondsMcap: 130, cryptoMcap: 0.77 },
-  { date: "2021", gold: 1829, silver: 23.4, oil: 75, copper: 4.46, sp500: 4766, nasdaq: 15645, msciWorld: 3230, tesla: 1056, caseShiller: 276, btc: 47000, eth: 3680, sol: 170, btcMcap: 0.9, ethMcap: 0.45, solMcap: 0.055, goldMcap: 11.0, silverMcap: 0.6, equitiesMcap: 120, realEstateMcap: 330, bondsMcap: 130, cryptoMcap: 2.2 },
-  { date: "2022", gold: 1824, silver: 24.0, oil: 80, copper: 3.81, sp500: 3840, nasdaq: 10466, msciWorld: 2602, tesla: 123, caseShiller: 308, btc: 16500, eth: 1200, sol: 10, btcMcap: 0.32, ethMcap: 0.145, solMcap: 0.004, goldMcap: 11.0, silverMcap: 0.6, equitiesMcap: 98, realEstateMcap: 340, bondsMcap: 125, cryptoMcap: 0.8 },
-  { date: "2023", gold: 2063, silver: 24.1, oil: 72, copper: 3.85, sp500: 4770, nasdaq: 15011, msciWorld: 3169, tesla: 248, caseShiller: 312, btc: 42200, eth: 2350, sol: 100, btcMcap: 0.82, ethMcap: 0.28, solMcap: 0.04, goldMcap: 12.5, silverMcap: 0.6, equitiesMcap: 110, realEstateMcap: 350, bondsMcap: 133, cryptoMcap: 1.6 },
-  { date: "2024", gold: 2625, silver: 30.5, oil: 71, copper: 4.20, sp500: 5881, nasdaq: 19310, msciWorld: 3700, tesla: 421, caseShiller: 324, btc: 93000, eth: 3400, sol: 190, btcMcap: 1.84, ethMcap: 0.41, solMcap: 0.09, goldMcap: 16.0, silverMcap: 0.8, equitiesMcap: 120, realEstateMcap: 360, bondsMcap: 140, cryptoMcap: 3.3 },
-  { date: "2025", gold: 2850, silver: 31.8, oil: 73, copper: 4.35, sp500: 6020, nasdaq: 19650, msciWorld: 3750, tesla: 390, caseShiller: 330, btc: 97000, eth: 2700, sol: 200, btcMcap: 1.92, ethMcap: 0.33, solMcap: 0.095, goldMcap: 18.0, silverMcap: 0.9, equitiesMcap: 122, realEstateMcap: 365, bondsMcap: 140, cryptoMcap: 3.1 },
-  { date: "2026", gold: 2870, silver: 32.2, oil: 71, copper: 4.40, sp500: 6050, nasdaq: 19800, msciWorld: 3780, tesla: 370, caseShiller: 335, btc: 98000, eth: 2750, sol: 210, btcMcap: 1.94, ethMcap: 0.34, solMcap: 0.10, goldMcap: 18.2, silverMcap: 0.9, equitiesMcap: 124, realEstateMcap: 370, bondsMcap: 142, cryptoMcap: 3.2 },
+  { date: "2014", gold: 1266, silver: 19.1, oil: 53, copper: 2.88, sp500: 2059, nasdaq: 4736, msciWorld: 1710, tesla: 44, caseShiller: 171, btc: 320, eth: 0.3, sol: 0, btcMcap: 0.005, ethMcap: 0, solMcap: 0, goldMcap: 7.5, silverMcap: 0.5, equitiesMcap: 65, realEstateMcap: 220, bondsMcap: 100, cryptoMcap: 0.006, m2Global: 60 },
+  { date: "2015", gold: 1160, silver: 15.7, oil: 37, copper: 2.13, sp500: 2044, nasdaq: 5007, msciWorld: 1663, tesla: 43, caseShiller: 179, btc: 430, eth: 0.9, sol: 0, btcMcap: 0.007, ethMcap: 0.0001, solMcap: 0, goldMcap: 7.0, silverMcap: 0.4, equitiesMcap: 67, realEstateMcap: 230, bondsMcap: 105, cryptoMcap: 0.008, m2Global: 63 },
+  { date: "2016", gold: 1251, silver: 17.1, oil: 54, copper: 2.50, sp500: 2239, nasdaq: 5383, msciWorld: 1751, tesla: 42, caseShiller: 189, btc: 960, eth: 8, sol: 0, btcMcap: 0.015, ethMcap: 0.001, solMcap: 0, goldMcap: 7.6, silverMcap: 0.5, equitiesMcap: 70, realEstateMcap: 240, bondsMcap: 110, cryptoMcap: 0.018, m2Global: 67 },
+  { date: "2017", gold: 1303, silver: 17.1, oil: 60, copper: 3.26, sp500: 2674, nasdaq: 6903, msciWorld: 2103, tesla: 62, caseShiller: 200, btc: 14000, eth: 725, sol: 0, btcMcap: 0.23, ethMcap: 0.07, solMcap: 0, goldMcap: 7.8, silverMcap: 0.5, equitiesMcap: 80, realEstateMcap: 260, bondsMcap: 115, cryptoMcap: 0.6, m2Global: 73 },
+  { date: "2018", gold: 1282, silver: 15.5, oil: 45, copper: 2.63, sp500: 2507, nasdaq: 6635, msciWorld: 1884, tesla: 60, caseShiller: 211, btc: 3800, eth: 133, sol: 0, btcMcap: 0.066, ethMcap: 0.014, solMcap: 0, goldMcap: 7.7, silverMcap: 0.4, equitiesMcap: 75, realEstateMcap: 270, bondsMcap: 115, cryptoMcap: 0.13, m2Global: 76 },
+  { date: "2019", gold: 1517, silver: 17.9, oil: 61, copper: 2.80, sp500: 3231, nasdaq: 8973, msciWorld: 2358, tesla: 84, caseShiller: 220, btc: 7200, eth: 130, sol: 0.2, btcMcap: 0.13, ethMcap: 0.014, solMcap: 0.00005, goldMcap: 9.0, silverMcap: 0.5, equitiesMcap: 88, realEstateMcap: 280, bondsMcap: 120, cryptoMcap: 0.19, m2Global: 80 },
+  { date: "2020", gold: 1898, silver: 26.5, oil: 49, copper: 3.52, sp500: 3756, nasdaq: 12888, msciWorld: 2690, tesla: 705, caseShiller: 239, btc: 28900, eth: 737, sol: 1.5, btcMcap: 0.54, ethMcap: 0.086, solMcap: 0.0005, goldMcap: 11.5, silverMcap: 0.7, equitiesMcap: 95, realEstateMcap: 290, bondsMcap: 130, cryptoMcap: 0.77, m2Global: 95 },
+  { date: "2021", gold: 1829, silver: 23.4, oil: 75, copper: 4.46, sp500: 4766, nasdaq: 15645, msciWorld: 3230, tesla: 1056, caseShiller: 276, btc: 47000, eth: 3680, sol: 170, btcMcap: 0.9, ethMcap: 0.45, solMcap: 0.055, goldMcap: 11.0, silverMcap: 0.6, equitiesMcap: 120, realEstateMcap: 330, bondsMcap: 130, cryptoMcap: 2.2, m2Global: 105 },
+  { date: "2022", gold: 1824, silver: 24.0, oil: 80, copper: 3.81, sp500: 3840, nasdaq: 10466, msciWorld: 2602, tesla: 123, caseShiller: 308, btc: 16500, eth: 1200, sol: 10, btcMcap: 0.32, ethMcap: 0.145, solMcap: 0.004, goldMcap: 11.0, silverMcap: 0.6, equitiesMcap: 98, realEstateMcap: 340, bondsMcap: 125, cryptoMcap: 0.8, m2Global: 100 },
+  { date: "2023", gold: 2063, silver: 24.1, oil: 72, copper: 3.85, sp500: 4770, nasdaq: 15011, msciWorld: 3169, tesla: 248, caseShiller: 312, btc: 42200, eth: 2350, sol: 100, btcMcap: 0.82, ethMcap: 0.28, solMcap: 0.04, goldMcap: 12.5, silverMcap: 0.6, equitiesMcap: 110, realEstateMcap: 350, bondsMcap: 133, cryptoMcap: 1.6, m2Global: 104 },
+  { date: "2024", gold: 2625, silver: 30.5, oil: 71, copper: 4.20, sp500: 5881, nasdaq: 19310, msciWorld: 3700, tesla: 421, caseShiller: 324, btc: 93000, eth: 3400, sol: 190, btcMcap: 1.84, ethMcap: 0.41, solMcap: 0.09, goldMcap: 16.0, silverMcap: 0.8, equitiesMcap: 120, realEstateMcap: 360, bondsMcap: 140, cryptoMcap: 3.3, m2Global: 110 },
+  { date: "2025", gold: 2850, silver: 31.8, oil: 73, copper: 4.35, sp500: 6020, nasdaq: 19650, msciWorld: 3750, tesla: 390, caseShiller: 330, btc: 97000, eth: 2700, sol: 200, btcMcap: 1.92, ethMcap: 0.33, solMcap: 0.095, goldMcap: 18.0, silverMcap: 0.9, equitiesMcap: 122, realEstateMcap: 365, bondsMcap: 140, cryptoMcap: 3.1, m2Global: 115 },
+  { date: "2026", gold: 2870, silver: 32.2, oil: 71, copper: 4.40, sp500: 6050, nasdaq: 19800, msciWorld: 3780, tesla: 370, caseShiller: 335, btc: 98000, eth: 2750, sol: 210, btcMcap: 1.94, ethMcap: 0.34, solMcap: 0.10, goldMcap: 18.2, silverMcap: 0.9, equitiesMcap: 124, realEstateMcap: 370, bondsMcap: 142, cryptoMcap: 3.2, m2Global: 118 },
 ];
 
 function lerp(a: number, b: number, t: number): number {
@@ -502,6 +506,7 @@ function generateMonthlyData(): AssetDataPoint[] {
         realEstateMcap: lerp(a.realEstateMcap, b.realEstateMcap, t),
         bondsMcap: lerp(a.bondsMcap, b.bondsMcap, t),
         cryptoMcap: lerp(a.cryptoMcap, b.cryptoMcap, t),
+        m2Global: lerp(a.m2Global, b.m2Global, t) * n2(),
       });
     }
   }
@@ -741,132 +746,207 @@ function getSignal(zScore: number, pair: string): { signal: string; signalType: 
 }
 
 // ============================================================
-// SEMÁFORO: ASSET CLASS SIGNALS
+// SEMÁFORO: ASSET CLASS SIGNALS — DEBASEMENT ADJUSTED
 // ============================================================
-function getSignalLevel(z: number): SignalLevel {
-  if (z <= -1) return "acumular";
-  if (z <= 0.5) return "neutral";
-  if (z <= 1.5) return "extendido";
-  return "sobrecomprado";
+
+// M2-adjusted SMA: scales the nominal SMA by accumulated M2 growth over the period
+function computeM2AdjustedDeviation(
+  priceValues: number[],
+  m2Values: number[],
+  period: number,
+  normDivisor: number,
+): { nominalDevPct: number; adjustedDevPct: number; nominalZ: number; adjustedZ: number } {
+  const n = priceValues.length;
+  const effectivePeriod = Math.min(period, n);
+  const latestPrice = priceValues[n - 1];
+
+  // Nominal SMA
+  const window = priceValues.slice(n - effectivePeriod);
+  const nominalSMA = window.reduce((s, v) => s + v, 0) / effectivePeriod;
+
+  // M2 growth over the SMA window
+  const m2Start = m2Values[n - effectivePeriod];
+  const m2End = m2Values[n - 1];
+  const m2Growth = m2Start > 0 ? (m2End - m2Start) / m2Start : 0;
+
+  // Adjusted SMA = nominal × (1 + M2 growth)
+  const adjustedSMA = nominalSMA * (1 + m2Growth);
+
+  const nominalDevPct = nominalSMA > 0 ? ((latestPrice - nominalSMA) / nominalSMA) * 100 : 0;
+  const adjustedDevPct = adjustedSMA > 0 ? ((latestPrice - adjustedSMA) / adjustedSMA) * 100 : 0;
+
+  return {
+    nominalDevPct,
+    adjustedDevPct,
+    nominalZ: nominalDevPct / normDivisor,
+    adjustedZ: adjustedDevPct / normDivisor,
+  };
 }
 
-function generateClassNarrative(cls: string, z: number, metrics: AssetClassMetric[]): string {
-  const level = getSignalLevel(z);
-  const mainMetric = metrics[0];
+function getSignalLevel(adjustedZ: number): SignalLevel {
+  if (adjustedZ > 1.5) return "adelantado";
+  if (adjustedZ > 0.5) return "adelantado";
+  if (adjustedZ >= -0.5) return "alineado";
+  if (adjustedZ >= -1.5) return "rezagado";
+  return "divergente";
+}
+
+function generateClassNarrative(cls: string, adjustedZ: number): string {
+  const level = getSignalLevel(adjustedZ);
 
   switch (cls) {
     case "Acciones": {
-      if (level === "acumular") return `S&P 500 bajo su SMA 200. Zona histórica de acumulación.`;
-      if (level === "sobrecomprado") return `S&P 500 muy extendido sobre SMA 200. Precaución, posible corrección.`;
-      if (level === "extendido") return `Acciones sobre su tendencia. No es momento de agregar agresivamente.`;
-      return `Acciones cerca de su tendencia. Posición neutral.`;
+      if (level === "rezagado") return `S&P 500 no ha priceado la expansión monetaria reciente. Oportunidad de acumulación.`;
+      if (level === "adelantado") return `Acciones se adelantaron al debasement. Considerar rotar hacia activos rezagados. No vender a fiat.`;
+      if (level === "divergente") return `Acciones divergen del debasement. Posible oportunidad extrema o señal de problema estructural.`;
+      return `Acciones reflejan correctamente las condiciones monetarias. Mantener.`;
     }
     case "Crypto": {
-      if (level === "acumular") return `BTC bajo su SMA 200. Zona de acumulación históricamente favorable.`;
-      if (level === "sobrecomprado") return `BTC muy extendido. Dominancia sugiere precaución.`;
-      if (level === "extendido") return `BTC sobre tendencia pero sin señales extremas.`;
-      return `BTC cerca de su tendencia. Zona neutral.`;
+      if (level === "rezagado") return `BTC no ha priceado el debasement. Zona de acumulación.`;
+      if (level === "adelantado") return `Crypto se adelantó a la expansión monetaria. Considerar rotar hacia activos rezagados. No vender a fiat.`;
+      if (level === "divergente") return `Crypto diverge fuertemente del debasement. Posible oportunidad extrema o cambio estructural.`;
+      return `Crypto refleja correctamente la expansión monetaria. Mantener.`;
     }
     case "Oro": {
-      if (level === "acumular") return `Oro bajo su SMA 200. Oportunidad histórica en metales.`;
-      if (level === "sobrecomprado") return `Oro extendido vs SMA y vs plata. Posible corrección o rotación a plata.`;
-      if (level === "extendido") return `Oro sobre tendencia. Plata podría ofrecer mejor entry relativo.`;
-      return `Oro en equilibrio con su tendencia.`;
+      if (level === "rezagado") return `Oro no ha priceado la expansión monetaria. Oportunidad histórica en metales.`;
+      if (level === "adelantado") return `Oro se adelantó al debasement. Plata podría ofrecer mejor entry relativo. No vender a fiat.`;
+      if (level === "divergente") return `Oro diverge del debasement. Investigar causa: posible oportunidad extrema.`;
+      return `Oro refleja correctamente las condiciones monetarias. Mantener.`;
     }
     case "Bonos": {
-      if (level === "acumular") return `Bonos baratos (yields altos). Oportunidad si se espera baja de tasas.`;
-      if (level === "sobrecomprado") return `Bonos caros (yields muy bajos). Mejor rotar a risk-on.`;
-      if (level === "extendido") return `Yields cayendo. Bonos caros pero con momentum.`;
-      return `Yields en rango neutral. Sin señal clara.`;
+      if (level === "rezagado") return `Bonos no pricearon el debasement (yields reales aún altos). Oportunidad si se espera más expansión.`;
+      if (level === "adelantado") return `Bonos se adelantaron (yields muy bajos vs expansión real). Rotar hacia activos duros. No vender a fiat.`;
+      if (level === "divergente") return `Bonos divergen del debasement. Señal de estrés monetario. Investigar.`;
+      return `Bonos reflejan las condiciones monetarias actuales. Mantener.`;
     }
     default:
-      return `Nivel compuesto: ${z.toFixed(1)}\u03C3.`;
+      return `Nivel compuesto ajustado: ${adjustedZ.toFixed(1)}\u03C3.`;
+  }
+}
+
+function generateActionSignal(level: SignalLevel): string {
+  switch (level) {
+    case "adelantado":
+      return "Considerar rotar hacia activos REZAGADOS. No vender a fiat.";
+    case "alineado":
+      return "Mantener. El activo refleja correctamente las condiciones monetarias.";
+    case "rezagado":
+      return "Oportunidad de acumulación. El mercado no ha priceado el debasement.";
+    case "divergente":
+      return "Investigar causa. Posible oportunidad extrema o señal de problema estructural.";
   }
 }
 
 function computeAssetClassSignals(): AssetClassSignal[] {
   const signals: AssetClassSignal[] = [];
-  const latest = rawAssets[rawAssets.length - 1];
+  const m2Values = rawAssets.map(d => d.m2Global);
 
   // --- ACCIONES ---
   const sp500Values = rawAssets.map(d => d.sp500);
-  const sp500Sma200 = computeSMA(sp500Values, Math.min(200, sp500Values.length));
-  const sp500SmaVal = sp500Sma200[sp500Sma200.length - 1];
-  const sp500DevPct = sp500SmaVal ? ((latest.sp500 - sp500SmaVal) / sp500SmaVal) * 100 : 0;
-  const sp500DevZ = sp500DevPct / 8; // normalize: ~8% typical deviation
+  const sp500Dev = computeM2AdjustedDeviation(sp500Values, m2Values, 200, 8);
 
   const sp500NasdaqSummary = summariesData.find(s => s.pair === "S&P 500 / Nasdaq");
   const concentrationZ = sp500NasdaqSummary ? sp500NasdaqSummary.zScore : 0;
 
-  const accionesZ = sp500DevZ * 0.6 + concentrationZ * 0.4;
+  const nomAccionesZ = sp500Dev.nominalZ * 0.6 + concentrationZ * 0.4;
+  const adjAccionesZ = sp500Dev.adjustedZ * 0.6 + concentrationZ * 0.4;
+  const deltaAcciones = nomAccionesZ - adjAccionesZ;
+
+  const accionesLevel = getSignalLevel(adjAccionesZ);
   const accionesMetrics: AssetClassMetric[] = [
-    { label: "S&P 500 vs SMA 200", value: sp500DevPct, zScore: sp500DevZ, interpretation: `${sp500DevPct > 0 ? "+" : ""}${sp500DevPct.toFixed(1)}% sobre SMA` },
-    { label: "S&P/Nasdaq (concentración)", value: sp500NasdaqSummary?.current ?? 0, zScore: concentrationZ, interpretation: concentrationZ > 1 ? "Tech rezagado" : concentrationZ < -1 ? "Tech dominante" : "Equilibrado" },
+    { label: "vs SMA 200 ajustado (M2)", value: sp500Dev.adjustedDevPct, zScore: sp500Dev.adjustedZ,
+      interpretation: `${sp500Dev.adjustedDevPct > 0 ? "+" : ""}${sp500Dev.adjustedDevPct.toFixed(1)}% vs SMA ajustado` },
+    { label: "S&P/Nasdaq (concentración)", value: sp500NasdaqSummary?.current ?? 0, zScore: concentrationZ,
+      interpretation: concentrationZ > 1 ? "Tech rezagado" : concentrationZ < -1 ? "Tech dominante" : "Equilibrado" },
+    { label: "Delta nominal vs real", value: deltaAcciones, zScore: deltaAcciones,
+      interpretation: `${deltaAcciones > 0 ? "+" : ""}${deltaAcciones.toFixed(2)}\u03C3 ruido monetario` },
   ];
   signals.push({
-    assetClass: "Acciones", icon: "📈", signal: getSignalLevel(accionesZ), compositeZScore: accionesZ,
-    metrics: accionesMetrics, narrative: generateClassNarrative("Acciones", accionesZ, accionesMetrics),
+    assetClass: "Acciones", icon: "📈", signal: accionesLevel,
+    compositeZScore: adjAccionesZ, nominalZScore: nomAccionesZ, debasementDelta: deltaAcciones,
+    metrics: accionesMetrics, narrative: generateClassNarrative("Acciones", adjAccionesZ),
+    actionSignal: generateActionSignal(accionesLevel),
   });
 
   // --- CRYPTO ---
   const btcValues = rawAssets.map(d => d.btc);
-  const btcSma200 = computeSMA(btcValues, Math.min(200, btcValues.length));
-  const btcSmaVal = btcSma200[btcSma200.length - 1];
-  const btcDevPct = btcSmaVal ? ((latest.btc - btcSmaVal) / btcSmaVal) * 100 : 0;
-  const btcDevZ = btcDevPct / 30; // BTC is more volatile, ~30% typical deviation
+  const btcDev = computeM2AdjustedDeviation(btcValues, m2Values, 200, 30);
 
+  const latest = rawAssets[rawAssets.length - 1];
   const btcDominance = latest.cryptoMcap > 0 ? (latest.btcMcap / latest.cryptoMcap) * 100 : 50;
-  const btcDomZ = (btcDominance - 55) / 10; // 55% is neutral, 10% stddev
+  const btcDomZ = (btcDominance - 55) / 10;
 
-  const cryptoZ = btcDevZ * 0.6 + btcDomZ * 0.4;
+  const nomCryptoZ = btcDev.nominalZ * 0.6 + btcDomZ * 0.4;
+  const adjCryptoZ = btcDev.adjustedZ * 0.6 + btcDomZ * 0.4;
+  const deltaCrypto = nomCryptoZ - adjCryptoZ;
+
+  const cryptoLevel = getSignalLevel(adjCryptoZ);
   const cryptoMetrics: AssetClassMetric[] = [
-    { label: "BTC vs SMA 200", value: btcDevPct, zScore: btcDevZ, interpretation: `${btcDevPct > 0 ? "+" : ""}${btcDevPct.toFixed(0)}% sobre SMA` },
-    { label: "BTC Dominancia", value: btcDominance, zScore: btcDomZ, interpretation: btcDominance > 60 ? "BTC dominante (risk-off)" : btcDominance < 45 ? "Alts subiendo (risk-on)" : "Equilibrado" },
+    { label: "BTC vs SMA 200 ajustado (M2)", value: btcDev.adjustedDevPct, zScore: btcDev.adjustedZ,
+      interpretation: `${btcDev.adjustedDevPct > 0 ? "+" : ""}${btcDev.adjustedDevPct.toFixed(0)}% vs SMA ajustado` },
+    { label: "BTC Dominancia", value: btcDominance, zScore: btcDomZ,
+      interpretation: btcDominance > 60 ? "BTC dominante (risk-off)" : btcDominance < 45 ? "Alts subiendo (risk-on)" : "Equilibrado" },
+    { label: "Delta nominal vs real", value: deltaCrypto, zScore: deltaCrypto,
+      interpretation: `${deltaCrypto > 0 ? "+" : ""}${deltaCrypto.toFixed(2)}\u03C3 ruido monetario` },
   ];
   signals.push({
-    assetClass: "Crypto", icon: "₿", signal: getSignalLevel(cryptoZ), compositeZScore: cryptoZ,
-    metrics: cryptoMetrics, narrative: generateClassNarrative("Crypto", cryptoZ, cryptoMetrics),
+    assetClass: "Crypto", icon: "₿", signal: cryptoLevel,
+    compositeZScore: adjCryptoZ, nominalZScore: nomCryptoZ, debasementDelta: deltaCrypto,
+    metrics: cryptoMetrics, narrative: generateClassNarrative("Crypto", adjCryptoZ),
+    actionSignal: generateActionSignal(cryptoLevel),
   });
 
   // --- ORO ---
   const goldValues = rawAssets.map(d => d.gold);
-  const goldSma200 = computeSMA(goldValues, Math.min(200, goldValues.length));
-  const goldSmaVal = goldSma200[goldSma200.length - 1];
-  const goldDevPct = goldSmaVal ? ((latest.gold - goldSmaVal) / goldSmaVal) * 100 : 0;
-  const goldDevZ = goldDevPct / 6; // ~6% typical deviation for gold
+  const goldDev = computeM2AdjustedDeviation(goldValues, m2Values, 200, 6);
 
   const goldSilverSummary = summariesData.find(s => s.pair === "Oro / Plata");
   const goldSilverZ = goldSilverSummary ? goldSilverSummary.zScore : 0;
 
-  const oroZ = goldDevZ * 0.6 + goldSilverZ * 0.4;
+  const nomOroZ = goldDev.nominalZ * 0.6 + goldSilverZ * 0.4;
+  const adjOroZ = goldDev.adjustedZ * 0.6 + goldSilverZ * 0.4;
+  const deltaOro = nomOroZ - adjOroZ;
+
+  const oroLevel = getSignalLevel(adjOroZ);
   const oroMetrics: AssetClassMetric[] = [
-    { label: "Oro vs SMA 200", value: goldDevPct, zScore: goldDevZ, interpretation: `${goldDevPct > 0 ? "+" : ""}${goldDevPct.toFixed(1)}% sobre SMA` },
-    { label: "Oro/Plata ratio", value: goldSilverSummary?.current ?? 0, zScore: goldSilverZ, interpretation: goldSilverZ > 1 ? "Plata rezagada (oportunidad)" : goldSilverZ < -1 ? "Plata cara" : "Equilibrado" },
+    { label: "Oro vs SMA 200 ajustado (M2)", value: goldDev.adjustedDevPct, zScore: goldDev.adjustedZ,
+      interpretation: `${goldDev.adjustedDevPct > 0 ? "+" : ""}${goldDev.adjustedDevPct.toFixed(1)}% vs SMA ajustado` },
+    { label: "Oro/Plata ratio", value: goldSilverSummary?.current ?? 0, zScore: goldSilverZ,
+      interpretation: goldSilverZ > 1 ? "Plata rezagada (oportunidad)" : goldSilverZ < -1 ? "Plata cara" : "Equilibrado" },
+    { label: "Delta nominal vs real", value: deltaOro, zScore: deltaOro,
+      interpretation: `${deltaOro > 0 ? "+" : ""}${deltaOro.toFixed(2)}\u03C3 ruido monetario` },
   ];
   signals.push({
-    assetClass: "Oro", icon: "🥇", signal: getSignalLevel(oroZ), compositeZScore: oroZ,
-    metrics: oroMetrics, narrative: generateClassNarrative("Oro", oroZ, oroMetrics),
+    assetClass: "Oro", icon: "🥇", signal: oroLevel,
+    compositeZScore: adjOroZ, nominalZScore: nomOroZ, debasementDelta: deltaOro,
+    metrics: oroMetrics, narrative: generateClassNarrative("Oro", adjOroZ),
+    actionSignal: generateActionSignal(oroLevel),
   });
 
   // --- BONOS ---
-  // Proxy: bond mcap trend (rising mcap = falling yields = bonds getting expensive)
   const bondValues = rawAssets.map(d => d.bondsMcap);
-  const bondSma = computeSMA(bondValues, Math.min(60, bondValues.length));
-  const bondSmaVal = bondSma[bondSma.length - 1];
-  const bondDevPct = bondSmaVal ? ((latest.bondsMcap - bondSmaVal) / bondSmaVal) * 100 : 0;
-  const bondDevZ = bondDevPct / 3; // bonds are less volatile
+  const bondDev = computeM2AdjustedDeviation(bondValues, m2Values, 60, 3);
 
-  // Yield spread proxy: when bonds mcap is rising fast relative to equities, yields are compressing
-  const yieldSpreadZ = bondDevZ * 0.5;
+  const yieldSpreadZ = bondDev.adjustedZ * 0.5;
 
-  const bonosZ = bondDevZ * 0.6 + yieldSpreadZ * 0.4;
+  const nomBonosZ = bondDev.nominalZ * 0.6 + (bondDev.nominalZ * 0.5) * 0.4;
+  const adjBonosZ = bondDev.adjustedZ * 0.6 + yieldSpreadZ * 0.4;
+  const deltaBonos = nomBonosZ - adjBonosZ;
+
+  const bonosLevel = getSignalLevel(adjBonosZ);
   const bonosMetrics: AssetClassMetric[] = [
-    { label: "Bonos vs tendencia", value: bondDevPct, zScore: bondDevZ, interpretation: bondDevZ > 0.5 ? "Yields comprimidos" : bondDevZ < -0.5 ? "Yields elevados" : "Yields neutrales" },
-    { label: "Spread proxy", value: yieldSpreadZ, zScore: yieldSpreadZ, interpretation: yieldSpreadZ > 0.5 ? "Curva aplanandose" : "Curva normal" },
+    { label: "Bonos vs tendencia ajustada (M2)", value: bondDev.adjustedDevPct, zScore: bondDev.adjustedZ,
+      interpretation: bondDev.adjustedZ > 0.5 ? "Yields comprimidos" : bondDev.adjustedZ < -0.5 ? "Yields elevados" : "Yields neutrales" },
+    { label: "Spread proxy", value: yieldSpreadZ, zScore: yieldSpreadZ,
+      interpretation: yieldSpreadZ > 0.5 ? "Curva aplanandose" : "Curva normal" },
+    { label: "Delta nominal vs real", value: deltaBonos, zScore: deltaBonos,
+      interpretation: `${deltaBonos > 0 ? "+" : ""}${deltaBonos.toFixed(2)}\u03C3 ruido monetario` },
   ];
   signals.push({
-    assetClass: "Bonos", icon: "🏛️", signal: getSignalLevel(bonosZ), compositeZScore: bonosZ,
-    metrics: bonosMetrics, narrative: generateClassNarrative("Bonos", bonosZ, bonosMetrics),
+    assetClass: "Bonos", icon: "🏛️", signal: bonosLevel,
+    compositeZScore: adjBonosZ, nominalZScore: nomBonosZ, debasementDelta: deltaBonos,
+    metrics: bonosMetrics, narrative: generateClassNarrative("Bonos", adjBonosZ),
+    actionSignal: generateActionSignal(bonosLevel),
   });
 
   return signals;
