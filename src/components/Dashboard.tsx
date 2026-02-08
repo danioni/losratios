@@ -219,10 +219,12 @@ export default function Dashboard() {
     fetch("/api/market-data")
       .then((res) => {
         if (!res.ok) throw new Error(`API ${res.status}`);
+        const ct = res.headers.get("content-type") ?? "";
+        if (!ct.includes("application/json")) throw new Error("Not JSON");
         return res.json();
       })
       .then((data: ComputedMarketData) => {
-        if (!cancelled && data.assetData?.length > 0) {
+        if (!cancelled && data?.assetData?.length > 0 && !(data as any).error) {
           setLiveData(data);
           setDataSource("live");
         }
