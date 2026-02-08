@@ -192,6 +192,14 @@ const stockMcapAnchors: StockMcapAnchors = {
     CSCO: 245, MCD: 210, ABT: 200, WFC: 240, ADBE: 240, IBM: 220, PM: 210, GE: 210,
     NOW: 200, DHR: 170, CAT: 190, TXN: 178, QCOM: 175, INTU: 185, GS: 195, AXP: 215, ISRG: 200,
   },
+  "2026": {
+    AAPL: 3720, MSFT: 3150, NVDA: 3350, AMZN: 2420, GOOGL: 2320, META: 1750, "BRK.B": 1120, TSLA: 1150,
+    LLY: 830, AVGO: 1070, WMT: 660, JPM: 720, V: 650, UNH: 490, XOM: 440, MA: 490, ORCL: 460,
+    COST: 430, HD: 385, PG: 405, JNJ: 350, NFLX: 430, ABBV: 340, BAC: 345, CRM: 295,
+    CVX: 245, MRK: 235, KO: 275, AMD: 190, PEP: 220, TMO: 205, ACN: 215, LIN: 225,
+    CSCO: 250, MCD: 215, ABT: 205, WFC: 245, ADBE: 245, IBM: 225, PM: 215, GE: 215,
+    NOW: 205, DHR: 175, CAT: 195, TXN: 180, QCOM: 178, INTU: 188, GS: 200, AXP: 220, ISRG: 205,
+  },
 };
 
 function generateStockDominance(): StockDominanceDataPoint[] {
@@ -340,6 +348,7 @@ const anchors: AssetDataPoint[] = [
   { date: "2023", gold: 2063, silver: 24.1, oil: 72, copper: 3.85, sp500: 4770, nasdaq: 15011, msciWorld: 3169, tesla: 248, caseShiller: 312, btc: 42200, eth: 2350, sol: 100, btcMcap: 0.82, goldMcap: 12.5, silverMcap: 0.6, equitiesMcap: 110, realEstateMcap: 350, bondsMcap: 133, cryptoMcap: 1.6 },
   { date: "2024", gold: 2625, silver: 30.5, oil: 71, copper: 4.20, sp500: 5881, nasdaq: 19310, msciWorld: 3700, tesla: 421, caseShiller: 324, btc: 93000, eth: 3400, sol: 190, btcMcap: 1.84, goldMcap: 16.0, silverMcap: 0.8, equitiesMcap: 120, realEstateMcap: 360, bondsMcap: 140, cryptoMcap: 3.3 },
   { date: "2025", gold: 2850, silver: 31.8, oil: 73, copper: 4.35, sp500: 6020, nasdaq: 19650, msciWorld: 3750, tesla: 390, caseShiller: 330, btc: 97000, eth: 2700, sol: 200, btcMcap: 1.92, goldMcap: 18.0, silverMcap: 0.9, equitiesMcap: 122, realEstateMcap: 365, bondsMcap: 140, cryptoMcap: 3.1 },
+  { date: "2026", gold: 2870, silver: 32.2, oil: 71, copper: 4.40, sp500: 6050, nasdaq: 19800, msciWorld: 3780, tesla: 370, caseShiller: 335, btc: 98000, eth: 2750, sol: 210, btcMcap: 1.94, goldMcap: 18.2, silverMcap: 0.9, equitiesMcap: 124, realEstateMcap: 370, bondsMcap: 142, cryptoMcap: 3.2 },
 ];
 
 function lerp(a: number, b: number, t: number): number {
