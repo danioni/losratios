@@ -572,7 +572,7 @@ function computeCryptoDominance(assets: AssetDataPoint[]): CryptoDominancePoint[
 
 function getCryptoRotationSignal(cryptoDom: CryptoDominancePoint[]): CryptoRotationSignal {
   if (cryptoDom.length < 7) {
-    return { phase: "neutral", btcDomTrend: "flat", narrative: "Datos insuficientes para evaluar rotacion crypto.", halvingCyclePosition: "N/A" };
+    return { phase: "neutral", btcDomTrend: "flat", narrative: "Datos insuficientes para evaluar rotación crypto.", halvingCyclePosition: "N/A" };
   }
   const latest = cryptoDom[cryptoDom.length - 1];
   const sixMAgo = cryptoDom[Math.max(0, cryptoDom.length - 7)];
@@ -601,7 +601,7 @@ function getCryptoRotationSignal(cryptoDom: CryptoDominancePoint[]): CryptoRotat
     narrative = `BTC dominancia cayendo (${btcDomChange.toFixed(1)}pp en 6M). Alts ganando terreno. Posible alt season.`;
   } else {
     phase = "neutral";
-    narrative = `Dominancia BTC estable (${btcDomChange > 0 ? "+" : ""}${btcDomChange.toFixed(1)}pp en 6M). Sin rotacion clara entre BTC y alts.`;
+    narrative = `Dominancia BTC estable (${btcDomChange > 0 ? "+" : ""}${btcDomChange.toFixed(1)}pp en 6M). Sin rotación clara entre BTC y alts.`;
   }
 
   return { phase, btcDomTrend, narrative, halvingCyclePosition };
@@ -697,15 +697,15 @@ export function generateNarrative(pair: string, zScore: number): string {
     return `${a} y ${b} en equilibrio relativo.`;
   }
   if (zScore > 1.5) {
-    return `${a} esta ${absZ}\u03C3 caro vs ${b}. Historicamente esto revierte en 3-6 meses. Considerar rotar hacia ${b}.`;
+    return `${a} está ${absZ}\u03C3 caro vs ${b}. Históricamente esto revierte en 3-6 meses. Considerar rotar hacia ${b}.`;
   }
   if (zScore > 0.5) {
-    return `${a} esta ${absZ}\u03C3 caro vs ${b}. Posible reversion en 6-12 meses.`;
+    return `${a} está ${absZ}\u03C3 caro vs ${b}. Posible reversión en 6-12 meses.`;
   }
   if (zScore < -1.5) {
-    return `${a} esta ${absZ}\u03C3 barato vs ${b}. Zona de acumulacion historica. Considerar sobreponderar ${a}.`;
+    return `${a} está ${absZ}\u03C3 barato vs ${b}. Zona de acumulación histórica. Considerar sobreponderar ${a}.`;
   }
-  return `${a} esta ${absZ}\u03C3 barato vs ${b}. Posible oportunidad de entrada.`;
+  return `${a} está ${absZ}\u03C3 barato vs ${b}. Posible oportunidad de entrada.`;
 }
 
 function computeStats(values: number[]): { mean: number; stdDev: number } {
@@ -756,28 +756,28 @@ function generateClassNarrative(cls: string, z: number, metrics: AssetClassMetri
 
   switch (cls) {
     case "Acciones": {
-      if (level === "acumular") return `S&P 500 bajo su SMA 200. Zona historica de acumulacion.`;
-      if (level === "sobrecomprado") return `S&P 500 muy extendido sobre SMA 200. Precaucion, posible correccion.`;
+      if (level === "acumular") return `S&P 500 bajo su SMA 200. Zona histórica de acumulación.`;
+      if (level === "sobrecomprado") return `S&P 500 muy extendido sobre SMA 200. Precaución, posible corrección.`;
       if (level === "extendido") return `Acciones sobre su tendencia. No es momento de agregar agresivamente.`;
-      return `Acciones cerca de su tendencia. Posicion neutral.`;
+      return `Acciones cerca de su tendencia. Posición neutral.`;
     }
     case "Crypto": {
-      if (level === "acumular") return `BTC bajo su SMA 200. Zona de acumulacion historicamente favorable.`;
-      if (level === "sobrecomprado") return `BTC muy extendido. Dominancia sugiere precaucion.`;
-      if (level === "extendido") return `BTC sobre tendencia pero sin senales extremas.`;
+      if (level === "acumular") return `BTC bajo su SMA 200. Zona de acumulación históricamente favorable.`;
+      if (level === "sobrecomprado") return `BTC muy extendido. Dominancia sugiere precaución.`;
+      if (level === "extendido") return `BTC sobre tendencia pero sin señales extremas.`;
       return `BTC cerca de su tendencia. Zona neutral.`;
     }
     case "Oro": {
-      if (level === "acumular") return `Oro bajo su SMA 200. Oportunidad historica en metales.`;
-      if (level === "sobrecomprado") return `Oro extendido vs SMA y vs plata. Posible correccion o rotacion a plata.`;
-      if (level === "extendido") return `Oro sobre tendencia. Plata podria ofrecer mejor entry relativo.`;
+      if (level === "acumular") return `Oro bajo su SMA 200. Oportunidad histórica en metales.`;
+      if (level === "sobrecomprado") return `Oro extendido vs SMA y vs plata. Posible corrección o rotación a plata.`;
+      if (level === "extendido") return `Oro sobre tendencia. Plata podría ofrecer mejor entry relativo.`;
       return `Oro en equilibrio con su tendencia.`;
     }
     case "Bonos": {
       if (level === "acumular") return `Bonos baratos (yields altos). Oportunidad si se espera baja de tasas.`;
       if (level === "sobrecomprado") return `Bonos caros (yields muy bajos). Mejor rotar a risk-on.`;
       if (level === "extendido") return `Yields cayendo. Bonos caros pero con momentum.`;
-      return `Yields en rango neutral. Sin senal clara.`;
+      return `Yields en rango neutral. Sin señal clara.`;
     }
     default:
       return `Nivel compuesto: ${z.toFixed(1)}\u03C3.`;
@@ -801,7 +801,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   const accionesZ = sp500DevZ * 0.6 + concentrationZ * 0.4;
   const accionesMetrics: AssetClassMetric[] = [
     { label: "S&P 500 vs SMA 200", value: sp500DevPct, zScore: sp500DevZ, interpretation: `${sp500DevPct > 0 ? "+" : ""}${sp500DevPct.toFixed(1)}% sobre SMA` },
-    { label: "S&P/Nasdaq (concentracion)", value: sp500NasdaqSummary?.current ?? 0, zScore: concentrationZ, interpretation: concentrationZ > 1 ? "Tech rezagado" : concentrationZ < -1 ? "Tech dominante" : "Equilibrado" },
+    { label: "S&P/Nasdaq (concentración)", value: sp500NasdaqSummary?.current ?? 0, zScore: concentrationZ, interpretation: concentrationZ > 1 ? "Tech rezagado" : concentrationZ < -1 ? "Tech dominante" : "Equilibrado" },
   ];
   signals.push({
     assetClass: "Acciones", icon: "📈", signal: getSignalLevel(accionesZ), compositeZScore: accionesZ,

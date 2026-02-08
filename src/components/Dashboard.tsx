@@ -308,8 +308,8 @@ export default function Dashboard() {
           Los ratios son señal.
         </p>
         <p className="text-[11px] sm:text-xs leading-relaxed max-w-2xl mx-auto" style={{ color: "var(--text-muted)" }}>
-          Si medís un activo en dólares, estás midiendo con una vara que se encoge.
-          Acá medimos activos contra activos — eliminando el ruido monetario.
+          Si mides un activo en dólares, estás midiendo con una vara que se encoge.
+          Aquí medimos activos contra activos — eliminando el ruido monetario.
           ¿BTC está caro? Depende contra qué lo compares.
         </p>
       </div>
@@ -805,7 +805,7 @@ export default function Dashboard() {
       {/* 14. Closing */}
       <div className="text-center py-8 space-y-4 fade-in-up fade-in-up-5">
         <p className="font-serif italic text-sm sm:text-base" style={{ color: "var(--text-secondary)" }}>
-          &ldquo;No preguntes si un activo está caro o barato. Preguntá contra qué lo estás midiendo.&rdquo;
+          &ldquo;No preguntes si un activo está caro o barato. Pregunta contra qué lo estás midiendo.&rdquo;
         </p>
         <div className="divider-gradient max-w-xs mx-auto" />
         <div className="space-y-1">
