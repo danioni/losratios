@@ -174,7 +174,7 @@ function alignToMonthlyGrid(
     }
 
     const result: number[] = [];
-    let lastVal = 0;
+    let lastVal = NaN;
     for (const d of dates) {
       const v = lookup.get(d);
       if (v !== undefined) {
@@ -253,9 +253,10 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
     { dates: caseShillerData.dates, values: caseShillerData.values }, // 16: case-shiller
   ];
 
-  // Check if we got enough data (at least sp500 or btc)
-  const hasData = sp500Data.dates.length > 12 || btcHist.dates.length > 12;
-  if (!hasData) {
+  // Check if we got enough data — need at least some equity + some crypto
+  const hasEquity = sp500Data.dates.length > 12;
+  const hasCrypto = btcHist.dates.length > 12;
+  if (!hasEquity && !hasCrypto) {
     throw new Error("Insufficient market data from APIs");
   }
 
@@ -272,6 +273,9 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
     const goldPrice = aligned[4][i] || 0;
     const silverPrice = aligned[5][i] || 0;
     const m2Val = aligned[15][i] || 0;
+    const btcMcap = aligned[10][i] || 0;
+    const ethMcap = aligned[12][i] || 0;
+    const solMcap = aligned[14][i] || 0;
     // M2SL is in billions, convert to trillions. Multiply by ~3 as rough global proxy (US M2 ≈ 1/3 of global)
     const m2GlobalProxy = (m2Val / 1000) * 3;
 
@@ -301,22 +305,31 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
       btc: aligned[9][i] || 0,
       eth: aligned[11][i] || 0,
       sol: aligned[13][i] || 0,
-      btcMcap: aligned[10][i] || 0,
-      ethMcap: aligned[12][i] || 0,
-      solMcap: aligned[14][i] || 0,
+      btcMcap,
+      ethMcap,
+      solMcap,
       goldMcap,
       silverMcap,
       equitiesMcap: equitiesMcapProxy,
       realEstateMcap: 360, // ~360T global, slow-moving
       bondsMcap: bondsMcapProxy,
-      cryptoMcap: aligned[10][i] + aligned[12][i] + aligned[14][i] || 0,
+      cryptoMcap: btcMcap + ethMcap + solMcap,
       m2Global: m2GlobalProxy || 0,
     };
   });
 
+  // Filter out data points where critical fields are all zero
+  // (dates before any series had data, forward-filled from NaN → 0)
+  const filtered = result.filter(
+    (d) => d.sp500 > 0 || d.gold > 0 || d.btc > 0,
+  );
+  if (filtered.length === 0) {
+    throw new Error("All market data fields are zero — API data unusable");
+  }
+
   // Override the last data point with live crypto prices if available
-  if (result.length > 0 && btcCurrent) {
-    const last = result[result.length - 1];
+  if (filtered.length > 0 && btcCurrent) {
+    const last = filtered[filtered.length - 1];
     last.btc = btcCurrent.current_price;
     last.btcMcap = btcCurrent.market_cap / 1e12;
     if (ethCurrent) {
@@ -330,5 +343,5 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
     last.cryptoMcap = totalCryptoMcap / 1e12;
   }
 
-  return result;
+  return filtered;
 }

@@ -521,34 +521,47 @@ function generateMonthlyData(): AssetDataPoint[] {
   return result;
 }
 
+function safeDiv(a: number, b: number): number {
+  if (!b || !isFinite(b)) return 0;
+  const r = a / b;
+  return isFinite(r) ? r : 0;
+}
+
 function computeRatios(assets: AssetDataPoint[]): ClassRatioDataPoint[] {
   return assets.map((d) => ({
     date: d.date,
     // Commodities
-    goldSilver: d.gold / d.silver,
-    goldOil: d.gold / d.oil,
-    goldCopper: d.gold / (d.copper * 1000), // scale copper to $/ton
-    silverOil: d.silver / d.oil,
-    copperGold: (d.copper * 1000) / d.gold,
+    goldSilver: safeDiv(d.gold, d.silver),
+    goldOil: safeDiv(d.gold, d.oil),
+    goldCopper: safeDiv(d.gold, d.copper * 1000),
+    silverOil: safeDiv(d.silver, d.oil),
+    copperGold: safeDiv(d.copper * 1000, d.gold),
     // Equities
-    sp500Nasdaq: d.sp500 / d.nasdaq,
-    teslaSp500: d.tesla / d.sp500,
-    sp500Msci: d.sp500 / d.msciWorld,
-    nasdaqMsci: d.nasdaq / d.msciWorld,
+    sp500Nasdaq: safeDiv(d.sp500, d.nasdaq),
+    teslaSp500: safeDiv(d.tesla, d.sp500),
+    sp500Msci: safeDiv(d.sp500, d.msciWorld),
+    nasdaqMsci: safeDiv(d.nasdaq, d.msciWorld),
     // Crypto
-    btcEth: d.btc / (d.eth || 0.01),
-    ethSol: (d.eth || 0.01) / (d.sol || 0.01),
-    btcSol: d.btc / (d.sol || 0.01),
+    btcEth: safeDiv(d.btc, d.eth || 0.01),
+    ethSol: safeDiv(d.eth || 0.01, d.sol || 0.01),
+    btcSol: safeDiv(d.btc, d.sol || 0.01),
     // BTC vs classes
-    btcGold: d.btc / d.gold,
-    btcSp500: d.btc / d.sp500,
-    btcRealEstate: d.btc / (d.caseShiller * 1000),
+    btcGold: safeDiv(d.btc, d.gold),
+    btcSp500: safeDiv(d.btc, d.sp500),
+    btcRealEstate: safeDiv(d.btc, d.caseShiller * 1000),
   }));
 }
 
 function computeDominance(assets: AssetDataPoint[]): DominanceDataPoint[] {
   return assets.map((d) => {
     const total = d.goldMcap + d.silverMcap + d.equitiesMcap + d.realEstateMcap + d.bondsMcap + d.cryptoMcap;
+    if (!total || total <= 0) {
+      return {
+        date: d.date,
+        goldDom: 0, silverDom: 0, equitiesDom: 0,
+        realEstateDom: 0, bondsDom: 0, cryptoDom: 0, total: 0,
+      };
+    }
     return {
       date: d.date,
       goldDom: (d.goldMcap / total) * 100,
@@ -721,6 +734,7 @@ export function generateNarrative(pair: string, zScore: number): string {
 
 function computeStats(values: number[]): { mean: number; stdDev: number } {
   const n = values.length;
+  if (n === 0) return { mean: 0, stdDev: 0 };
   const mean = values.reduce((s, v) => s + v, 0) / n;
   const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
   return { mean, stdDev: Math.sqrt(variance) };
