@@ -188,6 +188,31 @@ function alignToMonthlyGrid(
   return { dates, aligned };
 }
 
+// Estimate total crypto market cap from known coins + historical BTC dominance
+// BTC dominance varied: ~95% (2014-16), ~50% (2017-18), ~70% (2019), ~60% (2020-21), ~45% (2021 peak), ~40% (2022), ~50% (2023-24), ~58% (2025)
+function estimateTotalCryptoMcap(btcMcap: number, ethMcap: number, solMcap: number, date: string): number {
+  const known = btcMcap + ethMcap + solMcap;
+  if (btcMcap <= 0) return known;
+
+  const year = parseInt(date.slice(0, 4));
+  // Historical BTC dominance approximations
+  let btcDomPct: number;
+  if (year <= 2016) btcDomPct = 0.90;
+  else if (year === 2017) btcDomPct = 0.55;
+  else if (year === 2018) btcDomPct = 0.53;
+  else if (year === 2019) btcDomPct = 0.68;
+  else if (year === 2020) btcDomPct = 0.62;
+  else if (year === 2021) btcDomPct = 0.42;
+  else if (year === 2022) btcDomPct = 0.40;
+  else if (year === 2023) btcDomPct = 0.50;
+  else if (year === 2024) btcDomPct = 0.55;
+  else btcDomPct = 0.58; // 2025+
+
+  const estimatedTotal = btcMcap / btcDomPct;
+  // Use the larger of known sum vs estimated (in case our coins already exceed estimate)
+  return Math.max(known, estimatedTotal);
+}
+
 export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
   // Fetch everything in parallel
   const [
@@ -313,7 +338,9 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
       equitiesMcap: equitiesMcapProxy,
       realEstateMcap: 360, // ~360T global, slow-moving
       bondsMcap: bondsMcapProxy,
-      cryptoMcap: btcMcap + ethMcap + solMcap,
+      // Estimate total crypto mcap from BTC mcap using historical dominance
+      // BTC dominance has ranged ~40-70%; we approximate based on era
+      cryptoMcap: estimateTotalCryptoMcap(btcMcap, ethMcap, solMcap, date),
       m2Global: m2GlobalProxy || 0,
     };
   });
