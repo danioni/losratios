@@ -100,80 +100,12 @@ export default function Semaforo({ signals }: SemaforoProps) {
                 </div>
               </div>
 
-              {/* Dual z-score: adjusted vs nominal + delta */}
-              <div className="flex items-center gap-3 mb-3 px-1">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-                    Ajustado
-                  </span>
-                  <span className="text-[11px] tabular-nums font-medium" style={{ color: config.colorVar }}>
-                    {sig.compositeZScore >= 0 ? "+" : ""}{sig.compositeZScore.toFixed(2)}σ
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-                    Nominal
-                  </span>
-                  <span className="text-[10px] tabular-nums" style={{ color: "var(--text-muted)", textDecoration: "line-through", opacity: 0.5 }}>
-                    {sig.nominalZScore >= 0 ? "+" : ""}{sig.nominalZScore.toFixed(2)}σ
-                  </span>
-                </div>
-                <div
-                  className="ml-auto px-1.5 py-0.5 rounded text-[8px] tabular-nums"
-                  style={{
-                    background: sig.debasementDelta > 0.3 ? "var(--accent-amber-bg)" : "transparent",
-                    color: sig.debasementDelta > 0.3 ? "var(--accent-amber)" : "var(--text-muted)",
-                  }}
-                >
-                  Δ {sig.debasementDelta >= 0 ? "+" : ""}{sig.debasementDelta.toFixed(2)}σ ruido
-                </div>
-              </div>
-
-              {/* Metrics */}
-              <div className="space-y-2 mb-3">
-                {sig.metrics.map((m) => {
-                  const metricColor =
-                    m.zScore > 1 ? "var(--accent-cyan)" :
-                    m.zScore < -1 ? "var(--accent-amber)" :
-                    "var(--text-secondary)";
-                  return (
-                    <div key={m.label} className="flex items-center justify-between">
-                      <span className="text-[9px] tracking-wider" style={{ color: "var(--text-muted)" }}>
-                        {m.label}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] tabular-nums" style={{ color: metricColor }}>
-                          {m.interpretation}
-                        </span>
-                        <span
-                          className="text-[8px] tabular-nums px-1 py-0.5 rounded"
-                          style={{
-                            color: metricColor,
-                            background: m.zScore > 1 ? "var(--accent-cyan-bg)" : m.zScore < -1 ? "var(--accent-amber-bg)" : "transparent",
-                          }}
-                        >
-                          {m.zScore >= 0 ? "+" : ""}{m.zScore.toFixed(1)}σ
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
               {/* Narrative */}
               <div
-                className="pt-2 text-[9px] sm:text-[10px] leading-relaxed"
-                style={{ borderTop: "1px solid var(--border-subtle)", color: "var(--text-secondary)" }}
+                className="pt-2 text-[10px] sm:text-[11px] font-medium leading-relaxed"
+                style={{ borderTop: "1px solid var(--border-subtle)", color: config.colorVar }}
               >
                 {sig.narrative}
-              </div>
-
-              {/* Action signal */}
-              <div
-                className="mt-2 text-[9px] sm:text-[10px] font-medium leading-relaxed"
-                style={{ color: config.colorVar, opacity: 0.85 }}
-              >
-                → {sig.actionSignal}
               </div>
             </div>
           );

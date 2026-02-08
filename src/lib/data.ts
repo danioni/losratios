@@ -796,28 +796,28 @@ function generateClassNarrative(cls: string, adjustedZ: number): string {
 
   switch (cls) {
     case "Acciones": {
-      if (level === "rezagado") return `S&P 500 no ha priceado la expansión monetaria reciente. Oportunidad de acumulación.`;
-      if (level === "adelantado") return `Acciones se adelantaron al debasement. Considerar rotar hacia activos rezagados. No vender a fiat.`;
-      if (level === "divergente") return `Acciones divergen del debasement. Posible oportunidad extrema o señal de problema estructural.`;
-      return `Acciones reflejan correctamente las condiciones monetarias. Mantener.`;
+      if (level === "rezagado") return `Acciones no pricearon el debasement. Acumular.`;
+      if (level === "adelantado") return `Acciones se adelantaron al debasement. Rotar a rezagados.`;
+      if (level === "divergente") return `Acciones divergen del debasement. Oportunidad extrema o problema estructural.`;
+      return `Acciones alineadas con la expansión monetaria. Mantener.`;
     }
     case "Crypto": {
-      if (level === "rezagado") return `BTC no ha priceado el debasement. Zona de acumulación.`;
-      if (level === "adelantado") return `Crypto se adelantó a la expansión monetaria. Considerar rotar hacia activos rezagados. No vender a fiat.`;
-      if (level === "divergente") return `Crypto diverge fuertemente del debasement. Posible oportunidad extrema o cambio estructural.`;
-      return `Crypto refleja correctamente la expansión monetaria. Mantener.`;
+      if (level === "rezagado") return `BTC no priceó el debasement. Acumular.`;
+      if (level === "adelantado") return `Crypto se adelantó al debasement. Rotar a rezagados.`;
+      if (level === "divergente") return `Crypto diverge del debasement. Oportunidad extrema o cambio estructural.`;
+      return `Crypto alineado con la expansión monetaria. Mantener.`;
     }
     case "Oro": {
-      if (level === "rezagado") return `Oro no ha priceado la expansión monetaria. Oportunidad histórica en metales.`;
-      if (level === "adelantado") return `Oro se adelantó al debasement. Plata podría ofrecer mejor entry relativo. No vender a fiat.`;
-      if (level === "divergente") return `Oro diverge del debasement. Investigar causa: posible oportunidad extrema.`;
-      return `Oro refleja correctamente las condiciones monetarias. Mantener.`;
+      if (level === "rezagado") return `Oro no priceó la expansión monetaria. Acumular metales.`;
+      if (level === "adelantado") return `Oro se adelantó al debasement. Rotar a plata o rezagados.`;
+      if (level === "divergente") return `Oro diverge del debasement. Oportunidad extrema.`;
+      return `Oro alineado con las condiciones monetarias. Mantener.`;
     }
     case "Bonos": {
-      if (level === "rezagado") return `Bonos no pricearon el debasement (yields reales aún altos). Oportunidad si se espera más expansión.`;
-      if (level === "adelantado") return `Bonos se adelantaron (yields muy bajos vs expansión real). Rotar hacia activos duros. No vender a fiat.`;
-      if (level === "divergente") return `Bonos divergen del debasement. Señal de estrés monetario. Investigar.`;
-      return `Bonos reflejan las condiciones monetarias actuales. Mantener.`;
+      if (level === "rezagado") return `Bonos no pricearon el debasement. Oportunidad si se espera más expansión.`;
+      if (level === "adelantado") return `Bonos se adelantaron. Rotar hacia activos duros.`;
+      if (level === "divergente") return `Bonos divergen del debasement. Estrés monetario.`;
+      return `Bonos alineados con las condiciones monetarias. Mantener.`;
     }
     default:
       return `Nivel compuesto ajustado: ${adjustedZ.toFixed(1)}\u03C3.`;
