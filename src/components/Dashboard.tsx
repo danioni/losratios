@@ -516,19 +516,24 @@ export default function Dashboard() {
       {/* ========== OVERLAY: Z-scores rolling ========== */}
       <ChartSection
         title="Panorama General — Z-Score vs SMA"
-        subtitle={`${ratioDateRange} · Z-score rolling (ventana 36 meses) de cada ratio. Sobre 0 = caro, bajo 0 = barato. Todos comparables.`}
+        subtitle={`${ratioDateRange} · Z-score rolling (ventana 36 meses). Si BTC/Oro está caro, Cobre/Oro debería compensar. Pares cruzados para detectar rotaciones reales.`}
         delay={3}
       >
         {(() => {
           // Compute rolling z-score for each key pair
           // Ventana de 36 meses (3 años) para tener suficientes puntos visibles
           const ZSCORE_WINDOW = 36;
+          // Pares seleccionados para contrabalance:
+          // Si BTC/Oro sube → Cobre/Oro (industrial vs refugio) puede bajar
+          // Si BTC/S&P sube → S&P/Nasdaq (broad vs tech) se mueve independiente
+          // Oro/Plata y ETH/SOL como pares internos de cada clase
           const overlayKeys: { key: keyof ClassRatioDataPoint; label: string; color: string }[] = [
             { key: "btcGold", label: "BTC / Oro", color: COLORS.amber },
+            { key: "copperGold", label: "Cobre / Oro", color: COLORS.red },
+            { key: "sp500Nasdaq", label: "S&P / Nasdaq", color: COLORS.blue },
             { key: "goldSilver", label: "Oro / Plata", color: COLORS.gold },
+            { key: "ethSol", label: "ETH / SOL", color: COLORS.purple },
             { key: "btcSp500", label: "BTC / S&P 500", color: COLORS.cyan },
-            { key: "sp500Msci", label: "S&P 500 / MSCI", color: COLORS.blue },
-            { key: "btcEth", label: "BTC / ETH", color: COLORS.purple },
           ];
 
           const windowSize = Math.min(ZSCORE_WINDOW, filteredRatios.length);
@@ -606,8 +611,8 @@ export default function Dashboard() {
                 ))}
               </div>
               <div className="flex flex-wrap gap-6 mt-2 justify-center">
-                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--accent-green)", opacity: 0.7 }}>↓ bajo 0 = barato</span>
-                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--accent-red)", opacity: 0.7 }}>↑ sobre 0 = caro</span>
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--accent-green)", opacity: 0.7 }}>↓ bajo 0 = numerador barato vs denominador</span>
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--accent-red)", opacity: 0.7 }}>↑ sobre 0 = numerador caro vs denominador</span>
               </div>
             </>
           );
