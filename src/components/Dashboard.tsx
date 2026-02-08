@@ -4,17 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AreaChart,
   Area,
-  LineChart,
+  ComposedChart,
   Line,
+  LineChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  BarChart,
-  Bar,
-  Cell,
 } from "recharts";
 import {
   summaries,
@@ -24,17 +22,26 @@ import {
   PAIR_DEFS,
   ASSET_CLASSES,
   getSummariesByClass,
-  TOP_STOCKS,
-  getStockDominanceChanges,
-  getSectorDominance,
   computeRatioSMAs,
+  computeBollingerBands,
+  computeStockMomentum,
+  generateNarrative,
+  assetClassSignals,
+  cryptoDominanceData,
+  cryptoRotation,
+  assetPerformance,
+  assetProjections,
   SMA_LONG,
   SMA_SHORT,
   type ClassRatioDataPoint,
-  type StockDominanceDataPoint,
 } from "@/lib/data";
 import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
+import Semaforo from "./Semaforo";
+import PerformanceTable from "./PerformanceTable";
+import Projections from "./Projections";
+import StockMomentum from "./StockMomentum";
+import CryptoDominance from "./CryptoDominance";
 
 type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
 
@@ -143,7 +150,6 @@ function TimeRangeSelector({ range, onChange }: { range: TimeRange; onChange: (r
   );
 }
 
-// Asset class tab selector
 function ClassTabSelector({ activeClass, onChange }: { activeClass: string; onChange: (c: string) => void }) {
   const classIcons: Record<string, string> = {
     "Commodities": "🏆",
@@ -171,7 +177,6 @@ function ClassTabSelector({ activeClass, onChange }: { activeClass: string; onCh
   );
 }
 
-// Pair selector within a class
 function PairSelector({ pairs, activePair, onChange }: {
   pairs: typeof PAIR_DEFS;
   activePair: string;
@@ -201,13 +206,10 @@ export default function Dashboard() {
   const [range, setRange] = useState<TimeRange>("MAX");
   const [activeClass, setActiveClass] = useState<string>("Commodities");
   const [activePairKey, setActivePairKey] = useState<string>("goldSilver");
-  const [stockView, setStockView] = useState<"top10" | "gainers" | "sectors">("top10");
   const COLORS = useThemeColors();
 
-  // Get pairs for current class
   const classPairs = useMemo(() => PAIR_DEFS.filter((p) => p.assetClass === activeClass), [activeClass]);
 
-  // Switch to first pair of new class
   useEffect(() => {
     const first = PAIR_DEFS.find((p) => p.assetClass === activeClass);
     if (first) setActivePairKey(first.key);
@@ -215,28 +217,33 @@ export default function Dashboard() {
 
   const currentPairDef = useMemo(() => PAIR_DEFS.find((p) => p.key === activePairKey), [activePairKey]);
 
-  const { filteredRatios, filteredDominance, filteredStockDom, xTicks, ratioDateRange, stockDateRange } = useMemo(() => {
-    const { ratios: r, dominance: d, stockDom: sd } = getFilteredData(range);
+  const { filteredRatios, filteredDominance, filteredStockDom, filteredCryptoDom, xTicks, ratioDateRange, stockDateRange } = useMemo(() => {
+    const { ratios: r, dominance: d, stockDom: sd, cryptoDom: cd } = getFilteredData(range);
     const dates = r.map((x) => x.date);
     const ticks = dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
     const ratioRange = r.length > 0 ? formatDateRange(r[0].date, r[r.length - 1].date) : "";
     const stockRange = sd.length > 0 ? formatDateRange(sd[0].date, sd[sd.length - 1].date) : "";
-    return { filteredRatios: r, filteredDominance: d, filteredStockDom: sd, xTicks: ticks, ratioDateRange: ratioRange, stockDateRange: stockRange };
+    return { filteredRatios: r, filteredDominance: d, filteredStockDom: sd, filteredCryptoDom: cd, xTicks: ticks, ratioDateRange: ratioRange, stockDateRange: stockRange };
   }, [range]);
 
-  // Stock dom x-axis ticks
   const stockXTicks = useMemo(() => {
     if (!filteredStockDom.length) return [];
     const dates = filteredStockDom.map((x) => x.date);
     return dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
   }, [filteredStockDom]);
 
-  // Pair stats for current selection — using SMA window instead of full-period mean
-  const { pairStats, smaChartData } = useMemo(() => {
+  const cryptoXTicks = useMemo(() => {
+    if (!filteredCryptoDom.length) return [];
+    const dates = filteredCryptoDom.map((x) => x.date);
+    return dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
+  }, [filteredCryptoDom]);
+
+  // Pair stats + Bollinger bands
+  const { pairStats, bollingerChartData } = useMemo(() => {
     const key = activePairKey as keyof ClassRatioDataPoint;
     const values = filteredRatios.map((d) => d[key] as number);
+    const dates = filteredRatios.map((d) => d.date);
 
-    // SMA-based mean using the long window
     const windowSize = Math.min(SMA_LONG, values.length);
     const windowValues = values.slice(-windowSize);
     const mean = windowValues.reduce((s, v) => s + v, 0) / windowValues.length;
@@ -245,27 +252,31 @@ export default function Dashboard() {
     const current = values[values.length - 1];
     const zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
 
-    // Compute SMA series for chart overlay
+    // SMAs
     const { sma50, sma200 } = computeRatioSMAs(filteredRatios, key);
+    // Bollinger bands (20-period)
+    const bb = computeBollingerBands(values, dates, Math.min(20, values.length));
+
     const chartData = filteredRatios.map((d, i) => ({
       date: d.date,
       [activePairKey]: d[key],
       sma50: sma50[i],
       sma200: sma200[i],
+      bbUpper2: bb[i]?.upper2 ?? null,
+      bbLower2: bb[i]?.lower2 ?? null,
+      bbUpper1: bb[i]?.upper1 ?? null,
+      bbLower1: bb[i]?.lower1 ?? null,
+      bbSma: bb[i]?.sma ?? null,
     }));
 
     return {
-      pairStats: { mean, stdDev, current, zScore, plus1: mean + stdDev, minus1: mean - stdDev, plus2: mean + 2 * stdDev, minus2: mean - 2 * stdDev },
-      smaChartData: chartData,
+      pairStats: { mean, stdDev, current, zScore },
+      bollingerChartData: chartData,
     };
   }, [filteredRatios, activePairKey]);
 
-  const formatDate = (d: string) => {
-    if (d.length <= 4) return d;
-    return d.split("-")[0];
-  };
+  const formatDate = (d: string) => d.length <= 4 ? d : d.split("-")[0];
 
-  // Key metrics: one per class
   const keyMetrics = useMemo(() => {
     return [
       summaries.find((s) => s.pair === "Oro / Plata"),
@@ -283,13 +294,12 @@ export default function Dashboard() {
 
   const pairColor = currentPairDef ? getColorValue(currentPairDef.color) : COLORS.cyan;
 
-  // Stock dominance data
-  const stockChanges = useMemo(() => getStockDominanceChanges(filteredStockDom), [filteredStockDom]);
-  const sectorDom = useMemo(() => getSectorDominance(filteredStockDom), [filteredStockDom]);
+  // Stock momentum
+  const stockMomentum = useMemo(() => computeStockMomentum(filteredStockDom), [filteredStockDom]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8 relative z-10">
-      {/* Thesis banner */}
+      {/* 1. Thesis banner */}
       <div className="text-center space-y-4 py-6 sm:py-10 fade-in-up fade-in-up-1">
         <h2 className="font-serif text-2xl sm:text-4xl md:text-5xl tracking-wide" style={{ color: "var(--text-primary)" }}>
           Los precios en fiat son ruido.
@@ -304,7 +314,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Rotation Signals */}
+      {/* 2. Rotation Signals */}
       {rotationSignals.length > 0 && (
         <div className="space-y-2 fade-in-up fade-in-up-2">
           <h3
@@ -334,7 +344,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Controls */}
+      {/* 3. Semáforo */}
+      <Semaforo signals={assetClassSignals} colors={COLORS} />
+
+      {/* 4. Controls */}
       <div className="flex flex-wrap items-center gap-3 fade-in-up fade-in-up-2">
         <TimeRangeSelector range={range} onChange={setRange} />
         <span className="text-[10px] tabular-nums tracking-wider" style={{ color: "var(--text-muted)" }}>
@@ -342,7 +355,7 @@ export default function Dashboard() {
         </span>
       </div>
 
-      {/* Key metrics - one per class */}
+      {/* 5. Key metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {keyMetrics.map((m, i) => (
           <MetricCard
@@ -357,7 +370,30 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ========== ASSET CLASS RATIOS ========== */}
+      {/* 6. Performance Histórica */}
+      <PerformanceTable data={assetPerformance} colors={COLORS} />
+
+      {/* 7. Proyecciones Multi-Factor */}
+      <Projections projections={assetProjections} colors={COLORS} />
+
+      {/* 8. Stock Momentum (replaces old stock dominance) */}
+      <StockMomentum
+        momentum={stockMomentum}
+        stockDom={filteredStockDom}
+        stockDateRange={stockDateRange}
+        stockXTicks={stockXTicks}
+        colors={COLORS}
+      />
+
+      {/* 9. Crypto Dominance */}
+      <CryptoDominance
+        data={filteredCryptoDom}
+        rotation={cryptoRotation}
+        xTicks={cryptoXTicks}
+        colors={COLORS}
+      />
+
+      {/* 10. Asset Class Ratios with Bollinger Bands */}
       <div className="space-y-4">
         <h3 className="font-serif text-base sm:text-lg" style={{ color: "var(--text-primary)" }}>
           Ratios por Asset Class
@@ -397,15 +433,10 @@ export default function Dashboard() {
               </span>
             </div>
 
+            {/* Ratio chart with Bollinger bands */}
             <div className="h-[280px] sm:h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={smaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id="mainGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={pairColor} stopOpacity={0.25} />
-                      <stop offset="95%" stopColor={pairColor} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <ComposedChart data={bollingerChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
@@ -422,15 +453,13 @@ export default function Dashboard() {
                     tickFormatter={(v: number) => formatRatio(v)}
                   />
                   <Tooltip content={<RatioTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey={activePairKey}
-                    name={currentPairDef.pair}
-                    stroke={pairColor}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
-                  />
+                  {/* Bollinger bands ±2σ */}
+                  <Line type="monotone" dataKey="bbUpper2" name="BB +2σ" stroke={COLORS.red} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
+                  <Line type="monotone" dataKey="bbLower2" name="BB -2σ" stroke={COLORS.green} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
+                  {/* Bollinger bands ±1σ */}
+                  <Line type="monotone" dataKey="bbUpper1" name="BB +1σ" stroke={COLORS.red} strokeWidth={0.5} strokeDasharray="2 4" dot={false} connectNulls strokeOpacity={0.25} />
+                  <Line type="monotone" dataKey="bbLower1" name="BB -1σ" stroke={COLORS.green} strokeWidth={0.5} strokeDasharray="2 4" dot={false} connectNulls strokeOpacity={0.25} />
+                  {/* SMA lines */}
                   <Line
                     type="monotone"
                     dataKey="sma50"
@@ -450,7 +479,17 @@ export default function Dashboard() {
                     dot={false}
                     connectNulls
                   />
-                </LineChart>
+                  {/* Main ratio line on top */}
+                  <Line
+                    type="monotone"
+                    dataKey={activePairKey}
+                    name={currentPairDef.pair}
+                    stroke={pairColor}
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
             <div className="flex flex-wrap gap-4 mt-3 justify-center">
@@ -465,6 +504,10 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5">
                 <div className="w-4 h-0.5 rounded" style={{ background: COLORS.muted, opacity: 0.8 }} />
                 <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-px rounded" style={{ background: COLORS.red, opacity: 0.4 }} />
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>BB ±1σ/±2σ</span>
               </div>
             </div>
           </ChartSection>
@@ -513,20 +556,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ========== OVERLAY: Z-scores rolling ========== */}
+      {/* 11. Panorama General z-score overlay */}
       <ChartSection
         title="Panorama General — Z-Score vs SMA"
         subtitle={`${ratioDateRange} · Z-score rolling (ventana 36 meses). Si BTC/Oro está caro, Cobre/Oro debería compensar. Pares cruzados para detectar rotaciones reales.`}
         delay={3}
       >
         {(() => {
-          // Compute rolling z-score for each key pair
-          // Ventana de 36 meses (3 años) para tener suficientes puntos visibles
           const ZSCORE_WINDOW = 36;
-          // Pares seleccionados para contrabalance:
-          // Si BTC/Oro sube → Cobre/Oro (industrial vs refugio) puede bajar
-          // Si BTC/S&P sube → S&P/Nasdaq (broad vs tech) se mueve independiente
-          // Oro/Plata y ETH/SOL como pares internos de cada clase
           const overlayKeys: { key: keyof ClassRatioDataPoint; label: string; color: string }[] = [
             { key: "btcGold", label: "BTC / Oro", color: COLORS.amber },
             { key: "copperGold", label: "Cobre / Oro", color: COLORS.red },
@@ -544,15 +581,15 @@ export default function Dashboard() {
               if (i < windowSize - 1) {
                 point[key] = null;
               } else {
-                const window: number[] = [];
+                const w: number[] = [];
                 for (let j = i - windowSize + 1; j <= i; j++) {
-                  window.push(filteredRatios[j][key] as number);
+                  w.push(filteredRatios[j][key] as number);
                 }
-                const mean = window.reduce((s, v) => s + v, 0) / window.length;
-                const variance = window.reduce((s, v) => s + (v - mean) ** 2, 0) / window.length;
-                const stdDev = Math.sqrt(variance);
+                const mean = w.reduce((s, v) => s + v, 0) / w.length;
+                const variance = w.reduce((s, v) => s + (v - mean) ** 2, 0) / w.length;
+                const sd = Math.sqrt(variance);
                 const current = d[key] as number;
-                point[key] = stdDev > 0 ? (current - mean) / stdDev : 0;
+                point[key] = sd > 0 ? (current - mean) / sd : 0;
               }
             }
             return point;
@@ -619,7 +656,7 @@ export default function Dashboard() {
         })()}
       </ChartSection>
 
-      {/* ========== DOMINANCE: Macro Market Cap Share ========== */}
+      {/* 12. Macro Dominance */}
       <ChartSection
         title="Dominancia Macro — Peso de cada asset class"
         subtitle={`${ratioDateRange} · Market cap de cada clase de activo como % del total (Oro + Plata + Equities + Real Estate + Bonos + Crypto). Muestra cómo migra el capital entre clases.`}
@@ -697,272 +734,7 @@ export default function Dashboard() {
         })()}
       </ChartSection>
 
-      {/* ========== STOCK DOMINANCE: Top 50 ========== */}
-      <div className="space-y-4">
-        <ChartSection
-          title="Dominancia Acciones — Top 50 por Market Cap"
-          subtitle={`${stockDateRange} · ¿Quién gana terreno? Market cap de cada acción como % del total top-50. Detectá qué empresas están acumulando capital relativo.`}
-          delay={4}
-        >
-          {/* View toggle */}
-          <div className="flex flex-wrap gap-1 p-1 rounded-lg mb-4" style={{ background: "var(--controls-bg)", border: "1px solid var(--border-subtle)" }}>
-            {([
-              { key: "top10" as const, label: "Top 10 Chart" },
-              { key: "gainers" as const, label: "Gainers / Losers" },
-              { key: "sectors" as const, label: "Por Sector" },
-            ]).map((v) => (
-              <button
-                key={v.key}
-                onClick={() => setStockView(v.key)}
-                className="px-2.5 sm:px-3 py-1.5 rounded-md text-[9px] sm:text-[10px] tracking-wider uppercase transition-all"
-                style={{
-                  background: stockView === v.key ? "var(--accent-green-bg-active)" : "transparent",
-                  color: stockView === v.key ? "var(--accent-green)" : "var(--text-muted)",
-                  border: stockView === v.key ? "1px solid var(--accent-green-border-active)" : "1px solid transparent",
-                }}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-
-          {stockView === "top10" && filteredStockDom.length > 0 && (
-            <>
-              <div className="h-[300px] sm:h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={filteredStockDom} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} stackOffset="expand">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" ticks={stockXTicks} tickFormatter={formatDate} tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
-                    <Tooltip
-                      content={({ active, payload, label }: any) => {
-                        if (!active || !payload) return null;
-                        return (
-                          <div className="rounded-lg px-4 py-3 text-xs max-h-[300px] overflow-y-auto" style={{ background: "var(--bg-tooltip)", border: "1px solid var(--border)", backdropFilter: "blur(10px)" }}>
-                            <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>{label}</p>
-                            {payload.slice().reverse().map((entry: any, i: number) => (
-                              <div key={i} className="flex items-center gap-2 py-0.5">
-                                <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
-                                <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
-                                <span className="font-medium tabular-nums" style={{ color: entry.color }}>
-                                  {(entry.value as number * 100).toFixed(1)}%
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }}
-                    />
-                    {TOP_STOCKS.slice(0, 10).map((stock) => (
-                      <Area
-                        key={stock.ticker}
-                        type="monotone"
-                        dataKey={stock.ticker}
-                        name={stock.name}
-                        stackId="1"
-                        stroke="none"
-                        fill={stock.color}
-                        fillOpacity={0.8}
-                      />
-                    ))}
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-wrap gap-3 mt-4 justify-center">
-                {TOP_STOCKS.slice(0, 10).map((stock) => (
-                  <div key={stock.ticker} className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ background: stock.color }} />
-                    <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>{stock.ticker}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {stockView === "gainers" && stockChanges.length > 0 && (
-            <div className="space-y-4">
-              <p className="text-[9px] tracking-wider" style={{ color: "var(--text-muted)" }}>
-                Cambio en dominancia: {stockDateRange}
-              </p>
-              {/* Gainers */}
-              <div>
-                <h4 className="text-[10px] tracking-[0.2em] uppercase mb-3 flex items-center gap-2" style={{ color: "var(--accent-green)" }}>
-                  <span>↗</span> Ganando Terreno
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {stockChanges.filter((s) => s.changePp > 0).slice(0, 10).map((stock) => (
-                    <div key={stock.ticker} className="flex items-center gap-3 py-2 px-3 rounded-lg" style={{ background: "var(--controls-bg)" }}>
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stock.color }} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-medium" style={{ color: "var(--text-primary)" }}>{stock.ticker}</span>
-                          <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>{stock.name}</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[11px] font-medium tabular-nums" style={{ color: "var(--accent-green)" }}>
-                          +{stock.changePp.toFixed(2)}pp
-                        </span>
-                        <span className="text-[9px] tabular-nums ml-1.5" style={{ color: "var(--text-muted)" }}>
-                          {stock.currentDom.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Losers */}
-              <div>
-                <h4 className="text-[10px] tracking-[0.2em] uppercase mb-3 flex items-center gap-2" style={{ color: "var(--accent-red)" }}>
-                  <span>↘</span> Perdiendo Terreno
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {stockChanges.filter((s) => s.changePp < 0).slice(-10).reverse().map((stock) => (
-                    <div key={stock.ticker} className="flex items-center gap-3 py-2 px-3 rounded-lg" style={{ background: "var(--controls-bg)" }}>
-                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stock.color }} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-medium" style={{ color: "var(--text-primary)" }}>{stock.ticker}</span>
-                          <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>{stock.name}</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[11px] font-medium tabular-nums" style={{ color: "var(--accent-red)" }}>
-                          {stock.changePp.toFixed(2)}pp
-                        </span>
-                        <span className="text-[9px] tabular-nums ml-1.5" style={{ color: "var(--text-muted)" }}>
-                          {stock.currentDom.toFixed(1)}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {stockView === "sectors" && sectorDom.length > 0 && (
-            <div className="space-y-4">
-              <p className="text-[9px] tracking-wider" style={{ color: "var(--text-muted)" }}>
-                Cambio por sector: {stockDateRange}
-              </p>
-              <div className="h-[250px] sm:h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sectorDom} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v: number) => `${v.toFixed(0)}%`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="sector"
-                      tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={70}
-                    />
-                    <Tooltip
-                      content={({ active, payload }: any) => {
-                        if (!active || !payload || !payload[0]) return null;
-                        const d = payload[0].payload;
-                        return (
-                          <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "var(--bg-tooltip)", border: "1px solid var(--border)", backdropFilter: "blur(10px)" }}>
-                            <p className="font-medium mb-1" style={{ color: "var(--text-primary)" }}>{d.sector}</p>
-                            <p style={{ color: "var(--text-muted)" }}>Actual: <span className="tabular-nums" style={{ color: "var(--accent-cyan)" }}>{d.currentDom.toFixed(1)}%</span></p>
-                            <p style={{ color: "var(--text-muted)" }}>Cambio: <span className="tabular-nums" style={{ color: d.changePp >= 0 ? "var(--accent-green)" : "var(--accent-red)" }}>{d.changePp >= 0 ? "+" : ""}{d.changePp.toFixed(2)}pp</span></p>
-                          </div>
-                        );
-                      }}
-                    />
-                    <Bar dataKey="currentDom" radius={[0, 4, 4, 0]}>
-                      {sectorDom.map((entry, i) => (
-                        <Cell key={i} fill={entry.changePp >= 0 ? COLORS.green : COLORS.red} fillOpacity={0.7} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Sector change table */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {sectorDom.map((s) => (
-                  <div key={s.sector} className="text-center py-2 px-2 rounded-lg" style={{ background: "var(--controls-bg)" }}>
-                    <p className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>{s.sector}</p>
-                    <p className="text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>{s.currentDom.toFixed(1)}%</p>
-                    <p className="text-[10px] tabular-nums" style={{ color: s.changePp >= 0 ? "var(--accent-green)" : "var(--accent-red)" }}>
-                      {s.changePp >= 0 ? "+" : ""}{s.changePp.toFixed(2)}pp
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </ChartSection>
-
-        {/* Full stocks table */}
-        <div className="card-glass card-accent-left rounded-xl p-4 sm:p-6 md:p-8 fade-in-up fade-in-up-4">
-          <div className="mb-4 sm:mb-5">
-            <h2 className="mb-2">
-              <span className="font-serif text-base sm:text-lg tracking-wide" style={{ color: "var(--text-primary)" }}>
-                Top 50 Acciones
-              </span>
-              <span className="font-serif italic text-sm sm:text-base sm:ml-2" style={{ color: "var(--text-secondary)", opacity: 0.7 }}>
-                — Dominancia por Market Cap
-              </span>
-            </h2>
-            <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-              % del market cap total de las top 50. Cambio en puntos porcentuales · Período: {stockDateRange}
-            </p>
-          </div>
-          <div className="divider-gradient mb-5" />
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table className="w-full text-[10px] sm:text-[11px]">
-              <thead className="sticky top-0" style={{ background: "var(--bg-card)" }}>
-                <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>#</th>
-                  <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Ticker</th>
-                  <th className="text-left py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Nombre</th>
-                  <th className="text-left py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Sector</th>
-                  <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Dom %</th>
-                  <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Cambio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stockChanges.map((stock, i) => (
-                  <tr key={stock.ticker} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td className="py-2 px-2 tabular-nums" style={{ color: "var(--text-muted)" }}>{i + 1}</td>
-                    <td className="py-2 px-2">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: stock.color }} />
-                        <span className="font-medium" style={{ color: "var(--text-primary)" }}>{stock.ticker}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-2 hidden sm:table-cell" style={{ color: "var(--text-secondary)" }}>{stock.name}</td>
-                    <td className="py-2 px-2 hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>{stock.sector}</td>
-                    <td className="py-2 px-2 text-right tabular-nums" style={{ color: "var(--text-primary)" }}>{stock.currentDom.toFixed(2)}%</td>
-                    <td className="py-2 px-2 text-right">
-                      <span
-                        className="tabular-nums px-1.5 py-0.5 rounded font-medium"
-                        style={{
-                          color: stock.changePp > 0 ? "var(--accent-green)" : stock.changePp < 0 ? "var(--accent-red)" : "var(--text-muted)",
-                          background: stock.changePp > 0 ? "var(--accent-green-bg)" : stock.changePp < 0 ? "var(--accent-red-bg)" : "transparent",
-                        }}
-                      >
-                        {stock.changePp >= 0 ? "+" : ""}{stock.changePp.toFixed(2)}pp
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* ========== FULL SUMMARY TABLE ========== */}
+      {/* 13. Full Summary Table with narratives */}
       <div className="card-glass card-accent-left rounded-xl p-4 sm:p-6 md:p-8 fade-in-up fade-in-up-4">
         <div className="mb-4 sm:mb-5">
           <h2 className="mb-2">
@@ -988,7 +760,7 @@ export default function Dashboard() {
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Actual</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Desv.</th>
-                <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Señal</th>
+                <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Narrativa</th>
               </tr>
             </thead>
             <tbody>
@@ -1003,6 +775,7 @@ export default function Dashboard() {
                     s.signalType === "overbought" ? "var(--accent-red-bg)" :
                     s.signalType === "oversold" ? "var(--accent-green-bg)" :
                     "transparent";
+                  const narrative = generateNarrative(s.pair, s.zScore);
 
                   return (
                     <tr key={s.pair} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
@@ -1019,7 +792,7 @@ export default function Dashboard() {
                           {s.zScore >= 0 ? "+" : ""}{s.zScore.toFixed(1)}σ
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-[9px] sm:text-[10px]" style={{ color: signalColor }}>{s.context}</td>
+                      <td className="py-2.5 px-2 text-[9px] sm:text-[10px] max-w-[200px]" style={{ color: signalColor }}>{narrative}</td>
                     </tr>
                   );
                 });
@@ -1029,7 +802,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Closing */}
+      {/* 14. Closing */}
       <div className="text-center py-8 space-y-4 fade-in-up fade-in-up-5">
         <p className="font-serif italic text-sm sm:text-base" style={{ color: "var(--text-secondary)" }}>
           &ldquo;No preguntes si un activo está caro o barato. Preguntá contra qué lo estás midiendo.&rdquo;
