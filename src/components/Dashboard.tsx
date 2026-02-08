@@ -513,62 +513,99 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ========== OVERLAY: Ratios normalizados ========== */}
+      {/* ========== OVERLAY: Z-scores rolling ========== */}
       <ChartSection
-        title="Overlay — Ratios clave normalizados"
-        subtitle={`${ratioDateRange} · Base 100 desde inicio del período · Escala logarítmica para comparar magnitudes distintas.`}
+        title="Panorama General — Z-Score vs SMA"
+        subtitle={`${ratioDateRange} · Cada ratio normalizado como desviación vs su propia SMA ${SMA_LONG}. Sobre 0 = caro, bajo 0 = barato. Todos comparables en la misma escala.`}
         delay={3}
       >
         {(() => {
-          const base = filteredRatios[0];
-          if (!base) return null;
-          const indexed = filteredRatios.map((d) => ({
-            date: d.date,
-            btcGold: base.btcGold > 0 ? (d.btcGold / base.btcGold) * 100 : 100,
-            goldSilver: base.goldSilver > 0 ? (d.goldSilver / base.goldSilver) * 100 : 100,
-            btcSp500: base.btcSp500 > 0 ? (d.btcSp500 / base.btcSp500) * 100 : 100,
-            sp500Msci: base.sp500Msci > 0 ? (d.sp500Msci / base.sp500Msci) * 100 : 100,
-            btcEth: base.btcEth > 0 ? (d.btcEth / base.btcEth) * 100 : 100,
-          }));
+          // Compute rolling z-score for each key pair using SMA window
+          const overlayKeys: { key: keyof ClassRatioDataPoint; label: string; color: string }[] = [
+            { key: "btcGold", label: "BTC / Oro", color: COLORS.amber },
+            { key: "goldSilver", label: "Oro / Plata", color: COLORS.gold },
+            { key: "btcSp500", label: "BTC / S&P 500", color: COLORS.cyan },
+            { key: "sp500Msci", label: "S&P 500 / MSCI", color: COLORS.blue },
+            { key: "btcEth", label: "BTC / ETH", color: COLORS.purple },
+          ];
+
+          const windowSize = Math.min(SMA_LONG, filteredRatios.length);
+
+          const zScoreData = filteredRatios.map((d, i) => {
+            const point: Record<string, number | string | null> = { date: d.date };
+            for (const { key } of overlayKeys) {
+              if (i < windowSize - 1) {
+                point[key] = null;
+              } else {
+                const window: number[] = [];
+                for (let j = i - windowSize + 1; j <= i; j++) {
+                  window.push(filteredRatios[j][key] as number);
+                }
+                const mean = window.reduce((s, v) => s + v, 0) / window.length;
+                const variance = window.reduce((s, v) => s + (v - mean) ** 2, 0) / window.length;
+                const stdDev = Math.sqrt(variance);
+                const current = d[key] as number;
+                point[key] = stdDev > 0 ? (current - mean) / stdDev : 0;
+              }
+            }
+            return point;
+          });
+
           return (
             <>
               <div className="h-[280px] sm:h-[360px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={indexed} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <LineChart data={zScoreData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" ticks={xTicks} tickFormatter={formatDate} tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
                     <YAxis
-                      scale="log"
-                      domain={["auto", "auto"]}
-                      allowDataOverflow
+                      domain={[-3, 3]}
                       tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v.toFixed(0)}`}
+                      tickFormatter={(v: number) => `${v > 0 ? "+" : ""}${v.toFixed(0)}σ`}
                     />
-                    <Tooltip content={<RatioTooltip />} />
-                    <ReferenceLine y={100} stroke={COLORS.muted} strokeDasharray="6 4" label={{ value: "Base 100", position: "insideTopRight", fill: "var(--text-muted)", fontSize: 9 }} />
-                    <Line type="monotone" dataKey="btcGold" name="BTC / Oro" stroke={COLORS.amber} strokeWidth={1.5} dot={false} />
-                    <Line type="monotone" dataKey="goldSilver" name="Oro / Plata" stroke={COLORS.gold} strokeWidth={1.5} dot={false} />
-                    <Line type="monotone" dataKey="btcSp500" name="BTC / S&P 500" stroke={COLORS.cyan} strokeWidth={1.5} dot={false} />
-                    <Line type="monotone" dataKey="sp500Msci" name="S&P 500 / MSCI" stroke={COLORS.blue} strokeWidth={1.5} dot={false} />
-                    <Line type="monotone" dataKey="btcEth" name="BTC / ETH" stroke={COLORS.purple} strokeWidth={1.5} dot={false} />
+                    <Tooltip
+                      content={({ active, payload, label }: any) => {
+                        if (!active || !payload) return null;
+                        return (
+                          <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "var(--bg-tooltip)", border: "1px solid var(--border)", backdropFilter: "blur(10px)" }}>
+                            <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>{label}</p>
+                            {payload.map((entry: any, i: number) => (
+                              <div key={i} className="flex items-center gap-2 py-0.5">
+                                <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
+                                <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
+                                <span className="font-medium tabular-nums" style={{ color: entry.value > 1 ? "var(--accent-red)" : entry.value < -1 ? "var(--accent-green)" : entry.color }}>
+                                  {entry.value != null ? `${entry.value >= 0 ? "+" : ""}${entry.value.toFixed(2)}σ` : "—"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }}
+                    />
+                    <ReferenceLine y={0} stroke={COLORS.muted} strokeDasharray="6 4" />
+                    <ReferenceLine y={2} stroke={COLORS.red} strokeDasharray="3 6" strokeOpacity={0.3} />
+                    <ReferenceLine y={-2} stroke={COLORS.green} strokeDasharray="3 6" strokeOpacity={0.3} />
+                    <ReferenceLine y={1} stroke={COLORS.red} strokeDasharray="3 6" strokeOpacity={0.15} />
+                    <ReferenceLine y={-1} stroke={COLORS.green} strokeDasharray="3 6" strokeOpacity={0.15} />
+                    {overlayKeys.map(({ key, label, color }) => (
+                      <Line key={key} type="monotone" dataKey={key} name={label} stroke={color} strokeWidth={1.5} dot={false} connectNulls />
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
               <div className="flex flex-wrap gap-4 mt-4 justify-center">
-                {[
-                  { label: "BTC / Oro", color: COLORS.amber },
-                  { label: "Oro / Plata", color: COLORS.gold },
-                  { label: "BTC / S&P 500", color: COLORS.cyan },
-                  { label: "S&P 500 / MSCI", color: COLORS.blue },
-                  { label: "BTC / ETH", color: COLORS.purple },
-                ].map((item) => (
+                {overlayKeys.map((item) => (
                   <div key={item.label} className="flex items-center gap-1.5">
                     <div className="w-2.5 h-0.5 rounded" style={{ background: item.color }} />
                     <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>{item.label}</span>
                   </div>
                 ))}
+              </div>
+              <div className="flex flex-wrap gap-6 mt-2 justify-center">
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--accent-green)", opacity: 0.7 }}>↓ bajo 0 = barato</span>
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--accent-red)", opacity: 0.7 }}>↑ sobre 0 = caro</span>
               </div>
             </>
           );
