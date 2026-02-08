@@ -516,11 +516,13 @@ export default function Dashboard() {
       {/* ========== OVERLAY: Z-scores rolling ========== */}
       <ChartSection
         title="Panorama General — Z-Score vs SMA"
-        subtitle={`${ratioDateRange} · Cada ratio normalizado como desviación vs su propia SMA ${SMA_LONG}. Sobre 0 = caro, bajo 0 = barato. Todos comparables en la misma escala.`}
+        subtitle={`${ratioDateRange} · Z-score rolling (ventana 36 meses) de cada ratio. Sobre 0 = caro, bajo 0 = barato. Todos comparables.`}
         delay={3}
       >
         {(() => {
-          // Compute rolling z-score for each key pair using SMA window
+          // Compute rolling z-score for each key pair
+          // Ventana de 36 meses (3 años) para tener suficientes puntos visibles
+          const ZSCORE_WINDOW = 36;
           const overlayKeys: { key: keyof ClassRatioDataPoint; label: string; color: string }[] = [
             { key: "btcGold", label: "BTC / Oro", color: COLORS.amber },
             { key: "goldSilver", label: "Oro / Plata", color: COLORS.gold },
@@ -529,7 +531,7 @@ export default function Dashboard() {
             { key: "btcEth", label: "BTC / ETH", color: COLORS.purple },
           ];
 
-          const windowSize = Math.min(SMA_LONG, filteredRatios.length);
+          const windowSize = Math.min(ZSCORE_WINDOW, filteredRatios.length);
 
           const zScoreData = filteredRatios.map((d, i) => {
             const point: Record<string, number | string | null> = { date: d.date };
@@ -620,10 +622,10 @@ export default function Dashboard() {
       >
         <div className="h-[280px] sm:h-[360px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={filteredDominance} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} stackOffset="expand">
+            <AreaChart data={filteredDominance} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" ticks={xTicks} tickFormatter={formatDate} tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
+              <YAxis domain={[0, 100]} tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v.toFixed(0)}%`} />
               <Tooltip
                 content={({ active, payload, label }: any) => {
                   if (!active || !payload) return null;
@@ -635,7 +637,7 @@ export default function Dashboard() {
                           <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
                           <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
                           <span className="font-medium tabular-nums" style={{ color: entry.color }}>
-                            {(entry.value as number * 100).toFixed(1)}%
+                            {(entry.value as number).toFixed(1)}%
                           </span>
                         </div>
                       ))}
