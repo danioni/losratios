@@ -27,6 +27,9 @@ import {
   TOP_STOCKS,
   getStockDominanceChanges,
   getSectorDominance,
+  computeRatioSMAs,
+  SMA_LONG,
+  SMA_SHORT,
   type ClassRatioDataPoint,
   type StockDominanceDataPoint,
 } from "@/lib/data";
@@ -34,6 +37,19 @@ import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
 
 type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
+
+const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function formatDateLabel(dateStr: string): string {
+  if (!dateStr || dateStr.length < 7) return dateStr;
+  const [year, month] = dateStr.split("-");
+  const m = parseInt(month, 10);
+  return `${MONTH_NAMES[m - 1]} ${year}`;
+}
+
+function formatDateRange(startDate: string, endDate: string): string {
+  return `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}`;
+}
 
 const DEFAULT_COLORS = {
   green: "#00ff88", greenDim: "#00cc6a", blue: "#3388ff",
@@ -199,11 +215,13 @@ export default function Dashboard() {
 
   const currentPairDef = useMemo(() => PAIR_DEFS.find((p) => p.key === activePairKey), [activePairKey]);
 
-  const { filteredRatios, filteredDominance, filteredStockDom, xTicks } = useMemo(() => {
+  const { filteredRatios, filteredDominance, filteredStockDom, xTicks, ratioDateRange, stockDateRange } = useMemo(() => {
     const { ratios: r, dominance: d, stockDom: sd } = getFilteredData(range);
     const dates = r.map((x) => x.date);
     const ticks = dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
-    return { filteredRatios: r, filteredDominance: d, filteredStockDom: sd, xTicks: ticks };
+    const ratioRange = r.length > 0 ? formatDateRange(r[0].date, r[r.length - 1].date) : "";
+    const stockRange = sd.length > 0 ? formatDateRange(sd[0].date, sd[sd.length - 1].date) : "";
+    return { filteredRatios: r, filteredDominance: d, filteredStockDom: sd, xTicks: ticks, ratioDateRange: ratioRange, stockDateRange: stockRange };
   }, [range]);
 
   // Stock dom x-axis ticks
@@ -213,15 +231,33 @@ export default function Dashboard() {
     return dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
   }, [filteredStockDom]);
 
-  // Pair stats for current selection
-  const pairStats = useMemo(() => {
-    const values = filteredRatios.map((d) => d[activePairKey as keyof ClassRatioDataPoint] as number);
-    const mean = values.reduce((s, v) => s + v, 0) / values.length;
-    const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
+  // Pair stats for current selection — using SMA window instead of full-period mean
+  const { pairStats, smaChartData } = useMemo(() => {
+    const key = activePairKey as keyof ClassRatioDataPoint;
+    const values = filteredRatios.map((d) => d[key] as number);
+
+    // SMA-based mean using the long window
+    const windowSize = Math.min(SMA_LONG, values.length);
+    const windowValues = values.slice(-windowSize);
+    const mean = windowValues.reduce((s, v) => s + v, 0) / windowValues.length;
+    const variance = windowValues.reduce((s, v) => s + (v - mean) ** 2, 0) / windowValues.length;
     const stdDev = Math.sqrt(variance);
     const current = values[values.length - 1];
     const zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
-    return { mean, stdDev, current, zScore, plus1: mean + stdDev, minus1: mean - stdDev, plus2: mean + 2 * stdDev, minus2: mean - 2 * stdDev };
+
+    // Compute SMA series for chart overlay
+    const { sma50, sma200 } = computeRatioSMAs(filteredRatios, key);
+    const chartData = filteredRatios.map((d, i) => ({
+      date: d.date,
+      [activePairKey]: d[key],
+      sma50: sma50[i],
+      sma200: sma200[i],
+    }));
+
+    return {
+      pairStats: { mean, stdDev, current, zScore, plus1: mean + stdDev, minus1: mean - stdDev, plus2: mean + 2 * stdDev, minus2: mean - 2 * stdDev },
+      smaChartData: chartData,
+    };
   }, [filteredRatios, activePairKey]);
 
   const formatDate = (d: string) => {
@@ -301,6 +337,9 @@ export default function Dashboard() {
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 fade-in-up fade-in-up-2">
         <TimeRangeSelector range={range} onChange={setRange} />
+        <span className="text-[10px] tabular-nums tracking-wider" style={{ color: "var(--text-muted)" }}>
+          {ratioDateRange}
+        </span>
       </div>
 
       {/* Key metrics - one per class */}
@@ -329,7 +368,7 @@ export default function Dashboard() {
         {currentPairDef && (
           <ChartSection
             title={`${currentPairDef.name} — ${currentPairDef.description}`}
-            subtitle={`Ratio actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · Desviación: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
+            subtitle={`${ratioDateRange} · Actual: ${formatRatio(pairStats.current)} · SMA ${SMA_LONG}: ${formatRatio(pairStats.mean)} · Desv. vs SMA: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
             delay={3}
           >
             {/* Z-score indicator bar */}
@@ -360,7 +399,7 @@ export default function Dashboard() {
 
             <div className="h-[280px] sm:h-[360px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={filteredRatios} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                <LineChart data={smaChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="mainGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor={pairColor} stopOpacity={0.25} />
@@ -383,51 +422,49 @@ export default function Dashboard() {
                     tickFormatter={(v: number) => formatRatio(v)}
                   />
                   <Tooltip content={<RatioTooltip />} />
-                  {pairStats.minus2 > 0 && (
-                    <ReferenceLine y={pairStats.plus2} stroke={COLORS.red} strokeDasharray="3 6" strokeOpacity={0.3} />
-                  )}
-                  {pairStats.minus2 > 0 && (
-                    <ReferenceLine y={pairStats.minus2} stroke={COLORS.green} strokeDasharray="3 6" strokeOpacity={0.3} />
-                  )}
-                  <ReferenceLine y={pairStats.plus1} stroke={COLORS.red} strokeDasharray="4 4" strokeOpacity={0.2} />
-                  {pairStats.minus1 > 0 && (
-                    <ReferenceLine y={pairStats.minus1} stroke={COLORS.green} strokeDasharray="4 4" strokeOpacity={0.2} />
-                  )}
-                  <ReferenceLine
-                    y={pairStats.mean}
-                    stroke={COLORS.muted}
-                    strokeDasharray="6 4"
-                    label={{
-                      value: `Media: ${formatRatio(pairStats.mean)}`,
-                      position: "insideTopRight",
-                      fill: "var(--text-muted)",
-                      fontSize: 9,
-                    }}
-                  />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey={activePairKey}
                     name={currentPairDef.pair}
                     stroke={pairColor}
-                    fill="url(#mainGrad)"
                     strokeWidth={2}
                     dot={false}
+                    connectNulls
                   />
-                </AreaChart>
+                  <Line
+                    type="monotone"
+                    dataKey="sma50"
+                    name={`SMA ${SMA_SHORT}`}
+                    stroke={COLORS.amber}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                    dot={false}
+                    connectNulls
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="sma200"
+                    name={`SMA ${SMA_LONG}`}
+                    stroke={COLORS.muted}
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
             <div className="flex flex-wrap gap-4 mt-3 justify-center">
               <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5" style={{ background: COLORS.muted, opacity: 0.6 }} />
-                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>Media</span>
+                <div className="w-4 h-0.5 rounded" style={{ background: pairColor }} />
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>Ratio</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5" style={{ background: COLORS.red, opacity: 0.3 }} />
-                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>+1σ / +2σ</span>
+                <div className="w-4 h-0.5 rounded" style={{ background: COLORS.amber, opacity: 0.8 }} />
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>SMA {SMA_SHORT}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5" style={{ background: COLORS.green, opacity: 0.3 }} />
-                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>-1σ / -2σ</span>
+                <div className="w-4 h-0.5 rounded" style={{ background: COLORS.muted, opacity: 0.8 }} />
+                <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</span>
               </div>
             </div>
           </ChartSection>
@@ -441,7 +478,7 @@ export default function Dashboard() {
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
                   <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Par</th>
                   <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Actual</th>
-                  <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Media</th>
+                  <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</th>
                   <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Desv.</th>
                   <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Señal</th>
                 </tr>
@@ -479,7 +516,7 @@ export default function Dashboard() {
       {/* ========== OVERLAY: Ratios normalizados ========== */}
       <ChartSection
         title="Overlay — Ratios clave normalizados"
-        subtitle="Todos los pares principales indexados a Base 100 desde el inicio del período. Muestra cuál ganó o perdió terreno relativo."
+        subtitle={`${ratioDateRange} · Base 100 desde inicio del período · Escala logarítmica para comparar magnitudes distintas.`}
         delay={3}
       >
         {(() => {
@@ -500,7 +537,15 @@ export default function Dashboard() {
                   <LineChart data={indexed} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" ticks={xTicks} tickFormatter={formatDate} tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v.toFixed(0)}`} />
+                    <YAxis
+                      scale="log"
+                      domain={["auto", "auto"]}
+                      allowDataOverflow
+                      tick={{ fill: "var(--text-muted)", fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v.toFixed(0)}`}
+                    />
                     <Tooltip content={<RatioTooltip />} />
                     <ReferenceLine y={100} stroke={COLORS.muted} strokeDasharray="6 4" label={{ value: "Base 100", position: "insideTopRight", fill: "var(--text-muted)", fontSize: 9 }} />
                     <Line type="monotone" dataKey="btcGold" name="BTC / Oro" stroke={COLORS.amber} strokeWidth={1.5} dot={false} />
@@ -533,7 +578,7 @@ export default function Dashboard() {
       {/* ========== DOMINANCE: Macro Market Cap Share ========== */}
       <ChartSection
         title="Dominancia Macro — Peso de cada asset class"
-        subtitle="Market cap de cada clase de activo como % del total (Oro + Plata + Equities + Real Estate + Bonos + Crypto). Muestra cómo migra el capital entre clases."
+        subtitle={`${ratioDateRange} · Market cap de cada clase de activo como % del total (Oro + Plata + Equities + Real Estate + Bonos + Crypto). Muestra cómo migra el capital entre clases.`}
         delay={3}
       >
         <div className="h-[280px] sm:h-[360px]">
@@ -612,7 +657,7 @@ export default function Dashboard() {
       <div className="space-y-4">
         <ChartSection
           title="Dominancia Acciones — Top 50 por Market Cap"
-          subtitle="¿Quién gana terreno? Market cap de cada acción como % del total top-50. Detectá qué empresas están acumulando capital relativo."
+          subtitle={`${stockDateRange} · ¿Quién gana terreno? Market cap de cada acción como % del total top-50. Detectá qué empresas están acumulando capital relativo.`}
           delay={4}
         >
           {/* View toggle */}
@@ -692,6 +737,9 @@ export default function Dashboard() {
 
           {stockView === "gainers" && stockChanges.length > 0 && (
             <div className="space-y-4">
+              <p className="text-[9px] tracking-wider" style={{ color: "var(--text-muted)" }}>
+                Cambio en dominancia: {stockDateRange}
+              </p>
               {/* Gainers */}
               <div>
                 <h4 className="text-[10px] tracking-[0.2em] uppercase mb-3 flex items-center gap-2" style={{ color: "var(--accent-green)" }}>
@@ -751,6 +799,9 @@ export default function Dashboard() {
 
           {stockView === "sectors" && sectorDom.length > 0 && (
             <div className="space-y-4">
+              <p className="text-[9px] tracking-wider" style={{ color: "var(--text-muted)" }}>
+                Cambio por sector: {stockDateRange}
+              </p>
               <div className="h-[250px] sm:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={sectorDom} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
@@ -819,7 +870,7 @@ export default function Dashboard() {
               </span>
             </h2>
             <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-              % del market cap total de las top 50. Cambio en puntos porcentuales vs. inicio del período seleccionado.
+              % del market cap total de las top 50. Cambio en puntos porcentuales · Período: {stockDateRange}
             </p>
           </div>
           <div className="divider-gradient mb-5" />
@@ -879,7 +930,7 @@ export default function Dashboard() {
             </span>
           </h2>
           <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Ratio actual vs. media histórica. La desviación (σ) indica cuán lejos está de su promedio.
+            Ratio actual vs. media móvil (SMA {SMA_LONG}). La desviación (σ) indica cuán lejos está de su tendencia reciente.
           </p>
         </div>
         <div className="divider-gradient mb-5" />
@@ -891,7 +942,7 @@ export default function Dashboard() {
                 <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Clase</th>
                 <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Par</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Actual</th>
-                <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Media</th>
+                <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Desv.</th>
                 <th className="text-left py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Señal</th>
               </tr>

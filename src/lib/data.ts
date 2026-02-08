@@ -433,6 +433,21 @@ function computeStats(values: number[]): { mean: number; stdDev: number } {
   return { mean, stdDev: Math.sqrt(variance) };
 }
 
+// Simple Moving Average — returns null for the first (period - 1) points
+export function computeSMA(values: number[], period: number): (number | null)[] {
+  const result: (number | null)[] = [];
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) {
+      result.push(null);
+    } else {
+      let sum = 0;
+      for (let j = i - period + 1; j <= i; j++) sum += values[j];
+      result.push(sum / period);
+    }
+  }
+  return result;
+}
+
 function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
   const parts = pair.split(" / ");
   const a = parts[0], b = parts[1];
@@ -471,11 +486,19 @@ export const PAIR_DEFS: { name: string; pair: string; key: keyof ClassRatioDataP
   { name: "BTC ÷ Real Estate", pair: "BTC / Real Estate", key: "btcRealEstate", assetClass: "BTC vs Todo", description: "Digital vs. tangible", color: "purple" },
 ];
 
+const SMA_LONG = 200;  // meses — ventana para media y z-score
+const SMA_SHORT = 50;  // meses — media corta para cruces
+
 function buildSummaries(): RatioSummary[] {
   return PAIR_DEFS.map(({ pair, key, assetClass }) => {
     const values = ratioData.map((d) => d[key] as number);
-    const { mean, stdDev } = computeStats(values);
     const current = values[values.length - 1];
+
+    // Usar ventana SMA para media y stdDev (en vez de todo el histórico)
+    const windowSize = Math.min(SMA_LONG, values.length);
+    const windowValues = values.slice(-windowSize);
+    const { mean, stdDev } = computeStats(windowValues);
+
     const zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
     const { signal, signalType, context } = getSignal(zScore, pair);
     return { name: `${pair}`, pair, assetClass, current, mean, stdDev, zScore, signal, signalType, context };
@@ -533,3 +556,17 @@ export function formatRatio(value: number): string {
 export function getSummariesByClass(cls: string): RatioSummary[] {
   return summaries.filter((s) => s.assetClass === cls);
 }
+
+// Compute SMA series for a given ratio key over filtered data
+export function computeRatioSMAs(
+  data: ClassRatioDataPoint[],
+  key: keyof ClassRatioDataPoint,
+): { sma50: (number | null)[]; sma200: (number | null)[] } {
+  const values = data.map((d) => d[key] as number);
+  return {
+    sma50: computeSMA(values, Math.min(SMA_SHORT, values.length)),
+    sma200: computeSMA(values, Math.min(SMA_LONG, values.length)),
+  };
+}
+
+export { SMA_LONG, SMA_SHORT };
