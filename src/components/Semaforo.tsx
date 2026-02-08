@@ -1,6 +1,6 @@
 "use client";
 
-import type { AssetClassSignal, SignalLevel } from "@/lib/data";
+import type { AssetClassSignal, AssetMomentum, SignalLevel } from "@/lib/data";
 
 interface SemaforoProps {
   signals: AssetClassSignal[];
@@ -98,6 +98,23 @@ export default function Semaforo({ signals }: SemaforoProps) {
                     {sig.compositeZScore >= 0 ? "+" : ""}{sig.compositeZScore.toFixed(1)}σ
                   </span>
                 </div>
+              </div>
+
+              {/* Momentum */}
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className="text-[10px] tabular-nums font-medium"
+                  style={{ color: sig.momentum.pctChange12M >= 0 ? "var(--accent-green)" : "var(--accent-red)" }}
+                >
+                  {sig.momentum.pctChange12M >= 0 ? "↑" : "↓"} {sig.momentum.pctChange12M >= 0 ? "+" : ""}{sig.momentum.pctChange12M.toFixed(1)}% 12M
+                </span>
+                <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>·</span>
+                <span
+                  className="text-[9px]"
+                  style={{ color: sig.momentum.aboveSma50 ? "var(--accent-green)" : "var(--accent-red)" }}
+                >
+                  {sig.momentum.aboveSma50 ? "Sobre" : "Bajo"} SMA 50
+                </span>
               </div>
 
               {/* Narrative */}

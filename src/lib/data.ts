@@ -88,6 +88,11 @@ export interface AssetClassMetric {
   interpretation: string;
 }
 
+export interface AssetMomentum {
+  pctChange12M: number;
+  aboveSma50: boolean;
+}
+
 export interface AssetClassSignal {
   assetClass: string;
   icon: string;
@@ -95,6 +100,7 @@ export interface AssetClassSignal {
   compositeZScore: number;
   nominalZScore: number;
   debasementDelta: number;
+  momentum: AssetMomentum;
   metrics: AssetClassMetric[];
   narrative: string;
   actionSignal: string;
@@ -837,6 +843,20 @@ function generateActionSignal(level: SignalLevel): string {
   }
 }
 
+function computeMomentum(values: number[]): AssetMomentum {
+  const n = values.length;
+  const current = values[n - 1];
+  const ago12M = values[Math.max(0, n - 13)]; // ~12 months back
+  const pctChange12M = ago12M > 0 ? ((current - ago12M) / ago12M) * 100 : 0;
+
+  // SMA 50 check
+  const sma50Len = Math.min(50, n);
+  const sma50 = values.slice(n - sma50Len).reduce((s, v) => s + v, 0) / sma50Len;
+  const aboveSma50 = current > sma50;
+
+  return { pctChange12M, aboveSma50 };
+}
+
 function computeAssetClassSignals(): AssetClassSignal[] {
   const signals: AssetClassSignal[] = [];
   const m2Values = rawAssets.map(d => d.m2Global);
@@ -852,6 +872,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   const adjAccionesZ = sp500Dev.adjustedZ * 0.6 + concentrationZ * 0.4;
   const deltaAcciones = nomAccionesZ - adjAccionesZ;
 
+  const accionesMom = computeMomentum(sp500Values);
   const accionesLevel = getSignalLevel(adjAccionesZ);
   const accionesMetrics: AssetClassMetric[] = [
     { label: "vs SMA 200 ajustado (M2)", value: sp500Dev.adjustedDevPct, zScore: sp500Dev.adjustedZ,
@@ -864,6 +885,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   signals.push({
     assetClass: "Acciones", icon: "📈", signal: accionesLevel,
     compositeZScore: adjAccionesZ, nominalZScore: nomAccionesZ, debasementDelta: deltaAcciones,
+    momentum: accionesMom,
     metrics: accionesMetrics, narrative: generateClassNarrative("Acciones", adjAccionesZ),
     actionSignal: generateActionSignal(accionesLevel),
   });
@@ -880,6 +902,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   const adjCryptoZ = btcDev.adjustedZ * 0.6 + btcDomZ * 0.4;
   const deltaCrypto = nomCryptoZ - adjCryptoZ;
 
+  const cryptoMom = computeMomentum(btcValues);
   const cryptoLevel = getSignalLevel(adjCryptoZ);
   const cryptoMetrics: AssetClassMetric[] = [
     { label: "BTC vs SMA 200 ajustado (M2)", value: btcDev.adjustedDevPct, zScore: btcDev.adjustedZ,
@@ -892,6 +915,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   signals.push({
     assetClass: "Crypto", icon: "₿", signal: cryptoLevel,
     compositeZScore: adjCryptoZ, nominalZScore: nomCryptoZ, debasementDelta: deltaCrypto,
+    momentum: cryptoMom,
     metrics: cryptoMetrics, narrative: generateClassNarrative("Crypto", adjCryptoZ),
     actionSignal: generateActionSignal(cryptoLevel),
   });
@@ -907,6 +931,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   const adjOroZ = goldDev.adjustedZ * 0.6 + goldSilverZ * 0.4;
   const deltaOro = nomOroZ - adjOroZ;
 
+  const oroMom = computeMomentum(goldValues);
   const oroLevel = getSignalLevel(adjOroZ);
   const oroMetrics: AssetClassMetric[] = [
     { label: "Oro vs SMA 200 ajustado (M2)", value: goldDev.adjustedDevPct, zScore: goldDev.adjustedZ,
@@ -919,6 +944,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   signals.push({
     assetClass: "Oro", icon: "🥇", signal: oroLevel,
     compositeZScore: adjOroZ, nominalZScore: nomOroZ, debasementDelta: deltaOro,
+    momentum: oroMom,
     metrics: oroMetrics, narrative: generateClassNarrative("Oro", adjOroZ),
     actionSignal: generateActionSignal(oroLevel),
   });
@@ -933,6 +959,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   const adjBonosZ = bondDev.adjustedZ * 0.6 + yieldSpreadZ * 0.4;
   const deltaBonos = nomBonosZ - adjBonosZ;
 
+  const bonosMom = computeMomentum(bondValues);
   const bonosLevel = getSignalLevel(adjBonosZ);
   const bonosMetrics: AssetClassMetric[] = [
     { label: "Bonos vs tendencia ajustada (M2)", value: bondDev.adjustedDevPct, zScore: bondDev.adjustedZ,
@@ -945,6 +972,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   signals.push({
     assetClass: "Bonos", icon: "🏛️", signal: bonosLevel,
     compositeZScore: adjBonosZ, nominalZScore: nomBonosZ, debasementDelta: deltaBonos,
+    momentum: bonosMom,
     metrics: bonosMetrics, narrative: generateClassNarrative("Bonos", adjBonosZ),
     actionSignal: generateActionSignal(bonosLevel),
   });
