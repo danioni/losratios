@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { ratios, summaries, rotationSignals, getFilteredData, formatRatio, type RatioDataPoint } from "@/lib/data";
+import { summaries, rotationSignals, getFilteredData, formatRatio, type DominanceDataPoint } from "@/lib/data";
 import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
 
@@ -61,7 +61,6 @@ function useThemeColors() {
   return colors;
 }
 
-// Custom tooltip
 function RatioTooltip({ active, payload, label }: any) {
   if (!active || !payload) return null;
   return (
@@ -78,10 +77,7 @@ function RatioTooltip({ active, payload, label }: any) {
       </p>
       {payload.map((entry: any, i: number) => (
         <div key={i} className="flex items-center gap-2 py-0.5">
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{ background: entry.color }}
-          />
+          <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
           <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
           <span className="font-medium tabular-nums" style={{ color: entry.color }}>
             {formatRatio(entry.value)}
@@ -92,54 +88,7 @@ function RatioTooltip({ active, payload, label }: any) {
   );
 }
 
-function IndexTooltip({ active, payload, label }: any) {
-  if (!active || !payload) return null;
-  return (
-    <div
-      className="rounded-lg px-4 py-3 text-xs"
-      style={{
-        background: "var(--bg-tooltip)",
-        border: "1px solid var(--border)",
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>
-        {label}
-      </p>
-      {payload.map((entry: any, i: number) => {
-        const val = entry.value as number;
-        const change = val - 100;
-        const changeStr = `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
-        return (
-          <div key={i} className="flex items-center gap-2 py-0.5">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ background: entry.color }}
-            />
-            <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
-            <span className="font-medium tabular-nums" style={{ color: entry.color }}>
-              {val.toFixed(1)}
-            </span>
-            <span
-              className="text-[9px] tabular-nums"
-              style={{ color: change >= 0 ? "var(--accent-green)" : "var(--accent-red)" }}
-            >
-              ({changeStr})
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TimeRangeSelector({
-  range,
-  onChange,
-}: {
-  range: TimeRange;
-  onChange: (r: TimeRange) => void;
-}) {
+function TimeRangeSelector({ range, onChange }: { range: TimeRange; onChange: (r: TimeRange) => void }) {
   const options: TimeRange[] = ["1Y", "3Y", "5Y", "10Y", "MAX"];
   return (
     <div className="flex gap-1 p-1 rounded-lg" style={{ background: "var(--controls-bg)", border: "1px solid var(--border-subtle)" }}>
@@ -162,67 +111,36 @@ function TimeRangeSelector({
   );
 }
 
-// Pair selector for cross-asset
-type CrossPair = "btcGold" | "goldSilver" | "btcSp500" | "realEstateGold";
+// All available cross-asset pairs
+type CrossPair = "btcGold" | "goldSilver" | "btcSp500" | "realEstateGold" | "sp500Gold" | "btcRealEstate" | "teslaGold" | "teslaBtc";
 
-const CROSS_PAIR_CONFIG: Record<CrossPair, { label: string; description: string }> = {
-  btcGold: { label: "BTC / Oro", description: "Reserva digital vs. reserva física" },
-  goldSilver: { label: "Oro / Plata", description: "Ratio histórico. >80 = plata barata, <50 = plata cara" },
-  btcSp500: { label: "BTC / S&P 500", description: "Escasez vs. equity tradicional" },
-  realEstateGold: { label: "Real Estate / Oro", description: "Activo productivo vs. reserva pura" },
+const PAIR_CONFIG: Record<CrossPair, { label: string; description: string; color: string }> = {
+  btcGold: { label: "BTC / Oro", description: "Reserva digital vs. reserva física", color: "amber" },
+  goldSilver: { label: "Oro / Plata", description: "Ratio histórico · >80 = plata barata · <50 = plata cara", color: "gold" },
+  btcSp500: { label: "BTC / S&P 500", description: "Escasez absoluta vs. equity tradicional", color: "cyan" },
+  sp500Gold: { label: "S&P 500 / Oro", description: "Productividad corporativa vs. reserva de valor", color: "blue" },
+  realEstateGold: { label: "Real Estate / Oro", description: "Activo productivo vs. reserva pura", color: "purple" },
+  btcRealEstate: { label: "BTC / Real Estate", description: "Escasez digital vs. activo tangible", color: "green" },
+  teslaGold: { label: "Tesla / Oro", description: "Crecimiento especulativo vs. reserva milenaria", color: "red" },
+  teslaBtc: { label: "Tesla / BTC", description: "Tech equity vs. escasez programática", color: "red" },
 };
 
 function PairSelector({ pair, onChange }: { pair: CrossPair; onChange: (p: CrossPair) => void }) {
-  const pairs: CrossPair[] = ["btcGold", "goldSilver", "btcSp500", "realEstateGold"];
+  const presets: CrossPair[] = ["btcGold", "goldSilver", "btcSp500", "sp500Gold", "realEstateGold", "btcRealEstate", "teslaGold", "teslaBtc"];
   return (
     <div className="flex flex-wrap gap-1 p-1 rounded-lg" style={{ background: "var(--controls-bg)", border: "1px solid var(--border-subtle)" }}>
-      {pairs.map((p) => (
+      {presets.map((p) => (
         <button
           key={p}
           onClick={() => onChange(p)}
-          className="px-2 sm:px-3 py-1.5 rounded-md text-[8px] sm:text-[10px] tracking-wider uppercase transition-all"
+          className="px-2 sm:px-2.5 py-1.5 rounded-md text-[8px] sm:text-[9px] tracking-wider uppercase transition-all"
           style={{
             background: pair === p ? "var(--accent-green-bg-active)" : "transparent",
             color: pair === p ? "var(--accent-green)" : "var(--text-muted)",
             border: pair === p ? "1px solid var(--accent-green-border-active)" : "1px solid transparent",
           }}
         >
-          {CROSS_PAIR_CONFIG[p].label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// Denominator ratio selector
-type DenomRatio = "btcM2" | "goldM2" | "silverM2" | "sp500M2" | "realEstateM2" | "teslaM2" | "msciWorldM2";
-
-const DENOM_RATIO_CONFIG: Record<DenomRatio, { label: string; color: string }> = {
-  btcM2: { label: "BTC", color: "amber" },
-  goldM2: { label: "Oro", color: "gold" },
-  silverM2: { label: "Plata", color: "muted" },
-  sp500M2: { label: "S&P 500", color: "blue" },
-  realEstateM2: { label: "Real Estate", color: "purple" },
-  teslaM2: { label: "Tesla", color: "red" },
-  msciWorldM2: { label: "MSCI World", color: "cyan" },
-};
-
-function DenomRatioSelector({ selected, onChange }: { selected: DenomRatio; onChange: (r: DenomRatio) => void }) {
-  const options: DenomRatio[] = ["btcM2", "goldM2", "silverM2", "sp500M2", "realEstateM2", "teslaM2", "msciWorldM2"];
-  return (
-    <div className="flex flex-wrap gap-1 p-1 rounded-lg" style={{ background: "var(--controls-bg)", border: "1px solid var(--border-subtle)" }}>
-      {options.map((opt) => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className="px-2 sm:px-3 py-1.5 rounded-md text-[8px] sm:text-[10px] tracking-wider uppercase transition-all"
-          style={{
-            background: selected === opt ? "var(--accent-green-bg-active)" : "transparent",
-            color: selected === opt ? "var(--accent-green)" : "var(--text-muted)",
-            border: selected === opt ? "1px solid var(--accent-green-border-active)" : "1px solid transparent",
-          }}
-        >
-          {DENOM_RATIO_CONFIG[opt].label}
+          {PAIR_CONFIG[p].label}
         </button>
       ))}
     </div>
@@ -232,70 +150,56 @@ function DenomRatioSelector({ selected, onChange }: { selected: DenomRatio; onCh
 export default function Dashboard() {
   const [range, setRange] = useState<TimeRange>("MAX");
   const [crossPair, setCrossPair] = useState<CrossPair>("btcGold");
-  const [denomRatio, setDenomRatio] = useState<DenomRatio>("btcM2");
   const COLORS = useThemeColors();
 
-  const filteredData = useMemo(() => {
-    const { ratios: r } = getFilteredData(range);
-    return r;
+  const { filteredData, filteredDominance } = useMemo(() => {
+    const { ratios: r, dominance: d } = getFilteredData(range);
+    return { filteredData: r, filteredDominance: d };
   }, [range]);
 
-  // Compute mean line for current cross pair
-  const crossMean = useMemo(() => {
+  // Mean & std for current pair
+  const pairStats = useMemo(() => {
     const values = filteredData.map((d) => d[crossPair] as number);
-    return values.reduce((s, v) => s + v, 0) / values.length;
+    const mean = values.reduce((s, v) => s + v, 0) / values.length;
+    const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    const current = values[values.length - 1];
+    const zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
+    return { mean, stdDev, current, zScore, plus1: mean + stdDev, minus1: mean - stdDev, plus2: mean + 2 * stdDev, minus2: mean - 2 * stdDev };
   }, [filteredData, crossPair]);
 
-  // Compute mean for denominator ratio
-  const denomMean = useMemo(() => {
-    const values = filteredData.map((d) => d[denomRatio] as number);
-    return values.reduce((s, v) => s + v, 0) / values.length;
-  }, [filteredData, denomRatio]);
-
-  // Indexed data for Panorama General (base 100 = first point of filtered range)
-  const indexedData = useMemo(() => {
-    if (filteredData.length === 0) return [];
-    const base = filteredData[0];
-    const keys: (keyof RatioDataPoint)[] = ["btcM2", "goldM2", "silverM2", "sp500M2", "realEstateM2"];
-    return filteredData.map((d) => {
-      const row: Record<string, string | number> = { date: d.date };
-      for (const k of keys) {
-        const baseVal = base[k] as number;
-        const curVal = d[k] as number;
-        row[`${k}_idx`] = baseVal > 0 ? (curVal / baseVal) * 100 : 100;
-      }
-      return row;
-    });
+  // S2F mean
+  const s2fMean = useMemo(() => {
+    const vals = filteredData.map((d) => d.btcGoldS2F);
+    return vals.reduce((s, v) => s + v, 0) / vals.length;
   }, [filteredData]);
 
   // X-axis ticks
   const xTicks = useMemo(() => {
     const dates = filteredData.map((d) => d.date);
-    if (dates.length <= 24) {
-      return dates.filter((_, i) => i % 3 === 0);
-    }
+    if (dates.length <= 24) return dates.filter((_, i) => i % 3 === 0);
     return dates.filter((_, i) => i % 12 === 0);
   }, [filteredData]);
 
-  // Format date for display
   const formatDate = (d: string) => {
     if (d.length <= 4) return d;
-    const parts = d.split("-");
-    return `${parts[0]}`;
+    return d.split("-")[0];
   };
 
-  // Key ratios for MetricCards
+  // Top 3 key metrics for cards
   const keyMetrics = useMemo(() => {
     return [
       summaries.find((s) => s.pair === "BTC / Oro")!,
       summaries.find((s) => s.pair === "Oro / Plata")!,
-      summaries.find((s) => s.pair === "BTC / Denominador")!,
+      summaries.find((s) => s.pair === "BTC / S&P 500")!,
     ];
   }, []);
 
   const getColorValue = (colorKey: string): string => {
-    return COLORS[colorKey as keyof typeof COLORS] || COLORS.green;
+    return COLORS[colorKey as keyof typeof COLORS] || COLORS.cyan;
   };
+
+  const pairColor = getColorValue(PAIR_CONFIG[crossPair].color);
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 sm:space-y-8 relative z-10">
@@ -308,9 +212,9 @@ export default function Dashboard() {
           Los ratios son señal.
         </p>
         <p className="text-[11px] sm:text-xs leading-relaxed max-w-2xl mx-auto" style={{ color: "var(--text-muted)" }}>
-          Cruzamos el numerador (oferta/escasez de activos) con el denominador (liquidez global)
-          para encontrar activos sobrevendidos o sobrevalorados en términos reales,
-          y detectar pares desalineados para rotación de capital.
+          Si medís un activo en dólares, estás midiendo con una vara que se encoge.
+          Acá medimos activos contra activos — eliminando el ruido monetario.
+          ¿BTC está caro? Depende contra qué lo compares.
         </p>
       </div>
 
@@ -328,21 +232,15 @@ export default function Dashboard() {
             </svg>
             Señales de Rotación
           </h3>
-          {rotationSignals.slice(0, 3).map((sig, i) => (
-            <div
-              key={i}
-              className="signal-badge-gold"
-            >
+          {rotationSignals.slice(0, 4).map((sig, i) => (
+            <div key={i} className="signal-badge-gold">
               <span
                 className="text-[10px] sm:text-[11px] font-medium"
                 style={{ color: sig.type === "rotate_from" ? "var(--accent-red)" : "var(--accent-green)" }}
               >
                 {sig.type === "rotate_from" ? "↗" : "↙"} {sig.message}
               </span>
-              <span
-                className="text-[9px] tabular-nums ml-auto"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <span className="text-[9px] tabular-nums ml-auto" style={{ color: "var(--text-muted)" }}>
                 {sig.zScore >= 0 ? "+" : ""}{sig.zScore.toFixed(1)}σ
               </span>
             </div>
@@ -370,98 +268,55 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ========== SECTION 1: Activo ÷ Denominador ========== */}
+      {/* ========== MAIN CHART: Cross-Asset Ratio ========== */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <h3
-            className="font-serif text-base sm:text-lg"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Activo ÷ Denominador
+          <h3 className="font-serif text-base sm:text-lg" style={{ color: "var(--text-primary)" }}>
+            Cross-Asset Ratios
           </h3>
-          <DenomRatioSelector selected={denomRatio} onChange={setDenomRatio} />
         </div>
+        <PairSelector pair={crossPair} onChange={setCrossPair} />
 
         <ChartSection
-          title={`${DENOM_RATIO_CONFIG[denomRatio].label} ÷ M2 Global — Precio real descontando expansión monetaria`}
-          subtitle={`Si el activo sube 20% pero el denominador creció 25%, perdió valor en términos reales. La línea punteada es la media histórica.`}
+          title={`${PAIR_CONFIG[crossPair].label} — ${PAIR_CONFIG[crossPair].description}`}
+          subtitle={`Ratio actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · Desviación: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
           delay={3}
         >
-          <div className="h-[250px] sm:h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={filteredData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="denomGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={getColorValue(DENOM_RATIO_CONFIG[denomRatio].color)} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={getColorValue(DENOM_RATIO_CONFIG[denomRatio].color)} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  ticks={xTicks}
-                  tickFormatter={formatDate}
-                  tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => formatRatio(v)}
-                />
-                <Tooltip content={<RatioTooltip />} />
-                <ReferenceLine
-                  y={denomMean}
-                  stroke={COLORS.muted}
-                  strokeDasharray="6 4"
-                  label={{
-                    value: `Media: ${formatRatio(denomMean)}`,
-                    position: "insideTopRight",
-                    fill: "var(--text-muted)",
-                    fontSize: 9,
+          {/* Z-score indicator bar */}
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--controls-bg)" }}>
+              <div className="relative h-full">
+                {/* Zones */}
+                <div className="absolute inset-0 flex">
+                  <div className="flex-1" style={{ background: "rgba(0, 255, 136, 0.15)" }} />
+                  <div className="flex-1" style={{ background: "rgba(0, 255, 136, 0.05)" }} />
+                  <div className="flex-1" style={{ background: "transparent" }} />
+                  <div className="flex-1" style={{ background: "rgba(255, 51, 85, 0.05)" }} />
+                  <div className="flex-1" style={{ background: "rgba(255, 51, 85, 0.15)" }} />
+                </div>
+                {/* Marker */}
+                <div
+                  className="absolute top-0 bottom-0 w-1 rounded-full"
+                  style={{
+                    background: pairStats.zScore > 1 ? "var(--accent-red)" : pairStats.zScore < -1 ? "var(--accent-green)" : "var(--accent-cyan)",
+                    left: `${Math.min(Math.max((pairStats.zScore + 3) / 6 * 100, 2), 98)}%`,
+                    boxShadow: `0 0 6px ${pairStats.zScore > 1 ? "var(--accent-red)" : pairStats.zScore < -1 ? "var(--accent-green)" : "var(--accent-cyan)"}`,
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey={denomRatio}
-                  name={`${DENOM_RATIO_CONFIG[denomRatio].label} ÷ M2`}
-                  stroke={getColorValue(DENOM_RATIO_CONFIG[denomRatio].color)}
-                  fill="url(#denomGrad)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+              </div>
+            </div>
+            <span className="text-[9px] tracking-wider uppercase whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+              -3σ → +3σ
+            </span>
           </div>
-        </ChartSection>
-      </div>
 
-      {/* ========== SECTION 2: Cross-Asset Ratios ========== */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h3
-            className="font-serif text-base sm:text-lg"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Activo A ÷ Activo B
-          </h3>
-          <PairSelector pair={crossPair} onChange={setCrossPair} />
-        </div>
-
-        <ChartSection
-          title={`${CROSS_PAIR_CONFIG[crossPair].label} — ${CROSS_PAIR_CONFIG[crossPair].description}`}
-          subtitle="Ratios entre activos que eliminan el efecto del denominador. La línea punteada muestra la media histórica como ancla."
-          delay={4}
-        >
-          <div className="h-[250px] sm:h-[320px]">
+          <div className="h-[280px] sm:h-[360px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={filteredData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                 <defs>
-                  <linearGradient id="crossGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.cyan} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.cyan} stopOpacity={0} />
+                  <linearGradient id="mainGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={pairColor} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={pairColor} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -480,12 +335,25 @@ export default function Dashboard() {
                   tickFormatter={(v: number) => formatRatio(v)}
                 />
                 <Tooltip content={<RatioTooltip />} />
+                {/* +2σ / -2σ bands */}
+                {pairStats.minus2 > 0 && (
+                  <ReferenceLine y={pairStats.plus2} stroke={COLORS.red} strokeDasharray="3 6" strokeOpacity={0.3} />
+                )}
+                {pairStats.minus2 > 0 && (
+                  <ReferenceLine y={pairStats.minus2} stroke={COLORS.green} strokeDasharray="3 6" strokeOpacity={0.3} />
+                )}
+                {/* +1σ / -1σ */}
+                <ReferenceLine y={pairStats.plus1} stroke={COLORS.red} strokeDasharray="4 4" strokeOpacity={0.2} />
+                {pairStats.minus1 > 0 && (
+                  <ReferenceLine y={pairStats.minus1} stroke={COLORS.green} strokeDasharray="4 4" strokeOpacity={0.2} />
+                )}
+                {/* Mean */}
                 <ReferenceLine
-                  y={crossMean}
+                  y={pairStats.mean}
                   stroke={COLORS.muted}
                   strokeDasharray="6 4"
                   label={{
-                    value: `Media: ${formatRatio(crossMean)}`,
+                    value: `Media: ${formatRatio(pairStats.mean)}`,
                     position: "insideTopRight",
                     fill: "var(--text-muted)",
                     fontSize: 9,
@@ -494,27 +362,48 @@ export default function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey={crossPair}
-                  name={CROSS_PAIR_CONFIG[crossPair].label}
-                  stroke={COLORS.cyan}
-                  fill="url(#crossGrad)"
+                  name={PAIR_CONFIG[crossPair].label}
+                  stroke={pairColor}
+                  fill="url(#mainGrad)"
                   strokeWidth={2}
                   dot={false}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          {/* Band legend */}
+          <div className="flex flex-wrap gap-4 mt-3 justify-center">
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-0.5" style={{ background: COLORS.muted, opacity: 0.6 }} />
+              <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>Media</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-0.5" style={{ background: COLORS.red, opacity: 0.3 }} />
+              <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>+1σ / +2σ</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-0.5" style={{ background: COLORS.green, opacity: 0.3 }} />
+              <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>-1σ / -2σ</span>
+            </div>
+          </div>
         </ChartSection>
       </div>
 
-      {/* ========== SECTION 3: S2F-Adjusted ========== */}
+      {/* ========== S2F-Adjusted ========== */}
       <ChartSection
-        title="BTC ÷ Oro (S2F-Adjusted) — Comparación en igualdad de condiciones de emisión"
-        subtitle="Ratio ponderado por stock-to-flow relativo entre activos. Normaliza la comparación para activos con diferentes perfiles de escasez."
-        delay={5}
+        title="BTC ÷ Oro (S2F-Adjusted) — Ajustado por perfil de emisión"
+        subtitle="Divide el ratio BTC/Oro por el ratio de sus stock-to-flows. Si BTC tiene S2F de 120 y Oro de 62, BTC es ~2x más escaso — el ratio se ajusta por eso."
+        delay={4}
       >
         <div className="h-[250px] sm:h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <AreaChart data={filteredData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+              <defs>
+                <linearGradient id="s2fGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={COLORS.gold} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={COLORS.gold} stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -532,35 +421,39 @@ export default function Dashboard() {
               />
               <Tooltip content={<RatioTooltip />} />
               <ReferenceLine
-                y={(() => {
-                  const vals = filteredData.map((d) => d.btcGoldS2F);
-                  return vals.reduce((s, v) => s + v, 0) / vals.length;
-                })()}
+                y={s2fMean}
                 stroke={COLORS.muted}
                 strokeDasharray="6 4"
+                label={{
+                  value: `Media: ${formatRatio(s2fMean)}`,
+                  position: "insideTopRight",
+                  fill: "var(--text-muted)",
+                  fontSize: 9,
+                }}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="btcGoldS2F"
                 name="BTC/Oro (S2F-adj)"
                 stroke={COLORS.gold}
+                fill="url(#s2fGrad)"
                 strokeWidth={2}
                 dot={false}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </ChartSection>
 
-      {/* ========== SECTION 4: Multi-ratio overlay ========== */}
+      {/* ========== DOMINANCE: Market Cap Share ========== */}
       <ChartSection
-        title="Panorama General — Todos los activos ÷ Denominador"
-        subtitle="Vista comparativa indexada (Base 100 = inicio del período). Muestra qué activos ganaron o perdieron valor real relativo a la liquidez global."
+        title="Dominancia — Peso de cada activo sobre el total"
+        subtitle="Market cap de cada activo como % del total (BTC + Oro + Plata + Equities + Real Estate + Bonos). Muestra cómo migra el capital entre clases de activos."
         delay={3}
       >
         <div className="h-[280px] sm:h-[360px]">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={indexedData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+            <AreaChart data={filteredDominance} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} stackOffset="expand">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -574,43 +467,142 @@ export default function Dashboard() {
                 tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v: number) => `${v.toFixed(0)}`}
+                tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
               />
-              <Tooltip content={<IndexTooltip />} />
-              <ReferenceLine
-                y={100}
-                stroke={COLORS.muted}
-                strokeDasharray="6 4"
-                label={{
-                  value: "Base 100",
-                  position: "insideTopRight",
-                  fill: "var(--text-muted)",
-                  fontSize: 9,
+              <Tooltip
+                content={({ active, payload, label }: any) => {
+                  if (!active || !payload) return null;
+                  return (
+                    <div className="rounded-lg px-4 py-3 text-xs" style={{ background: "var(--bg-tooltip)", border: "1px solid var(--border)", backdropFilter: "blur(10px)" }}>
+                      <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>{label}</p>
+                      {payload.map((entry: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 py-0.5">
+                          <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
+                          <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
+                          <span className="font-medium tabular-nums" style={{ color: entry.color }}>
+                            {(entry.value as number).toFixed(2)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
                 }}
               />
-              <Line type="monotone" dataKey="btcM2_idx" name="BTC" stroke={COLORS.amber} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="goldM2_idx" name="Oro" stroke={COLORS.gold} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="sp500M2_idx" name="S&P 500" stroke={COLORS.blue} strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="silverM2_idx" name="Plata" stroke={COLORS.muted} strokeWidth={1} dot={false} strokeDasharray="4 2" />
-              <Line type="monotone" dataKey="realEstateM2_idx" name="Real Estate" stroke={COLORS.purple} strokeWidth={1} dot={false} strokeDasharray="4 2" />
-            </LineChart>
+              <Area type="monotone" dataKey="realEstateDom" name="Real Estate" stackId="1" stroke="none" fill={COLORS.purple} fillOpacity={0.7} />
+              <Area type="monotone" dataKey="bondsDom" name="Bonos" stackId="1" stroke="none" fill={COLORS.blue} fillOpacity={0.5} />
+              <Area type="monotone" dataKey="equitiesDom" name="Equities" stackId="1" stroke="none" fill={COLORS.cyan} fillOpacity={0.6} />
+              <Area type="monotone" dataKey="goldDom" name="Oro" stackId="1" stroke="none" fill={COLORS.gold} fillOpacity={0.7} />
+              <Area type="monotone" dataKey="silverDom" name="Plata" stackId="1" stroke="none" fill={COLORS.muted} fillOpacity={0.5} />
+              <Area type="monotone" dataKey="btcDom" name="Bitcoin" stackId="1" stroke="none" fill={COLORS.amber} fillOpacity={0.8} />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
         {/* Legend */}
         <div className="flex flex-wrap gap-4 mt-4 justify-center">
           {[
-            { label: "BTC", color: COLORS.amber },
+            { label: "Bitcoin", color: COLORS.amber },
             { label: "Oro", color: COLORS.gold },
-            { label: "S&P 500", color: COLORS.blue },
             { label: "Plata", color: COLORS.muted },
+            { label: "Equities", color: COLORS.cyan },
+            { label: "Bonos", color: COLORS.blue },
             { label: "Real Estate", color: COLORS.purple },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-0.5 rounded" style={{ background: item.color }} />
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ background: item.color, opacity: 0.7 }} />
               <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>{item.label}</span>
             </div>
           ))}
         </div>
+        {/* Current dominance stats */}
+        {filteredDominance.length > 0 && (() => {
+          const latest = filteredDominance[filteredDominance.length - 1];
+          const items = [
+            { label: "Real Estate", value: latest.realEstateDom },
+            { label: "Bonos", value: latest.bondsDom },
+            { label: "Equities", value: latest.equitiesDom },
+            { label: "Oro", value: latest.goldDom },
+            { label: "BTC", value: latest.btcDom },
+            { label: "Plata", value: latest.silverDom },
+          ].sort((a, b) => b.value - a.value);
+          return (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              {items.map((item) => (
+                <div key={item.label} className="text-center py-2 px-1 rounded-lg" style={{ background: "var(--controls-bg)" }}>
+                  <p className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>{item.label}</p>
+                  <p className="text-sm font-medium tabular-nums" style={{ color: "var(--text-primary)" }}>{item.value.toFixed(1)}%</p>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </ChartSection>
+
+      {/* ========== MULTI-PAIR OVERLAY ========== */}
+      <ChartSection
+        title="Overlay — Ratios clave normalizados"
+        subtitle="Todos los pares principales indexados a Base 100 desde el inicio del período. Muestra cuál ganó o perdió terreno relativo."
+        delay={3}
+      >
+        {(() => {
+          // Index all cross-asset ratios to base 100
+          const base = filteredData[0];
+          const indexed = filteredData.map((d) => ({
+            date: d.date,
+            btcGold: base.btcGold > 0 ? (d.btcGold / base.btcGold) * 100 : 100,
+            goldSilver: base.goldSilver > 0 ? (d.goldSilver / base.goldSilver) * 100 : 100,
+            btcSp500: base.btcSp500 > 0 ? (d.btcSp500 / base.btcSp500) * 100 : 100,
+            sp500Gold: base.sp500Gold > 0 ? (d.sp500Gold / base.sp500Gold) * 100 : 100,
+          }));
+          return (
+            <>
+              <div className="h-[280px] sm:h-[360px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={indexed} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      ticks={xTicks}
+                      tickFormatter={formatDate}
+                      tick={{ fill: "var(--text-muted)", fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: "var(--text-muted)", fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v: number) => `${v.toFixed(0)}`}
+                    />
+                    <Tooltip content={<RatioTooltip />} />
+                    <ReferenceLine
+                      y={100}
+                      stroke={COLORS.muted}
+                      strokeDasharray="6 4"
+                      label={{ value: "Base 100", position: "insideTopRight", fill: "var(--text-muted)", fontSize: 9 }}
+                    />
+                    <Line type="monotone" dataKey="btcGold" name="BTC / Oro" stroke={COLORS.amber} strokeWidth={1.5} dot={false} />
+                    <Line type="monotone" dataKey="goldSilver" name="Oro / Plata" stroke={COLORS.gold} strokeWidth={1.5} dot={false} />
+                    <Line type="monotone" dataKey="btcSp500" name="BTC / S&P 500" stroke={COLORS.cyan} strokeWidth={1.5} dot={false} />
+                    <Line type="monotone" dataKey="sp500Gold" name="S&P 500 / Oro" stroke={COLORS.blue} strokeWidth={1.5} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap gap-4 mt-4 justify-center">
+                {[
+                  { label: "BTC / Oro", color: COLORS.amber },
+                  { label: "Oro / Plata", color: COLORS.gold },
+                  { label: "BTC / S&P 500", color: COLORS.cyan },
+                  { label: "S&P 500 / Oro", color: COLORS.blue },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-0.5 rounded" style={{ background: item.color }} />
+                    <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
       </ChartSection>
 
       {/* ========== SUMMARY TABLE ========== */}
@@ -621,11 +613,11 @@ export default function Dashboard() {
               Tabla de Pares
             </span>
             <span className="font-serif italic text-sm sm:text-base sm:ml-2" style={{ color: "var(--text-secondary)", opacity: 0.7 }}>
-              — Resumen de todos los ratios
+              — Todos los ratios cross-asset
             </span>
           </h2>
           <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Ratio actual vs. media histórica. La desviación estándar (σ) indica cuán lejos está el ratio de su promedio.
+            Ratio actual vs. media histórica. La desviación (σ) indica cuán lejos está de su promedio. Sobrecomprado = el numerador está caro vs. el denominador.
           </p>
         </div>
         <div className="divider-gradient mb-5" />
@@ -671,8 +663,8 @@ export default function Dashboard() {
                         {s.zScore >= 0 ? "+" : ""}{s.zScore.toFixed(1)}σ
                       </span>
                     </td>
-                    <td className="py-2.5 px-2" style={{ color: signalColor }}>
-                      {s.signal}
+                    <td className="py-2.5 px-2 text-[9px] sm:text-[10px]" style={{ color: signalColor }}>
+                      {s.context}
                     </td>
                   </tr>
                 );
