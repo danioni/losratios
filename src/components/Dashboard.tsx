@@ -15,8 +15,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import {
-  summaries,
-  rotationSignals,
+  summaries as fallbackSummaries,
+  rotationSignals as fallbackRotationSignals,
   getFilteredData,
   formatRatio,
   PAIR_DEFS,
@@ -26,14 +26,17 @@ import {
   computeBollingerBands,
   computeStockMomentum,
   generateNarrative,
-  assetClassSignals,
-  cryptoDominanceData,
-  cryptoRotation,
-  assetPerformance,
-  assetProjections,
+  assetClassSignals as fallbackAssetClassSignals,
+  cryptoDominanceData as fallbackCryptoDominanceData,
+  cryptoRotation as fallbackCryptoRotation,
+  assetPerformance as fallbackAssetPerformance,
+  assetProjections as fallbackAssetProjections,
+  assetData as fallbackAssetData,
+  stockDominance as fallbackStockDominance,
   SMA_LONG,
   SMA_SHORT,
   type ClassRatioDataPoint,
+  type ComputedMarketData,
 } from "@/lib/data";
 import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
@@ -206,7 +209,40 @@ export default function Dashboard() {
   const [range, setRange] = useState<TimeRange>("MAX");
   const [activeClass, setActiveClass] = useState<string>("Commodities");
   const [activePairKey, setActivePairKey] = useState<string>("goldSilver");
+  const [liveData, setLiveData] = useState<ComputedMarketData | null>(null);
+  const [dataSource, setDataSource] = useState<"mock" | "live">("mock");
   const COLORS = useThemeColors();
+
+  // Fetch live market data on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/market-data")
+      .then((res) => {
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        return res.json();
+      })
+      .then((data: ComputedMarketData) => {
+        if (!cancelled && data.assetData?.length > 0) {
+          setLiveData(data);
+          setDataSource("live");
+        }
+      })
+      .catch(() => {
+        // Silently fall back to mock data
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Resolve data sources: live if available, else fallback
+  const summaries = liveData?.summaries ?? fallbackSummaries;
+  const currentRotationSignals = liveData?.rotationSignals ?? fallbackRotationSignals;
+  const currentAssetClassSignals = liveData?.assetClassSignals ?? fallbackAssetClassSignals;
+  const currentCryptoDominanceData = liveData?.cryptoDominanceData ?? fallbackCryptoDominanceData;
+  const currentCryptoRotation = liveData?.cryptoRotation ?? fallbackCryptoRotation;
+  const currentAssetPerformance = liveData?.assetPerformance ?? fallbackAssetPerformance;
+  const currentAssetProjections = liveData?.assetProjections ?? fallbackAssetProjections;
+  const sourceAssets = liveData?.assetData ?? fallbackAssetData;
+  const sourceStockDom = liveData?.stockDominance ?? fallbackStockDominance;
 
   const classPairs = useMemo(() => PAIR_DEFS.filter((p) => p.assetClass === activeClass), [activeClass]);
 
@@ -218,13 +254,13 @@ export default function Dashboard() {
   const currentPairDef = useMemo(() => PAIR_DEFS.find((p) => p.key === activePairKey), [activePairKey]);
 
   const { filteredRatios, filteredDominance, filteredStockDom, filteredCryptoDom, xTicks, ratioDateRange, stockDateRange } = useMemo(() => {
-    const { ratios: r, dominance: d, stockDom: sd, cryptoDom: cd } = getFilteredData(range);
+    const { ratios: r, dominance: d, stockDom: sd, cryptoDom: cd } = getFilteredData(range, sourceAssets, sourceStockDom);
     const dates = r.map((x) => x.date);
     const ticks = dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
     const ratioRange = r.length > 0 ? formatDateRange(r[0].date, r[r.length - 1].date) : "";
     const stockRange = sd.length > 0 ? formatDateRange(sd[0].date, sd[sd.length - 1].date) : "";
     return { filteredRatios: r, filteredDominance: d, filteredStockDom: sd, filteredCryptoDom: cd, xTicks: ticks, ratioDateRange: ratioRange, stockDateRange: stockRange };
-  }, [range]);
+  }, [range, sourceAssets, sourceStockDom]);
 
   const stockXTicks = useMemo(() => {
     if (!filteredStockDom.length) return [];
@@ -284,9 +320,9 @@ export default function Dashboard() {
       summaries.find((s) => s.pair === "BTC / ETH"),
       summaries.find((s) => s.pair === "BTC / Oro"),
     ].filter(Boolean) as typeof summaries;
-  }, []);
+  }, [summaries]);
 
-  const classSummaries = useMemo(() => getSummariesByClass(activeClass), [activeClass]);
+  const classSummaries = useMemo(() => getSummariesByClass(activeClass, summaries), [activeClass, summaries]);
 
   const getColorValue = (colorKey: string): string => {
     return COLORS[colorKey as keyof typeof COLORS] || COLORS.cyan;
@@ -315,7 +351,7 @@ export default function Dashboard() {
       </div>
 
       {/* 2. Rotation Signals */}
-      {rotationSignals.length > 0 && (
+      {currentRotationSignals.length > 0 && (
         <div className="space-y-2 fade-in-up fade-in-up-2">
           <h3
             className="text-[10px] tracking-[0.2em] uppercase mb-3 flex items-center gap-2"
@@ -328,7 +364,7 @@ export default function Dashboard() {
             </svg>
             Señales de Rotación
           </h3>
-          {rotationSignals.slice(0, 4).map((sig, i) => (
+          {currentRotationSignals.slice(0, 4).map((sig, i) => (
             <div key={i} className="signal-badge-gold">
               <span
                 className="text-[10px] sm:text-[11px] font-medium"
@@ -345,7 +381,7 @@ export default function Dashboard() {
       )}
 
       {/* 3. Semáforo */}
-      <Semaforo signals={assetClassSignals} colors={COLORS} />
+      <Semaforo signals={currentAssetClassSignals} colors={COLORS} />
 
       {/* 4. Controls */}
       <div className="flex flex-wrap items-center gap-3 fade-in-up fade-in-up-2">
@@ -371,10 +407,10 @@ export default function Dashboard() {
       </div>
 
       {/* 6. Performance Histórica */}
-      <PerformanceTable data={assetPerformance} colors={COLORS} />
+      <PerformanceTable data={currentAssetPerformance} colors={COLORS} />
 
       {/* 7. Proyecciones Multi-Factor */}
-      <Projections projections={assetProjections} colors={COLORS} />
+      <Projections projections={currentAssetProjections} colors={COLORS} />
 
       {/* 8. Stock Momentum (replaces old stock dominance) */}
       <StockMomentum
@@ -388,7 +424,7 @@ export default function Dashboard() {
       {/* 9. Crypto Dominance */}
       <CryptoDominance
         data={filteredCryptoDom}
-        rotation={cryptoRotation}
+        rotation={currentCryptoRotation}
         xTicks={cryptoXTicks}
         colors={COLORS}
       />
@@ -765,7 +801,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {ASSET_CLASSES.map((cls) => {
-                const classSums = getSummariesByClass(cls);
+                const classSums = getSummariesByClass(cls, summaries);
                 return classSums.map((s, idx) => {
                   const signalColor =
                     s.signalType === "overbought" ? "var(--accent-red)" :
@@ -810,7 +846,7 @@ export default function Dashboard() {
         <div className="divider-gradient max-w-xs mx-auto" />
         <div className="space-y-1">
           <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-            Datos simulados · Estructura lista para APIs reales
+            {dataSource === "live" ? "Datos en vivo · Actualización cada hora" : "Datos simulados · Cargando datos reales..."}
           </p>
           <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>
             CoinGecko · FRED · Yahoo Finance · World Gold Council

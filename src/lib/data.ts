@@ -857,15 +857,18 @@ function computeMomentum(values: number[]): AssetMomentum {
   return { pctChange12M, aboveSma50 };
 }
 
-function computeAssetClassSignals(): AssetClassSignal[] {
+function computeAssetClassSignals(
+  assets: AssetDataPoint[],
+  sums: RatioSummary[],
+): AssetClassSignal[] {
   const signals: AssetClassSignal[] = [];
-  const m2Values = rawAssets.map(d => d.m2Global);
+  const m2Values = assets.map(d => d.m2Global);
 
   // --- ACCIONES ---
-  const sp500Values = rawAssets.map(d => d.sp500);
+  const sp500Values = assets.map(d => d.sp500);
   const sp500Dev = computeM2AdjustedDeviation(sp500Values, m2Values, 200, 8);
 
-  const sp500NasdaqSummary = summariesData.find(s => s.pair === "S&P 500 / Nasdaq");
+  const sp500NasdaqSummary = sums.find(s => s.pair === "S&P 500 / Nasdaq");
   const concentrationZ = sp500NasdaqSummary ? sp500NasdaqSummary.zScore : 0;
 
   const nomAccionesZ = sp500Dev.nominalZ * 0.6 + concentrationZ * 0.4;
@@ -891,10 +894,10 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   });
 
   // --- CRYPTO ---
-  const btcValues = rawAssets.map(d => d.btc);
+  const btcValues = assets.map(d => d.btc);
   const btcDev = computeM2AdjustedDeviation(btcValues, m2Values, 200, 30);
 
-  const latest = rawAssets[rawAssets.length - 1];
+  const latest = assets[assets.length - 1];
   const btcDominance = latest.cryptoMcap > 0 ? (latest.btcMcap / latest.cryptoMcap) * 100 : 50;
   const btcDomZ = (btcDominance - 55) / 10;
 
@@ -921,10 +924,10 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   });
 
   // --- ORO ---
-  const goldValues = rawAssets.map(d => d.gold);
+  const goldValues = assets.map(d => d.gold);
   const goldDev = computeM2AdjustedDeviation(goldValues, m2Values, 200, 6);
 
-  const goldSilverSummary = summariesData.find(s => s.pair === "Oro / Plata");
+  const goldSilverSummary = sums.find(s => s.pair === "Oro / Plata");
   const goldSilverZ = goldSilverSummary ? goldSilverSummary.zScore : 0;
 
   const nomOroZ = goldDev.nominalZ * 0.6 + goldSilverZ * 0.4;
@@ -950,7 +953,7 @@ function computeAssetClassSignals(): AssetClassSignal[] {
   });
 
   // --- BONOS ---
-  const bondValues = rawAssets.map(d => d.bondsMcap);
+  const bondValues = assets.map(d => d.bondsMcap);
   const bondDev = computeM2AdjustedDeviation(bondValues, m2Values, 60, 3);
 
   const yieldSpreadZ = bondDev.adjustedZ * 0.5;
@@ -1139,9 +1142,9 @@ export const PAIR_DEFS: { name: string; pair: string; key: keyof ClassRatioDataP
 const SMA_LONG = 200;  // meses — ventana para media y z-score
 const SMA_SHORT = 50;  // meses — media corta para cruces
 
-function buildSummaries(): RatioSummary[] {
+function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
   return PAIR_DEFS.map(({ pair, key, assetClass }) => {
-    const values = ratioData.map((d) => d[key] as number);
+    const values = ratios.map((d) => d[key] as number);
     const current = values[values.length - 1];
 
     // Usar ventana SMA para media y stdDev (en vez de todo el histórico)
@@ -1169,9 +1172,9 @@ function buildRotationSignals(sums: RatioSummary[]): RotationSignal[] {
 }
 
 // Build data in correct order (summaries needed for signals computation)
-const summariesData = buildSummaries();
+const summariesData = buildSummaries(ratioData);
 
-// EXPORTS
+// EXPORTS (static fallback from mock data)
 export const assetData = rawAssets;
 export const ratios = ratioData;
 export const dominance = computeDominance(rawAssets);
@@ -1180,22 +1183,76 @@ export const summaries = summariesData;
 export const rotationSignals = buildRotationSignals(summaries);
 export const cryptoDominanceData = computeCryptoDominance(rawAssets);
 export const cryptoRotation = getCryptoRotationSignal(cryptoDominanceData);
-export const assetClassSignals = computeAssetClassSignals();
+export const assetClassSignals = computeAssetClassSignals(rawAssets, summariesData);
 export const assetPerformance = buildPerformanceData();
 export const assetProjections = buildProjections(assetPerformance);
 
+// ============================================================
+// COMPUTED MARKET DATA — used by API route
+// ============================================================
+export interface ComputedMarketData {
+  assetData: AssetDataPoint[];
+  ratios: ClassRatioDataPoint[];
+  dominance: DominanceDataPoint[];
+  stockDominance: StockDominanceDataPoint[];
+  summaries: RatioSummary[];
+  rotationSignals: RotationSignal[];
+  cryptoDominanceData: CryptoDominancePoint[];
+  cryptoRotation: CryptoRotationSignal;
+  assetClassSignals: AssetClassSignal[];
+  assetPerformance: AssetPerformance[];
+  assetProjections: AssetProjection[];
+}
+
+/**
+ * Takes raw AssetDataPoint[] (from real APIs) and computes everything.
+ * Stock dominance stays mock (no free historical mcap API).
+ */
+export function computeAllFromRawAssets(assets: AssetDataPoint[]): ComputedMarketData {
+  const ratioD = computeRatios(assets);
+  const domD = computeDominance(assets);
+  const stockDomD = generateStockDominance(); // stays mock
+  const sumsD = buildSummaries(ratioD);
+  const rotD = buildRotationSignals(sumsD);
+  const cryptoDomD = computeCryptoDominance(assets);
+  const cryptoRotD = getCryptoRotationSignal(cryptoDomD);
+  const signalsD = computeAssetClassSignals(assets, sumsD);
+  const perfD = buildPerformanceData(); // stays mock (static anchors)
+  const projD = buildProjections(perfD);
+
+  return {
+    assetData: assets,
+    ratios: ratioD,
+    dominance: domD,
+    stockDominance: stockDomD,
+    summaries: sumsD,
+    rotationSignals: rotD,
+    cryptoDominanceData: cryptoDomD,
+    cryptoRotation: cryptoRotD,
+    assetClassSignals: signalsD,
+    assetPerformance: perfD,
+    assetProjections: projD,
+  };
+}
+
 export const ASSET_CLASSES = ["Commodities", "Equities", "Crypto", "BTC vs Todo"] as const;
 
-export function getFilteredData(timeframe: string): {
+export function getFilteredData(
+  timeframe: string,
+  sourceAssets?: AssetDataPoint[],
+  sourceStockDom?: StockDominanceDataPoint[],
+): {
   assets: AssetDataPoint[];
   ratios: ClassRatioDataPoint[];
   dominance: DominanceDataPoint[];
   stockDom: StockDominanceDataPoint[];
   cryptoDom: CryptoDominancePoint[];
 } {
-  const months = timeframe === "1Y" ? 12 : timeframe === "3Y" ? 36 : timeframe === "5Y" ? 60 : timeframe === "10Y" ? 120 : rawAssets.length;
-  const sliced = rawAssets.slice(-months);
-  const slicedStockDom = stockDomData.slice(-Math.min(months, stockDomData.length));
+  const assets = sourceAssets ?? rawAssets;
+  const stockDom = sourceStockDom ?? stockDomData;
+  const months = timeframe === "1Y" ? 12 : timeframe === "3Y" ? 36 : timeframe === "5Y" ? 60 : timeframe === "10Y" ? 120 : assets.length;
+  const sliced = assets.slice(-months);
+  const slicedStockDom = stockDom.slice(-Math.min(months, stockDom.length));
   return {
     assets: sliced,
     ratios: computeRatios(sliced),
@@ -1213,8 +1270,8 @@ export function formatRatio(value: number): string {
   return value.toExponential(2);
 }
 
-export function getSummariesByClass(cls: string): RatioSummary[] {
-  return summaries.filter((s) => s.assetClass === cls);
+export function getSummariesByClass(cls: string, source?: RatioSummary[]): RatioSummary[] {
+  return (source ?? summaries).filter((s) => s.assetClass === cls);
 }
 
 // Compute SMA series for a given ratio key over filtered data
