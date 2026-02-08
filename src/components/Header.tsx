@@ -71,7 +71,7 @@ export default function Header() {
               <defs>
                 <filter id="header-neon">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
-                  <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 1  0 0 0 0 0.53  0 0 0 1 0" result="green-blur"/>
+                  <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 1  0 0 0 0 0.53  0 0 0 0.8 0" result="green-blur"/>
                   <feMerge>
                     <feMergeNode in="green-blur"/>
                     <feMergeNode in="SourceGraphic"/>
@@ -79,13 +79,22 @@ export default function Header() {
                 </filter>
               </defs>
               <g filter="url(#header-neon)">
-                {/* ÷ symbol */}
-                <circle cx="22" cy="16" r="5" fill="#00ff88"/>
-                <rect x="8" y="28" width="20" height="7" rx="3.5" fill="#00ff88"/>
-                <circle cx="22" cy="48" r="5" fill="#00ff88"/>
-                {/* × symbol */}
-                <line x1="38" y1="20" x2="54" y2="44" stroke="#00ff88" strokeWidth="5" strokeLinecap="round"/>
-                <line x1="54" y1="20" x2="38" y2="44" stroke="#00ff88" strokeWidth="5" strokeLinecap="round"/>
+                {/* Pillar */}
+                <line x1="32" y1="12" x2="32" y2="52" stroke="#00ff88" strokeWidth="3" strokeLinecap="round"/>
+                {/* Base */}
+                <line x1="22" y1="52" x2="42" y2="52" stroke="#00ff88" strokeWidth="3" strokeLinecap="round"/>
+                {/* Fulcrum */}
+                <polygon points="32,12 28,18 36,18" fill="#00ff88"/>
+                {/* Beam (tilted) */}
+                <line x1="10" y1="24" x2="54" y2="30" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round"/>
+                {/* Left pan */}
+                <path d="M6,24 Q10,34 14,24" stroke="#00ff88" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                <line x1="10" y1="24" x2="6" y2="24" stroke="#00ff88" strokeWidth="1.5"/>
+                <line x1="10" y1="24" x2="14" y2="24" stroke="#00ff88" strokeWidth="1.5"/>
+                {/* Right pan */}
+                <path d="M50,30 Q54,40 58,30" stroke="#00ff88" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                <line x1="54" y1="30" x2="50" y2="30" stroke="#00ff88" strokeWidth="1.5"/>
+                <line x1="54" y1="30" x2="58" y2="30" stroke="#00ff88" strokeWidth="1.5"/>
               </g>
             </svg>
           </div>
