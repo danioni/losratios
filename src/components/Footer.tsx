@@ -32,16 +32,11 @@ export default function Footer() {
                 </filter>
               </defs>
               <g filter="url(#footer-neon)">
-                <line x1="32" y1="12" x2="32" y2="52" stroke="#00ff88" strokeWidth="3" strokeLinecap="round"/>
-                <line x1="22" y1="52" x2="42" y2="52" stroke="#00ff88" strokeWidth="3" strokeLinecap="round"/>
-                <polygon points="32,12 28,18 36,18" fill="#00ff88"/>
-                <line x1="10" y1="24" x2="54" y2="30" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round"/>
-                <path d="M6,24 Q10,34 14,24" stroke="#00ff88" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                <line x1="10" y1="24" x2="6" y2="24" stroke="#00ff88" strokeWidth="1.5"/>
-                <line x1="10" y1="24" x2="14" y2="24" stroke="#00ff88" strokeWidth="1.5"/>
-                <path d="M50,30 Q54,40 58,30" stroke="#00ff88" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                <line x1="54" y1="30" x2="50" y2="30" stroke="#00ff88" strokeWidth="1.5"/>
-                <line x1="54" y1="30" x2="58" y2="30" stroke="#00ff88" strokeWidth="1.5"/>
+                <line x1="6" y1="32" x2="16" y2="32" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round"/>
+                <polyline points="16,32 19,36 22,32" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <polyline points="22,32 27,12 32,52 37,18 42,32" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <polyline points="42,32 45,28 48,32" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <line x1="48" y1="32" x2="58" y2="32" stroke="#00ff88" strokeWidth="2.5" strokeLinecap="round"/>
               </g>
             </svg>
           </div>
