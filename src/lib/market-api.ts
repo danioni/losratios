@@ -54,63 +54,45 @@ interface CoinGeckoMarketItem {
   market_cap: number;
 }
 
-interface CoinGeckoGlobal {
-  total_market_cap: { usd: number };
-  market_cap_percentage: { btc: number; eth: number };
+interface CoinGeckoHistoryPoint {
+  prices: [number, number][];
+  market_caps: [number, number][];
 }
 
 export async function fetchCoinGeckoMarkets(): Promise<CoinGeckoMarketItem[]> {
-  const url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,solana&order=market_cap_desc&sparkline=false";
+  const url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin&order=market_cap_desc&sparkline=false";
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error(`CoinGecko markets: ${res.status}`);
   return res.json();
 }
 
-export async function fetchCoinGeckoGlobal(): Promise<CoinGeckoGlobal> {
-  const url = "https://api.coingecko.com/api/v3/global";
-  const res = await fetch(url, { next: { revalidate: 3600 } });
-  if (!res.ok) throw new Error(`CoinGecko global: ${res.status}`);
-  const json = await res.json();
-  return json.data;
-}
-
-interface CoinGeckoHistoryPoint {
-  prices: [number, number][]; // [timestamp_ms, price]
-  market_caps: [number, number][];
-}
-
 export async function fetchCoinGeckoHistory(
   coinId: string,
   days = 3650,
-): Promise<{ dates: string[]; prices: number[]; mcaps: number[] }> {
+): Promise<{ dates: string[]; prices: number[] }> {
   const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=daily`;
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error(`CoinGecko history ${coinId}: ${res.status}`);
   const json: CoinGeckoHistoryPoint = await res.json();
 
   // Downsample to monthly (take first entry per month)
-  const monthlyPrices: Map<string, { price: number; mcap: number }> = new Map();
+  const monthlyPrices: Map<string, number> = new Map();
   for (let i = 0; i < json.prices.length; i++) {
     const d = new Date(json.prices[i][0]);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     if (!monthlyPrices.has(key)) {
-      monthlyPrices.set(key, {
-        price: json.prices[i][1],
-        mcap: json.market_caps[i]?.[1] ?? 0,
-      });
+      monthlyPrices.set(key, json.prices[i][1]);
     }
   }
 
   const dates: string[] = [];
   const prices: number[] = [];
-  const mcaps: number[] = [];
-  for (const [date, data] of monthlyPrices) {
+  for (const [date, price] of monthlyPrices) {
     dates.push(date);
-    prices.push(data.price);
-    mcaps.push(data.mcap / 1e12); // convert to trillions
+    prices.push(price);
   }
 
-  return { dates, prices, mcaps };
+  return { dates, prices };
 }
 
 // ── FRED ───────────────────────────────────────────────────
@@ -141,7 +123,6 @@ export async function fetchFredSeries(
   for (const obs of observations) {
     const val = parseFloat(obs.value);
     if (isNaN(val)) continue;
-    // FRED dates are "YYYY-MM-DD", we want "YYYY-MM"
     dates.push(obs.date.slice(0, 7));
     values.push(val);
   }
@@ -151,22 +132,15 @@ export async function fetchFredSeries(
 
 // ── Merge all sources into AssetDataPoint[] ────────────────
 
-// Known supply constants for market cap derivation
-const GOLD_SUPPLY_OZ = 212_582 * 32_150.7; // ~212,582 tonnes × 32,150.7 oz/tonne
-const SILVER_SUPPLY_OZ = 1_740_000_000; // ~1.74B oz above-ground
-
-// Align multiple time series to a common monthly date range
 function alignToMonthlyGrid(
   series: { dates: string[]; values: number[] }[],
 ): { dates: string[]; aligned: number[][] } {
-  // Find the common date range
   const allDates = new Set<string>();
   for (const s of series) {
     for (const d of s.dates) allDates.add(d);
   }
   const dates = [...allDates].sort();
 
-  // For each series, create a lookup and forward-fill missing values
   const aligned: number[][] = series.map((s) => {
     const lookup = new Map<string, number>();
     for (let i = 0; i < s.dates.length; i++) {
@@ -188,165 +162,62 @@ function alignToMonthlyGrid(
   return { dates, aligned };
 }
 
-// Estimate total crypto market cap from known coins + historical BTC dominance
-// BTC dominance varied: ~95% (2014-16), ~50% (2017-18), ~70% (2019), ~60% (2020-21), ~45% (2021 peak), ~40% (2022), ~50% (2023-24), ~58% (2025)
-function estimateTotalCryptoMcap(btcMcap: number, ethMcap: number, solMcap: number, date: string): number {
-  const known = btcMcap + ethMcap + solMcap;
-  if (btcMcap <= 0) return known;
-
-  const year = parseInt(date.slice(0, 4));
-  // Historical BTC dominance approximations
-  let btcDomPct: number;
-  if (year <= 2016) btcDomPct = 0.90;
-  else if (year === 2017) btcDomPct = 0.55;
-  else if (year === 2018) btcDomPct = 0.53;
-  else if (year === 2019) btcDomPct = 0.68;
-  else if (year === 2020) btcDomPct = 0.62;
-  else if (year === 2021) btcDomPct = 0.42;
-  else if (year === 2022) btcDomPct = 0.40;
-  else if (year === 2023) btcDomPct = 0.50;
-  else if (year === 2024) btcDomPct = 0.55;
-  else btcDomPct = 0.58; // 2025+
-
-  const estimatedTotal = btcMcap / btcDomPct;
-  // Use the larger of known sum vs estimated (in case our coins already exceed estimate)
-  return Math.max(known, estimatedTotal);
-}
-
 export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
-  // Fetch everything in parallel
+  // Fetch everything in parallel — only what we need for the 5 ratios
   const [
-    // Equities
     sp500Data,
     nasdaqData,
-    msciData,
-    teslaData,
-    // Commodities
     goldData,
     silverData,
-    oilData,
-    copperData,
-    // Bonds
-    tltData,
-    // Crypto historical
     btcHist,
-    ethHist,
-    solHist,
-    // Crypto current
-    cryptoMarkets,
-    cryptoGlobal,
-    // Macro
+    btcMarkets,
     m2Data,
-    caseShillerData,
   ] = await Promise.all([
     fetchYahooChart("^GSPC").catch(() => ({ dates: [], closes: [] })),
     fetchYahooChart("^IXIC").catch(() => ({ dates: [], closes: [] })),
-    fetchYahooChart("URTH").catch(() => ({ dates: [], closes: [] })),
-    fetchYahooChart("TSLA").catch(() => ({ dates: [], closes: [] })),
     fetchYahooChart("GC=F").catch(() => ({ dates: [], closes: [] })),
     fetchYahooChart("SI=F").catch(() => ({ dates: [], closes: [] })),
-    fetchYahooChart("CL=F").catch(() => ({ dates: [], closes: [] })),
-    fetchYahooChart("HG=F").catch(() => ({ dates: [], closes: [] })),
-    fetchYahooChart("TLT").catch(() => ({ dates: [], closes: [] })),
-    fetchCoinGeckoHistory("bitcoin").catch(() => ({ dates: [], prices: [], mcaps: [] })),
-    fetchCoinGeckoHistory("ethereum").catch(() => ({ dates: [], prices: [], mcaps: [] })),
-    fetchCoinGeckoHistory("solana", 1825).catch(() => ({ dates: [], prices: [], mcaps: [] })),
+    fetchCoinGeckoHistory("bitcoin").catch(() => ({ dates: [], prices: [] })),
     fetchCoinGeckoMarkets().catch(() => [] as CoinGeckoMarketItem[]),
-    fetchCoinGeckoGlobal().catch(() => ({ total_market_cap: { usd: 0 }, market_cap_percentage: { btc: 0, eth: 0 } })),
     fetchFredSeries("M2SL").catch(() => ({ dates: [], values: [] })),
-    fetchFredSeries("CSUSHPINSA").catch(() => ({ dates: [], values: [] })),
   ]);
 
-  // Prepare all series for alignment
-  const allSeries = [
-    { dates: sp500Data.dates, values: sp500Data.closes },       // 0: sp500
-    { dates: nasdaqData.dates, values: nasdaqData.closes },     // 1: nasdaq
-    { dates: msciData.dates, values: msciData.closes },         // 2: msci
-    { dates: teslaData.dates, values: teslaData.closes },       // 3: tesla
-    { dates: goldData.dates, values: goldData.closes },         // 4: gold
-    { dates: silverData.dates, values: silverData.closes },     // 5: silver
-    { dates: oilData.dates, values: oilData.closes },           // 6: oil
-    { dates: copperData.dates, values: copperData.closes },     // 7: copper
-    { dates: tltData.dates, values: tltData.closes },           // 8: tlt (bonds proxy)
-    { dates: btcHist.dates, values: btcHist.prices },           // 9: btc price
-    { dates: btcHist.dates, values: btcHist.mcaps },            // 10: btc mcap
-    { dates: ethHist.dates, values: ethHist.prices },           // 11: eth price
-    { dates: ethHist.dates, values: ethHist.mcaps },            // 12: eth mcap
-    { dates: solHist.dates, values: solHist.prices },           // 13: sol price
-    { dates: solHist.dates, values: solHist.mcaps },            // 14: sol mcap
-    { dates: m2Data.dates, values: m2Data.values },             // 15: m2
-    { dates: caseShillerData.dates, values: caseShillerData.values }, // 16: case-shiller
-  ];
-
-  // Check if we got enough data — need at least some equity + some crypto
+  // Check we have enough data
   const hasEquity = sp500Data.dates.length > 12;
   const hasCrypto = btcHist.dates.length > 12;
   if (!hasEquity && !hasCrypto) {
     throw new Error("Insufficient market data from APIs");
   }
 
+  const allSeries = [
+    { dates: sp500Data.dates, values: sp500Data.closes },     // 0: sp500
+    { dates: nasdaqData.dates, values: nasdaqData.closes },   // 1: nasdaq
+    { dates: goldData.dates, values: goldData.closes },       // 2: gold
+    { dates: silverData.dates, values: silverData.closes },   // 3: silver
+    { dates: btcHist.dates, values: btcHist.prices },         // 4: btc
+    { dates: m2Data.dates, values: m2Data.values },           // 5: m2
+  ];
+
   const { dates, aligned } = alignToMonthlyGrid(allSeries);
 
-  // Current crypto data from CoinGecko markets endpoint
-  const btcCurrent = cryptoMarkets.find((c) => c.id === "bitcoin");
-  const ethCurrent = cryptoMarkets.find((c) => c.id === "ethereum");
-  const solCurrent = cryptoMarkets.find((c) => c.id === "solana");
-  const totalCryptoMcap = cryptoGlobal.total_market_cap?.usd ?? 0;
-
-  // Build AssetDataPoint array
+  // Build simplified AssetDataPoint array
   const result: AssetDataPoint[] = dates.map((date, i) => {
-    const goldPrice = aligned[4][i] || 0;
-    const silverPrice = aligned[5][i] || 0;
-    const m2Val = aligned[15][i] || 0;
-    const btcMcap = aligned[10][i] || 0;
-    const ethMcap = aligned[12][i] || 0;
-    const solMcap = aligned[14][i] || 0;
-    // M2SL is in billions, convert to trillions. Multiply by ~3 as rough global proxy (US M2 ≈ 1/3 of global)
+    const m2Val = aligned[5][i] || 0;
+    // M2SL is in billions, convert to trillions. Multiply by ~3 as rough global proxy
     const m2GlobalProxy = (m2Val / 1000) * 3;
-
-    // Derive market caps from known supply
-    const goldMcap = (goldPrice * GOLD_SUPPLY_OZ) / 1e12; // trillions
-    const silverMcap = (silverPrice * SILVER_SUPPLY_OZ) / 1e12;
-
-    // Bond market cap proxy from TLT price (normalized)
-    const tltPrice = aligned[8][i] || 100;
-    const bondsMcapProxy = (tltPrice / 100) * 130; // rough scale to ~130T
-
-    // Equities market cap rough estimate from S&P level
-    const sp500Level = aligned[0][i] || 0;
-    const equitiesMcapProxy = sp500Level > 0 ? (sp500Level / 6000) * 120 : 0; // rough scale
 
     return {
       date,
-      gold: goldPrice,
-      silver: silverPrice,
-      oil: aligned[6][i] || 0,
-      copper: aligned[7][i] || 0,
+      gold: aligned[2][i] || 0,
+      silver: aligned[3][i] || 0,
       sp500: aligned[0][i] || 0,
       nasdaq: aligned[1][i] || 0,
-      msciWorld: aligned[2][i] || 0,
-      tesla: aligned[3][i] || 0,
-      caseShiller: aligned[16][i] || 0,
-      btc: aligned[9][i] || 0,
-      eth: aligned[11][i] || 0,
-      sol: aligned[13][i] || 0,
-      btcMcap,
-      ethMcap,
-      solMcap,
-      goldMcap,
-      silverMcap,
-      equitiesMcap: equitiesMcapProxy,
-      realEstateMcap: 360, // ~360T global, slow-moving
-      bondsMcap: bondsMcapProxy,
-      // Estimate total crypto mcap from BTC mcap using historical dominance
-      // BTC dominance has ranged ~40-70%; we approximate based on era
-      cryptoMcap: estimateTotalCryptoMcap(btcMcap, ethMcap, solMcap, date),
+      btc: aligned[4][i] || 0,
       m2Global: m2GlobalProxy || 0,
     };
   });
 
   // Filter out data points where critical fields are all zero
-  // (dates before any series had data, forward-filled from NaN → 0)
   const filtered = result.filter(
     (d) => d.sp500 > 0 || d.gold > 0 || d.btc > 0,
   );
@@ -354,20 +225,10 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
     throw new Error("All market data fields are zero — API data unusable");
   }
 
-  // Override the last data point with live crypto prices if available
+  // Override the last data point with live BTC price if available
+  const btcCurrent = btcMarkets.find((c) => c.id === "bitcoin");
   if (filtered.length > 0 && btcCurrent) {
-    const last = filtered[filtered.length - 1];
-    last.btc = btcCurrent.current_price;
-    last.btcMcap = btcCurrent.market_cap / 1e12;
-    if (ethCurrent) {
-      last.eth = ethCurrent.current_price;
-      last.ethMcap = ethCurrent.market_cap / 1e12;
-    }
-    if (solCurrent) {
-      last.sol = solCurrent.current_price;
-      last.solMcap = solCurrent.market_cap / 1e12;
-    }
-    last.cryptoMcap = totalCryptoMcap / 1e12;
+    filtered[filtered.length - 1].btc = btcCurrent.current_price;
   }
 
   return filtered;
