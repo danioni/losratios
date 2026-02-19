@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AssetPerformance } from "@/lib/data";
+import { useCurrencyBase } from "./CurrencyContext";
 
 interface PerformanceTableProps {
   data: AssetPerformance[];
@@ -11,17 +12,10 @@ interface PerformanceTableProps {
 type SortKey = "cagrHistorical" | "cagr5Y" | "vsM2" | "ticker";
 type SortDir = "asc" | "desc";
 
-function formatPrice(p: number): string {
-  if (p >= 10000) return `$${(p / 1000).toFixed(0)}K`;
-  if (p >= 100) return `$${p.toFixed(0)}`;
-  if (p >= 1) return `$${p.toFixed(2)}`;
-  if (p >= 0.01) return `$${p.toFixed(3)}`;
-  return `$${p.toExponential(1)}`;
-}
-
 export default function PerformanceTable({ data }: PerformanceTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("cagrHistorical");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const { base, formatValue, isUSD, symbol, level } = useCurrencyBase();
 
   const sorted = useMemo(() => {
     return [...data].sort((a, b) => {
@@ -47,6 +41,9 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
   const winners = sorted.filter((a) => a.beatsM2);
   const losers = sorted.filter((a) => !a.beatsM2);
 
+  // Currency label for the price column header
+  const priceLabel = isUSD ? "Precio" : `Precio (${base})`;
+
   return (
     <div className="space-y-6 fade-in-up fade-in-up-3">
       <div className="max-w-2xl">
@@ -57,6 +54,20 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
           M2 Global crece ~7% por año. Si tu activo no supera eso, no estás ganando — estás perdiendo en términos reales. Solo los activos que superan esta línea entran al análisis. La mayoría de los &ldquo;activos seguros&rdquo; no le ganan a la impresora.
         </p>
       </div>
+
+      {/* Currency context note */}
+      {!isUSD && (
+        <div
+          className="rounded-lg px-4 py-2.5 text-[10px] sm:text-[11px] leading-relaxed"
+          style={{
+            background: level === 4 ? "var(--accent-gold-bg)" : level === 3 ? "var(--accent-amber-bg)" : "var(--accent-green-bg)",
+            border: `1px solid ${level === 4 ? "var(--accent-gold-border)" : level === 3 ? "var(--accent-amber-border)" : "var(--accent-green-border)"}`,
+            color: level === 4 ? "var(--accent-gold)" : level === 3 ? "var(--accent-amber)" : "var(--text-secondary)",
+          }}
+        >
+          Precios convertidos a {base} ({symbol}) al tipo de cambio actual. CAGR en USD — la conversión cambia los nominales, no el rendimiento porcentual (asumiendo FX constante).
+        </div>
+      )}
 
       {/* Full table */}
       <div className="card-glass card-accent-left rounded-xl p-4 sm:p-5">
@@ -69,7 +80,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                   Activo {sortIcon("ticker")}
                 </th>
                 <th className="text-left py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Sector</th>
-                <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>Precio</th>
+                <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>{priceLabel}</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium cursor-pointer" style={{ color: "var(--text-muted)" }} onClick={() => toggleSort("cagrHistorical")}>
                   CAGR Hist {sortIcon("cagrHistorical")}
                 </th>
@@ -99,7 +110,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                     </span>
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums hidden lg:table-cell" style={{ color: "var(--text-primary)" }}>
-                    {formatPrice(a.priceCurrent)}
+                    {formatValue(a.priceCurrent)}
                   </td>
                   <td className="py-2.5 px-2 text-right">
                     <span
@@ -170,7 +181,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                     </span>
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>
-                    {formatPrice(a.priceCurrent)}
+                    {formatValue(a.priceCurrent)}
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
                     {a.cagrHistorical.toFixed(1)}%

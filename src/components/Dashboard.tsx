@@ -31,6 +31,7 @@ import {
 import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
 import PerformanceTable from "./PerformanceTable";
+import { useCurrencyBase } from "./CurrencyContext";
 
 type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
 
@@ -367,6 +368,7 @@ export default function Dashboard() {
   const [dataSource, setDataSource] = useState<"loading" | "live" | "cache" | "error">("loading");
   const [dataTimestamp, setDataTimestamp] = useState<number | null>(null);
   const COLORS = useThemeColors();
+  const { base, isUSD, levelMessage, level } = useCurrencyBase();
 
   // Fetch live market data on mount with localStorage cache (24h TTL)
   useEffect(() => {
@@ -562,6 +564,23 @@ export default function Dashboard() {
           />
         ))}
       </div>
+
+      {/* Currency base note — ratios are dimensionless */}
+      {!isUSD && (
+        <div
+          className="rounded-lg px-4 py-2.5 text-[10px] sm:text-[11px] leading-relaxed"
+          style={{
+            background: level === 4 ? "var(--accent-gold-bg)" : level === 3 ? "var(--accent-amber-bg)" : "var(--accent-green-bg)",
+            border: `1px solid ${level === 4 ? "var(--accent-gold-border)" : level === 3 ? "var(--accent-amber-border)" : "var(--accent-green-border)"}`,
+            color: level === 4 ? "var(--accent-gold)" : level === 3 ? "var(--accent-amber)" : "var(--text-secondary)",
+          }}
+        >
+          <span className="font-medium">Midiendo en {base}.</span>{" "}
+          Los ratios entre activos (BTC/Oro, Oro/S&P) son adimensionales — no cambian con la moneda base.
+          Los precios nominales y la tabla de performance sí se convierten.
+          {levelMessage && <span className="block mt-1" style={{ color: "var(--text-muted)" }}>{levelMessage}</span>}
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 1 — BTC/Oro: EL RATIO CENTRAL                 */}
