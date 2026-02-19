@@ -102,9 +102,9 @@ const anchors: AssetDataPoint[] = [
   { date: "2021", gold: 1829, silver: 23.4, sp500: 4766, nasdaq: 15645, btc: 47000, m2Global: 105 },
   { date: "2022", gold: 1824, silver: 24.0, sp500: 3840, nasdaq: 10466, btc: 16500, m2Global: 100 },
   { date: "2023", gold: 2063, silver: 24.1, sp500: 4770, nasdaq: 15011, btc: 42200, m2Global: 104 },
-  { date: "2024", gold: 2625, silver: 30.5, sp500: 5881, nasdaq: 19310, btc: 108000, m2Global: 110 },
-  { date: "2025", gold: 2800, silver: 31.5, sp500: 6050, nasdaq: 19800, btc: 97000, m2Global: 114 },
-  { date: "2026", gold: 2900, silver: 32.5, sp500: 6100, nasdaq: 19900, btc: 96000, m2Global: 118 },
+  { date: "2024", gold: 2625, silver: 30.5, sp500: 5881, nasdaq: 19310, btc: 93000, m2Global: 110 },
+  { date: "2025", gold: 2900, silver: 31.5, sp500: 6050, nasdaq: 19800, btc: 95000, m2Global: 114 },
+  { date: "2026", gold: 2900, silver: 32.5, sp500: 6100, nasdaq: 19900, btc: 66000, m2Global: 118 },
 ];
 
 function lerp(a: number, b: number, t: number): number {
@@ -369,7 +369,7 @@ const M2_BENCHMARK = 7; // M2 Global CAGR ~7% anual
 
 const PERFORMANCE_ANCHORS: { ticker: string; name: string; sector: string; marketCap: number; ipoYear: number; priceStart: number; price5YAgo: number; priceCurrent: number }[] = [
   // Universe of winners — assets that historically beat M2
-  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1940, ipoYear: 2009, priceStart: 0.001, price5YAgo: 7200, priceCurrent: 96000 },
+  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1300, ipoYear: 2009, priceStart: 0.001, price5YAgo: 7200, priceCurrent: 66000 },
   { ticker: "GOLD", name: "Oro (onza)", sector: "Commodities", marketCap: 18200, ipoYear: 1971, priceStart: 35, price5YAgo: 1517, priceCurrent: 2900 },
   { ticker: "AAPL", name: "Apple", sector: "Tech", marketCap: 3720, ipoYear: 1980, priceStart: 0.10, price5YAgo: 75, priceCurrent: 242 },
   { ticker: "MSFT", name: "Microsoft", sector: "Tech", marketCap: 3150, ipoYear: 1986, priceStart: 0.10, price5YAgo: 160, priceCurrent: 423 },
