@@ -347,7 +347,7 @@ function RatioChart({
   );
 }
 
-const CACHE_KEY = "losratios_market_data_v2"; // bumped to invalidate old broken cache
+const CACHE_KEY = "losratios_market_data_v3"; // v3: updated anchors + force CDN invalidation
 const CACHE_TTL_HOURS = 24;
 const MIN_USEFUL_DATAPOINTS = 24; // minimum months for live data to be useful on its own
 
@@ -682,7 +682,7 @@ export default function Dashboard() {
             {dataSource === "live" ? "Datos en vivo · Actualización cada hora" : dataSource === "cache" ? `Datos del caché · ${timestampLabel}` : "Datos de referencia"}
           </p>
           <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-            CoinGecko · FRED · Yahoo Finance
+            CoinGecko · FRED · Yahoo Finance · v3
           </p>
         </div>
       </div>
