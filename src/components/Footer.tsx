@@ -26,7 +26,7 @@ export default function Footer() {
         </div>
 
         {/* Ecosystem links */}
-        <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+        <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-8 gap-y-3">
           {ECOSYSTEM_LINKS.map((link) => (
             <div key={link.label} className="flex items-center gap-2">
               <a

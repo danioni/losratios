@@ -18,6 +18,7 @@ import {
   PAIR_DEFS,
   computeRatioSMAs,
   computeBollingerBands,
+  needsLogScale,
   assetPerformance as fallbackAssetPerformance,
   assetData as fallbackAssetData,
   SMA_LONG,
@@ -150,21 +151,38 @@ function RatioChart({
   ratioDateRange: string;
   COLORS: typeof DEFAULT_COLORS;
 }) {
-  const { pairStats, bollingerChartData } = useMemo(() => {
+  const { pairStats, bollingerChartData, isLogScale } = useMemo(() => {
     const key = pairDef.key as keyof ClassRatioDataPoint;
     const values = filteredRatios.map((d) => d[key] as number);
     const dates = filteredRatios.map((d) => d.date);
+    const current = values[values.length - 1];
 
     const windowSize = Math.min(SMA_LONG, values.length);
     const windowValues = values.slice(-windowSize);
-    const mean = windowValues.reduce((s, v) => s + v, 0) / windowValues.length;
-    const variance = windowValues.reduce((s, v) => s + (v - mean) ** 2, 0) / windowValues.length;
-    const stdDev = Math.sqrt(variance);
-    const current = values[values.length - 1];
-    const zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
 
-    const { sma50, sma200 } = computeRatioSMAs(filteredRatios, key);
-    const bb = computeBollingerBands(values, dates, Math.min(20, values.length));
+    // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
+    const useLog = needsLogScale(windowValues);
+
+    let mean: number;
+    let zScore: number;
+
+    if (useLog && current > 0) {
+      const positives = windowValues.filter(v => v > 0);
+      const logVals = positives.map(v => Math.log(v));
+      const logMean = logVals.reduce((s, v) => s + v, 0) / logVals.length;
+      const logVariance = logVals.reduce((s, v) => s + (v - logMean) ** 2, 0) / logVals.length;
+      const logStdDev = Math.sqrt(logVariance);
+      zScore = logStdDev > 0 ? (Math.log(current) - logMean) / logStdDev : 0;
+      mean = Math.exp(logMean);  // geometric mean
+    } else {
+      mean = windowValues.reduce((s, v) => s + v, 0) / windowValues.length;
+      const variance = windowValues.reduce((s, v) => s + (v - mean) ** 2, 0) / windowValues.length;
+      const stdDev = Math.sqrt(variance);
+      zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
+    }
+
+    const { sma50, sma200, isLogScale } = computeRatioSMAs(filteredRatios, key);
+    const bb = computeBollingerBands(values, dates, Math.min(20, values.length), isLogScale);
 
     const chartData = filteredRatios.map((d, i) => ({
       date: d.date,
@@ -179,8 +197,9 @@ function RatioChart({
     }));
 
     return {
-      pairStats: { mean, stdDev, current, zScore },
+      pairStats: { mean, current, zScore },
       bollingerChartData: chartData,
+      isLogScale: isLogScale,
     };
   }, [filteredRatios, pairDef.key]);
 
@@ -192,18 +211,23 @@ function RatioChart({
   const narrative = generateNarrative(pairDef.pair, pairStats.zScore);
 
   // Human-readable z-score explanation
+  // Proper normal CDF approximation (Abramowitz & Stegun)
   const absZ = Math.abs(pairStats.zScore);
-  const percentile = Math.round((1 - 2 * (1 - 0.5 * (1 + Math.min(absZ, 3) * (0.3275911 * Math.exp(-0.5 * absZ * absZ))))) * 100);
+  const t = 1 / (1 + 0.2316419 * Math.min(absZ, 6));
+  const d = 0.3989423 * Math.exp(-0.5 * Math.min(absZ, 6) * Math.min(absZ, 6));
+  const cdfTail = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  const percentile = Math.max(1, Math.min(99, Math.round((1 - cdfTail) * 100)));
+  const [pairA, pairB] = pairDef.pair.split(" / ");
   const zExplanation = pairStats.zScore > 0.5
-    ? `${pairDef.pair.split(" / ")[0]} está más caro vs ${pairDef.pair.split(" / ")[1]} de lo que ha estado el ~${Math.min(percentile, 99)}% del tiempo`
+    ? `${pairA} está más caro vs ${pairB} de lo que ha estado el ~${percentile}% del tiempo`
     : pairStats.zScore < -0.5
-    ? `${pairDef.pair.split(" / ")[0]} está más barato vs ${pairDef.pair.split(" / ")[1]} de lo que ha estado el ~${Math.min(percentile, 99)}% del tiempo`
-    : `${pairDef.pair.split(" / ")[0]} y ${pairDef.pair.split(" / ")[1]} en equilibrio relativo`;
+    ? `${pairA} está más barato vs ${pairB} de lo que ha estado el ~${percentile}% del tiempo`
+    : `${pairA} y ${pairB} en equilibrio relativo`;
 
   return (
     <ChartSection
       title={`${pairDef.name}`}
-      subtitle={`${ratioDateRange} · Actual: ${formatRatio(pairStats.current)} · SMA ${SMA_LONG}: ${formatRatio(pairStats.mean)} · Desv: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
+      subtitle={`${ratioDateRange} · Actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · z-score: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
       delay={3}
     >
       {/* Z-score indicator bar */}
@@ -251,10 +275,13 @@ function RatioChart({
               tickLine={false}
             />
             <YAxis
+              scale={isLogScale ? "log" : "auto"}
+              domain={isLogScale ? ["auto", "auto"] : undefined}
+              allowDataOverflow={isLogScale}
               tick={{ fill: "var(--text-muted)", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v: number) => formatRatio(v)}
+              tickFormatter={(v: number) => v > 0 ? formatRatio(v) : "0"}
             />
             <Tooltip content={<RatioTooltip />} />
             {/* Bollinger bands ±2σ */}

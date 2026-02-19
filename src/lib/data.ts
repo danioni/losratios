@@ -154,45 +154,94 @@ function computeRatios(assets: AssetDataPoint[]): ClassRatioDataPoint[] {
 }
 
 // ============================================================
-// BOLLINGER BANDS
+// LOG-SCALE DETECTION
+// Ratios that span >10x range need log-scale statistics
+// ============================================================
+export function needsLogScale(values: number[]): boolean {
+  const positives = values.filter(v => v > 0);
+  if (positives.length < 2) return false;
+  const min = Math.min(...positives);
+  const max = Math.max(...positives);
+  return max / min > 10;
+}
+
+// ============================================================
+// BOLLINGER BANDS (supports linear or log scale)
 // ============================================================
 export function computeBollingerBands(
   values: number[],
   dates: string[],
   period: number,
+  useLogScale?: boolean,
 ): BollingerBandPoint[] {
+  // Auto-detect log scale if not specified
+  const logScale = useLogScale ?? needsLogScale(values);
+
   return values.map((v, i) => {
-    if (i < period - 1) {
+    if (i < period - 1 || v <= 0) {
       return { date: dates[i], value: v, sma: null, upper1: null, lower1: null, upper2: null, lower2: null };
     }
-    const w = values.slice(i - period + 1, i + 1);
-    const mean = w.reduce((s, x) => s + x, 0) / w.length;
-    const variance = w.reduce((s, x) => s + (x - mean) ** 2, 0) / w.length;
-    const sd = Math.sqrt(variance);
-    return {
-      date: dates[i],
-      value: v,
-      sma: mean,
-      upper1: mean + sd,
-      lower1: mean - sd,
-      upper2: mean + 2 * sd,
-      lower2: mean - 2 * sd,
-    };
+    const w = values.slice(i - period + 1, i + 1).filter(x => x > 0);
+    if (w.length === 0) {
+      return { date: dates[i], value: v, sma: null, upper1: null, lower1: null, upper2: null, lower2: null };
+    }
+
+    if (logScale) {
+      // Log-scale: compute mean & stddev in log space, then transform back
+      const logW = w.map(x => Math.log(x));
+      const logMean = logW.reduce((s, x) => s + x, 0) / logW.length;
+      const logVariance = logW.reduce((s, x) => s + (x - logMean) ** 2, 0) / logW.length;
+      const logSd = Math.sqrt(logVariance);
+      return {
+        date: dates[i],
+        value: v,
+        sma: Math.exp(logMean),
+        upper1: Math.exp(logMean + logSd),
+        lower1: Math.exp(logMean - logSd),
+        upper2: Math.exp(logMean + 2 * logSd),
+        lower2: Math.exp(logMean - 2 * logSd),
+      };
+    } else {
+      // Linear scale (original behavior)
+      const mean = w.reduce((s, x) => s + x, 0) / w.length;
+      const variance = w.reduce((s, x) => s + (x - mean) ** 2, 0) / w.length;
+      const sd = Math.sqrt(variance);
+      return {
+        date: dates[i],
+        value: v,
+        sma: mean,
+        upper1: mean + sd,
+        lower1: mean - sd,
+        upper2: mean + 2 * sd,
+        lower2: mean - 2 * sd,
+      };
+    }
   });
 }
 
 // ============================================================
-// SMA COMPUTATION
+// SMA COMPUTATION (supports geometric mean for log-scale ratios)
 // ============================================================
-export function computeSMA(values: number[], period: number): (number | null)[] {
+export function computeSMA(values: number[], period: number, useLogScale?: boolean): (number | null)[] {
+  const logScale = useLogScale ?? false;
   const result: (number | null)[] = [];
   for (let i = 0; i < values.length; i++) {
     if (i < period - 1) {
       result.push(null);
     } else {
-      let sum = 0;
-      for (let j = i - period + 1; j <= i; j++) sum += values[j];
-      result.push(sum / period);
+      if (logScale) {
+        // Geometric mean SMA
+        let logSum = 0;
+        let count = 0;
+        for (let j = i - period + 1; j <= i; j++) {
+          if (values[j] > 0) { logSum += Math.log(values[j]); count++; }
+        }
+        result.push(count > 0 ? Math.exp(logSum / count) : null);
+      } else {
+        let sum = 0;
+        for (let j = i - period + 1; j <= i; j++) sum += values[j];
+        result.push(sum / period);
+      }
     }
   }
   return result;
@@ -207,6 +256,26 @@ function computeStats(values: number[]): { mean: number; stdDev: number } {
   const mean = values.reduce((s, v) => s + v, 0) / n;
   const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / n;
   return { mean, stdDev: Math.sqrt(variance) };
+}
+
+/**
+ * Compute z-score in log space for ratios that span orders of magnitude.
+ * Returns the z-score of log(current) relative to the distribution of log(values).
+ * This gives meaningful z-scores for exponential assets like BTC.
+ */
+function computeLogStats(values: number[]): { mean: number; stdDev: number; logMean: number; logStdDev: number } {
+  const positives = values.filter(v => v > 0);
+  const n = positives.length;
+  if (n === 0) return { mean: 0, stdDev: 0, logMean: 0, logStdDev: 0 };
+  const logValues = positives.map(v => Math.log(v));
+  const logMean = logValues.reduce((s, v) => s + v, 0) / n;
+  const logVariance = logValues.reduce((s, v) => s + (v - logMean) ** 2, 0) / n;
+  return {
+    mean: Math.exp(logMean),  // geometric mean
+    stdDev: Math.exp(Math.sqrt(logVariance)),  // geometric stddev (multiplicative)
+    logMean,
+    logStdDev: Math.sqrt(logVariance),
+  };
 }
 
 function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
@@ -249,9 +318,26 @@ function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
 
     const windowSize = Math.min(SMA_LONG, values.length);
     const windowValues = values.slice(-windowSize);
-    const { mean, stdDev } = computeStats(windowValues);
 
-    const zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
+    // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
+    const useLog = needsLogScale(windowValues);
+
+    let zScore: number;
+    let mean: number;
+    let stdDev: number;
+
+    if (useLog && current > 0) {
+      const logStats = computeLogStats(windowValues);
+      zScore = logStats.logStdDev > 0 ? (Math.log(current) - logStats.logMean) / logStats.logStdDev : 0;
+      mean = logStats.mean;    // geometric mean
+      stdDev = logStats.logStdDev;  // in log space
+    } else {
+      const stats = computeStats(windowValues);
+      zScore = stats.stdDev > 0 ? (current - stats.mean) / stats.stdDev : 0;
+      mean = stats.mean;
+      stdDev = stats.stdDev;
+    }
+
     const { signal, signalType, context } = getSignal(zScore, pair);
     return { name: `${pair}`, pair, current, mean, stdDev, zScore, signal, signalType, context };
   });
@@ -335,7 +421,7 @@ const rawAssets = generateMonthlyData();
 const ratioData = computeRatios(rawAssets);
 const summariesData = buildSummaries(ratioData);
 
-// EXPORTS (static fallback from mock data)
+// EXPORTS (static fallback data for SSR / offline)
 export const assetData = rawAssets;
 export const ratios = ratioData;
 export const summaries = summariesData;
@@ -360,7 +446,7 @@ export function computeAllFromRawAssets(assets: AssetDataPoint[]): ComputedMarke
   const ratioD = computeRatios(assets);
   const sumsD = buildSummaries(ratioD);
   const rotD = buildRotationSignals(sumsD);
-  const perfD = buildPerformanceData(); // stays mock (static anchors)
+  const perfD = buildPerformanceData(); // static anchors (CAGR benchmarks)
 
   return {
     assetData: assets,
@@ -390,8 +476,10 @@ export function getFilteredData(
 export function formatRatio(value: number): string {
   if (value >= 10000) return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
   if (value >= 100) return value.toFixed(1);
+  if (value >= 10) return value.toFixed(2);
   if (value >= 1) return value.toFixed(2);
   if (value >= 0.01) return value.toFixed(4);
+  if (value >= 0.0001) return value.toFixed(6);
   return value.toExponential(2);
 }
 
@@ -399,11 +487,13 @@ export function formatRatio(value: number): string {
 export function computeRatioSMAs(
   data: ClassRatioDataPoint[],
   key: keyof ClassRatioDataPoint,
-): { sma50: (number | null)[]; sma200: (number | null)[] } {
+): { sma50: (number | null)[]; sma200: (number | null)[]; isLogScale: boolean } {
   const values = data.map((d) => d[key] as number);
+  const useLog = needsLogScale(values);
   return {
-    sma50: computeSMA(values, Math.min(SMA_SHORT, values.length)),
-    sma200: computeSMA(values, Math.min(SMA_LONG, values.length)),
+    sma50: computeSMA(values, Math.min(SMA_SHORT, values.length), useLog),
+    sma200: computeSMA(values, Math.min(SMA_LONG, values.length), useLog),
+    isLogScale: useLog,
   };
 }
 
