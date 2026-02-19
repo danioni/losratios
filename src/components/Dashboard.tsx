@@ -12,13 +12,14 @@ import {
 } from "recharts";
 import {
   summaries as fallbackSummaries,
-  rotationSignals as fallbackRotationSignals,
+  // rotationSignals as fallbackRotationSignals,
   getFilteredData,
   formatRatio,
   PAIR_DEFS,
   computeRatioSMAs,
   computeBollingerBands,
   needsLogScale,
+  computeAllFromRawAssets,
   assetPerformance as fallbackAssetPerformance,
   assetData as fallbackAssetData,
   SMA_LONG,
@@ -346,8 +347,9 @@ function RatioChart({
   );
 }
 
-const CACHE_KEY = "losratios_market_data";
+const CACHE_KEY = "losratios_market_data_v2"; // bumped to invalidate old broken cache
 const CACHE_TTL_HOURS = 24;
+const MIN_USEFUL_DATAPOINTS = 24; // minimum months for live data to be useful on its own
 
 function formatTimestamp(ts: number): string {
   const d = new Date(ts);
@@ -416,10 +418,38 @@ export default function Dashboard() {
   const isLoading = dataSource === "loading" && !liveData;
   const isError = dataSource === "error" && !liveData;
 
-  // Resolve data sources: live/cache if available, else fallback
-  const summaries = liveData?.summaries ?? fallbackSummaries;
-  const currentAssetPerformance = liveData?.assetPerformance ?? fallbackAssetPerformance;
-  const sourceAssets = liveData?.assetData ?? fallbackAssetData;
+  // Resolve data sources: merge fallback history with live/cache data
+  // If live API returns fewer months than fallback (e.g. API rate-limited),
+  // use fallback for historical depth + live for recent updates.
+  // Then recompute all summaries/ratios from the merged dataset.
+  const { sourceAssets, summaries, currentAssetPerformance } = useMemo(() => {
+    if (!liveData?.assetData || liveData.assetData.length === 0) {
+      return {
+        sourceAssets: fallbackAssetData,
+        summaries: fallbackSummaries,
+        currentAssetPerformance: fallbackAssetPerformance,
+      };
+    }
+    // If live data has enough depth (>= fallback), use it directly
+    if (liveData.assetData.length >= fallbackAssetData.length) {
+      return {
+        sourceAssets: liveData.assetData,
+        summaries: liveData.summaries,
+        currentAssetPerformance: liveData.assetPerformance,
+      };
+    }
+    // Merge: fallback for old history + live for recent months
+    const firstLiveDate = liveData.assetData[0].date;
+    const historical = fallbackAssetData.filter(d => d.date < firstLiveDate);
+    const merged = [...historical, ...liveData.assetData];
+    // Recompute all statistics from merged dataset
+    const recomputed = computeAllFromRawAssets(merged);
+    return {
+      sourceAssets: merged,
+      summaries: recomputed.summaries,
+      currentAssetPerformance: recomputed.assetPerformance,
+    };
+  }, [liveData]);
 
   const timestampLabel = dataTimestamp
     ? `Datos al: ${formatTimestamp(dataTimestamp)}`
