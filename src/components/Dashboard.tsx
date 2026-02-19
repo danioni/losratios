@@ -88,7 +88,7 @@ function useThemeColors() {
   return colors;
 }
 
-function RatioTooltip({ active, payload, label }: any) {
+function RatioTooltip({ active, payload, label, isLogScale }: any) {
   if (!active || !payload) return null;
   return (
     <div
@@ -102,15 +102,25 @@ function RatioTooltip({ active, payload, label }: any) {
       <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>
         {label}
       </p>
-      {payload.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-2 py-0.5">
-          <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
-          <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
-          <span className="font-medium tabular-nums" style={{ color: entry.color }}>
-            {typeof entry.value === "number" ? (entry.value < 1 ? entry.value.toFixed(4) : entry.value >= 100 ? entry.value.toFixed(1) : entry.value.toFixed(2)) : entry.value}
-          </span>
-        </div>
-      ))}
+      {payload.map((entry: any, i: number) => {
+        // Convert log10 back to real value for display
+        let displayValue = entry.value;
+        if (typeof displayValue === "number" && isLogScale) {
+          displayValue = Math.pow(10, displayValue);
+        }
+        const formatted = typeof displayValue === "number"
+          ? (displayValue < 1 ? displayValue.toFixed(4) : displayValue >= 100 ? displayValue.toFixed(1) : displayValue.toFixed(2))
+          : displayValue;
+        return (
+          <div key={i} className="flex items-center gap-2 py-0.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
+            <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
+            <span className="font-medium tabular-nums" style={{ color: entry.color }}>
+              {formatted}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -184,16 +194,24 @@ function RatioChart({
     const { sma50, sma200, isLogScale } = computeRatioSMAs(filteredRatios, key);
     const bb = computeBollingerBands(values, dates, Math.min(20, values.length), isLogScale);
 
+    // For log-scale ratios, transform all values to log space for charting
+    // This makes the chart visually correct (no flat-then-spike)
+    const toChart = (v: number | null): number | null => {
+      if (v === null || v === undefined) return null;
+      if (isLogScale && v > 0) return Math.log10(v);
+      return v;
+    };
+
     const chartData = filteredRatios.map((d, i) => ({
       date: d.date,
-      [pairDef.key]: d[key],
-      sma50: sma50[i],
-      sma200: sma200[i],
-      bbUpper2: bb[i]?.upper2 ?? null,
-      bbLower2: bb[i]?.lower2 ?? null,
-      bbUpper1: bb[i]?.upper1 ?? null,
-      bbLower1: bb[i]?.lower1 ?? null,
-      bbSma: bb[i]?.sma ?? null,
+      [pairDef.key]: toChart(d[key] as number),
+      sma50: toChart(sma50[i]),
+      sma200: toChart(sma200[i]),
+      bbUpper2: toChart(bb[i]?.upper2 ?? null),
+      bbLower2: toChart(bb[i]?.lower2 ?? null),
+      bbUpper1: toChart(bb[i]?.upper1 ?? null),
+      bbLower1: toChart(bb[i]?.lower1 ?? null),
+      bbSma: toChart(bb[i]?.sma ?? null),
     }));
 
     return {
@@ -275,15 +293,19 @@ function RatioChart({
               tickLine={false}
             />
             <YAxis
-              scale={isLogScale ? "log" : "auto"}
-              domain={isLogScale ? ["auto", "auto"] : undefined}
-              allowDataOverflow={isLogScale}
               tick={{ fill: "var(--text-muted)", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v: number) => v > 0 ? formatRatio(v) : "0"}
+              tickFormatter={(v: number) => {
+                if (isLogScale) {
+                  // v is log10(ratio), convert back to real value for display
+                  const real = Math.pow(10, v);
+                  return formatRatio(real);
+                }
+                return v > 0 ? formatRatio(v) : "0";
+              }}
             />
-            <Tooltip content={<RatioTooltip />} />
+            <Tooltip content={<RatioTooltip isLogScale={isLogScale} />} />
             {/* Bollinger bands ±2σ */}
             <Line type="monotone" dataKey="bbUpper2" name="BB +2σ" stroke={COLORS.red} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
             <Line type="monotone" dataKey="bbLower2" name="BB -2σ" stroke={COLORS.green} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
