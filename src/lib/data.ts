@@ -89,13 +89,52 @@ const SMA_LONG = 200;  // meses — ventana para media y z-score
 const SMA_SHORT = 50;  // meses — media corta para cruces
 
 // ============================================================
-// HISTORICAL ANCHORS (2014-2026)
+// HISTORICAL ANCHORS (1971-2026)
+// Starts at 1971: Nixon shock (fiat standard) + Nasdaq launch
+// Sources: FRED M2SL, Yahoo Finance, WGC, CoinGecko,
+//          elnumerador.com, eldenominador.com
+// BTC = 0 before 2009 (didn't exist); BTC ratios skip those rows
 // ============================================================
 const anchors: AssetDataPoint[] = [
+  // ── Fiat standard era (1971-1994) ────────────────────────
+  { date: "1971", gold: 41, silver: 1.4, sp500: 102, nasdaq: 114, btc: 0, m2Global: 4 },
+  { date: "1973", gold: 106, silver: 3.3, sp500: 97, nasdaq: 92, btc: 0, m2Global: 5 },
+  { date: "1975", gold: 140, silver: 4.4, sp500: 90, nasdaq: 78, btc: 0, m2Global: 6 },
+  { date: "1977", gold: 165, silver: 4.7, sp500: 95, nasdaq: 105, btc: 0, m2Global: 7 },
+  { date: "1979", gold: 512, silver: 21.8, sp500: 108, nasdaq: 152, btc: 0, m2Global: 9 },
+  { date: "1980", gold: 615, silver: 16.4, sp500: 136, nasdaq: 202, btc: 0, m2Global: 10 },
+  { date: "1982", gold: 456, silver: 10.8, sp500: 141, nasdaq: 232, btc: 0, m2Global: 12 },
+  { date: "1984", gold: 309, silver: 6.1, sp500: 167, nasdaq: 247, btc: 0, m2Global: 13 },
+  { date: "1986", gold: 391, silver: 5.5, sp500: 242, nasdaq: 349, btc: 0, m2Global: 15 },
+  { date: "1988", gold: 410, silver: 6.1, sp500: 278, nasdaq: 381, btc: 0, m2Global: 18 },
+  { date: "1990", gold: 383, silver: 4.1, sp500: 330, nasdaq: 374, btc: 0, m2Global: 20 },
+  { date: "1992", gold: 333, silver: 3.7, sp500: 435, nasdaq: 677, btc: 0, m2Global: 21 },
+  { date: "1994", gold: 384, silver: 5.3, sp500: 459, nasdaq: 752, btc: 0, m2Global: 22 },
+  // ── Dot-com era (1995-2008) ──────────────────────────────
+  { date: "1995", gold: 387, silver: 5.2, sp500: 616, nasdaq: 1052, btc: 0, m2Global: 23 },
+  { date: "1996", gold: 369, silver: 4.9, sp500: 741, nasdaq: 1291, btc: 0, m2Global: 24 },
+  { date: "1997", gold: 290, silver: 4.7, sp500: 970, nasdaq: 1570, btc: 0, m2Global: 25 },
+  { date: "1998", gold: 288, silver: 5.1, sp500: 1229, nasdaq: 2193, btc: 0, m2Global: 27 },
+  { date: "1999", gold: 290, silver: 5.3, sp500: 1469, nasdaq: 4069, btc: 0, m2Global: 28 },
+  { date: "2000", gold: 273, silver: 4.6, sp500: 1320, nasdaq: 2471, btc: 0, m2Global: 30 },
+  { date: "2001", gold: 276, silver: 4.4, sp500: 1148, nasdaq: 1950, btc: 0, m2Global: 32 },
+  { date: "2002", gold: 347, silver: 4.8, sp500: 880, nasdaq: 1336, btc: 0, m2Global: 34 },
+  { date: "2003", gold: 416, silver: 5.9, sp500: 1112, nasdaq: 2003, btc: 0, m2Global: 36 },
+  { date: "2004", gold: 436, silver: 6.8, sp500: 1212, nasdaq: 2178, btc: 0, m2Global: 38 },
+  { date: "2005", gold: 518, silver: 8.8, sp500: 1248, nasdaq: 2205, btc: 0, m2Global: 39 },
+  { date: "2006", gold: 636, silver: 12.9, sp500: 1418, nasdaq: 2415, btc: 0, m2Global: 41 },
+  { date: "2007", gold: 836, silver: 14.8, sp500: 1468, nasdaq: 2652, btc: 0, m2Global: 44 },
+  { date: "2008", gold: 865, silver: 11.0, sp500: 903, nasdaq: 1577, btc: 0, m2Global: 49 },
+  // ── BTC era (2009-2026) ──────────────────────────────────
+  { date: "2009", gold: 1096, silver: 17.5, sp500: 1115, nasdaq: 2269, btc: 0.001, m2Global: 51 },
+  { date: "2010", gold: 1421, silver: 30.9, sp500: 1258, nasdaq: 2653, btc: 0.30, m2Global: 53 },
+  { date: "2011", gold: 1566, silver: 28.2, sp500: 1258, nasdaq: 2605, btc: 4.70, m2Global: 57 },
+  { date: "2012", gold: 1675, silver: 30.4, sp500: 1426, nasdaq: 3020, btc: 13.5, m2Global: 63 },
+  { date: "2013", gold: 1205, silver: 19.5, sp500: 1848, nasdaq: 4177, btc: 751, m2Global: 66 },
   { date: "2014", gold: 1266, silver: 19.1, sp500: 2059, nasdaq: 4736, btc: 320, m2Global: 60 },
-  { date: "2015", gold: 1160, silver: 15.7, sp500: 2044, nasdaq: 5007, btc: 430, m2Global: 63 },
-  { date: "2016", gold: 1251, silver: 17.1, sp500: 2239, nasdaq: 5383, btc: 960, m2Global: 67 },
-  { date: "2017", gold: 1303, silver: 17.1, sp500: 2674, nasdaq: 6903, btc: 14000, m2Global: 73 },
+  { date: "2015", gold: 1060, silver: 13.9, sp500: 2044, nasdaq: 5007, btc: 430, m2Global: 63 },
+  { date: "2016", gold: 1151, silver: 16.1, sp500: 2239, nasdaq: 5383, btc: 960, m2Global: 67 },
+  { date: "2017", gold: 1296, silver: 17.1, sp500: 2674, nasdaq: 6903, btc: 14000, m2Global: 73 },
   { date: "2018", gold: 1282, silver: 15.5, sp500: 2507, nasdaq: 6635, btc: 3800, m2Global: 76 },
   { date: "2019", gold: 1517, silver: 17.9, sp500: 3231, nasdaq: 8973, btc: 7200, m2Global: 80 },
   { date: "2020", gold: 1898, silver: 26.5, sp500: 3756, nasdaq: 12888, btc: 28900, m2Global: 95 },
