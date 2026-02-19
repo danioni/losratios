@@ -347,7 +347,7 @@ function RatioChart({
   );
 }
 
-const CACHE_KEY = "losratios_market_data_v3"; // v3: updated anchors + force CDN invalidation
+const CACHE_KEY = "losratios_market_data_v4"; // v4: always use 55yr fallback, live updates last point only
 const CACHE_TTL_HOURS = 24;
 const MIN_USEFUL_DATAPOINTS = 24; // minimum months for live data to be useful on its own
 
@@ -427,27 +427,44 @@ export default function Dashboard() {
   const isLoading = false;
   const isError = false;
 
-  // Resolve data sources: only use live API data if it has sufficient depth.
-  // API data with <60 months creates discontinuities with fallback,
-  // so we only use it when it's comprehensive enough to stand on its own.
-  const MIN_LIVE_MONTHS = 60;
-
+  // Strategy: ALWAYS use fallback (55 years of history) as the base.
+  // When live API data is available, update the last data point with
+  // fresh prices so the "current" values reflect real-time market data.
+  // This preserves the full 1971-2026 history while showing live prices.
   const { sourceAssets, summaries, currentAssetPerformance } = useMemo(() => {
-    const fallback = {
-      sourceAssets: fallbackAssetData,
-      summaries: fallbackSummaries,
-      currentAssetPerformance: fallbackAssetPerformance,
-    };
-
-    if (!liveData?.assetData || liveData.assetData.length < MIN_LIVE_MONTHS) {
-      return fallback;
+    if (!liveData?.assetData || liveData.assetData.length === 0) {
+      return {
+        sourceAssets: fallbackAssetData,
+        summaries: fallbackSummaries,
+        currentAssetPerformance: fallbackAssetPerformance,
+      };
     }
 
-    // Live data has enough depth — use it
+    // Take the last live data point (most recent real prices)
+    const liveLast = liveData.assetData[liveData.assetData.length - 1];
+
+    // Clone fallback and update the last point with live prices
+    const updated = fallbackAssetData.map((d, i) => {
+      if (i === fallbackAssetData.length - 1) {
+        return {
+          ...d,
+          gold: liveLast.gold > 0 ? liveLast.gold : d.gold,
+          silver: liveLast.silver > 0 ? liveLast.silver : d.silver,
+          sp500: liveLast.sp500 > 0 ? liveLast.sp500 : d.sp500,
+          nasdaq: liveLast.nasdaq > 0 ? liveLast.nasdaq : d.nasdaq,
+          btc: liveLast.btc > 0 ? liveLast.btc : d.btc,
+          m2Global: liveLast.m2Global > 0 ? liveLast.m2Global : d.m2Global,
+        };
+      }
+      return d;
+    });
+
+    // Recompute summaries with the updated last point
+    const recomputed = computeAllFromRawAssets(updated);
     return {
-      sourceAssets: liveData.assetData,
-      summaries: liveData.summaries,
-      currentAssetPerformance: liveData.assetPerformance,
+      sourceAssets: updated,
+      summaries: recomputed.summaries,
+      currentAssetPerformance: recomputed.assetPerformance,
     };
   }, [liveData]);
 
@@ -682,7 +699,7 @@ export default function Dashboard() {
             {dataSource === "live" ? "Datos en vivo · Actualización cada hora" : dataSource === "cache" ? `Datos del caché · ${timestampLabel}` : "Datos de referencia"}
           </p>
           <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-            CoinGecko · FRED · Yahoo Finance · v3
+            CoinGecko · FRED · Yahoo Finance · v4
           </p>
         </div>
       </div>
