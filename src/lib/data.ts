@@ -103,8 +103,8 @@ const anchors: AssetDataPoint[] = [
   { date: "2022", gold: 1824, silver: 24.0, sp500: 3840, nasdaq: 10466, btc: 16500, m2Global: 100 },
   { date: "2023", gold: 2063, silver: 24.1, sp500: 4770, nasdaq: 15011, btc: 42200, m2Global: 104 },
   { date: "2024", gold: 2625, silver: 30.5, sp500: 5881, nasdaq: 19310, btc: 93000, m2Global: 110 },
-  { date: "2025", gold: 2900, silver: 31.5, sp500: 6050, nasdaq: 19800, btc: 95000, m2Global: 114 },
-  { date: "2026", gold: 2900, silver: 32.5, sp500: 6100, nasdaq: 19900, btc: 66000, m2Global: 118 },
+  { date: "2025", gold: 4315, silver: 72, sp500: 6845, nasdaq: 23242, btc: 87500, m2Global: 114 },
+  { date: "2026", gold: 4983, silver: 77, sp500: 6881, nasdaq: 22705, btc: 66676, m2Global: 118 },
 ];
 
 function lerp(a: number, b: number, t: number): number {
@@ -369,20 +369,20 @@ const M2_BENCHMARK = 7; // M2 Global CAGR ~7% anual
 
 const PERFORMANCE_ANCHORS: { ticker: string; name: string; sector: string; marketCap: number; ipoYear: number; priceStart: number; price5YAgo: number; priceCurrent: number }[] = [
   // Universe of winners — assets that historically beat M2
-  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1300, ipoYear: 2009, priceStart: 0.001, price5YAgo: 7200, priceCurrent: 66000 },
-  { ticker: "GOLD", name: "Oro (onza)", sector: "Commodities", marketCap: 18200, ipoYear: 1971, priceStart: 35, price5YAgo: 1517, priceCurrent: 2900 },
-  { ticker: "AAPL", name: "Apple", sector: "Tech", marketCap: 3720, ipoYear: 1980, priceStart: 0.10, price5YAgo: 75, priceCurrent: 242 },
-  { ticker: "MSFT", name: "Microsoft", sector: "Tech", marketCap: 3150, ipoYear: 1986, priceStart: 0.10, price5YAgo: 160, priceCurrent: 423 },
-  { ticker: "GOOGL", name: "Alphabet", sector: "Tech", marketCap: 2320, ipoYear: 2004, priceStart: 2.50, price5YAgo: 73, priceCurrent: 189 },
-  { ticker: "NVDA", name: "NVIDIA", sector: "Tech", marketCap: 3350, ipoYear: 1999, priceStart: 1.50, price5YAgo: 59, priceCurrent: 136 },
-  { ticker: "META", name: "Meta", sector: "Tech", marketCap: 1750, ipoYear: 2012, priceStart: 38, price5YAgo: 208, priceCurrent: 680 },
-  { ticker: "V", name: "Visa", sector: "Finance", marketCap: 650, ipoYear: 2008, priceStart: 11, price5YAgo: 188, priceCurrent: 330 },
-  { ticker: "MA", name: "Mastercard", sector: "Finance", marketCap: 490, ipoYear: 2006, priceStart: 3.90, price5YAgo: 317, priceCurrent: 533 },
-  { ticker: "COST", name: "Costco", sector: "Consumer", marketCap: 430, ipoYear: 1985, priceStart: 2.50, price5YAgo: 335, priceCurrent: 967 },
-  { ticker: "BRK.B", name: "Berkshire Hathaway", sector: "Finance", marketCap: 1120, ipoYear: 1996, priceStart: 23, price5YAgo: 220, priceCurrent: 482 },
+  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1330, ipoYear: 2009, priceStart: 0.001, price5YAgo: 7200, priceCurrent: 66676 },
+  { ticker: "GOLD", name: "Oro (onza)", sector: "Commodities", marketCap: 18200, ipoYear: 1971, priceStart: 35, price5YAgo: 1517, priceCurrent: 4983 },
+  { ticker: "AAPL", name: "Apple", sector: "Tech", marketCap: 3900, ipoYear: 1980, priceStart: 0.10, price5YAgo: 75, priceCurrent: 265 },
+  { ticker: "MSFT", name: "Microsoft", sector: "Tech", marketCap: 2970, ipoYear: 1986, priceStart: 0.10, price5YAgo: 160, priceCurrent: 400 },
+  { ticker: "GOOGL", name: "Alphabet", sector: "Tech", marketCap: 3700, ipoYear: 2004, priceStart: 2.50, price5YAgo: 73, priceCurrent: 303 },
+  { ticker: "NVDA", name: "NVIDIA", sector: "Tech", marketCap: 4600, ipoYear: 1999, priceStart: 1.50, price5YAgo: 59, priceCurrent: 188 },
+  { ticker: "META", name: "Meta", sector: "Tech", marketCap: 1630, ipoYear: 2012, priceStart: 38, price5YAgo: 208, priceCurrent: 643 },
+  { ticker: "V", name: "Visa", sector: "Finance", marketCap: 620, ipoYear: 2008, priceStart: 11, price5YAgo: 188, priceCurrent: 320 },
+  { ticker: "MA", name: "Mastercard", sector: "Finance", marketCap: 480, ipoYear: 2006, priceStart: 3.90, price5YAgo: 317, priceCurrent: 522 },
+  { ticker: "COST", name: "Costco", sector: "Consumer", marketCap: 450, ipoYear: 1985, priceStart: 2.50, price5YAgo: 335, priceCurrent: 1008 },
+  { ticker: "BRK.B", name: "Berkshire Hathaway", sector: "Finance", marketCap: 1120, ipoYear: 1996, priceStart: 23, price5YAgo: 220, priceCurrent: 503 },
   // Context assets that DON'T beat M2 — shown for comparison
-  { ticker: "SPX", name: "S&P 500", sector: "Index", marketCap: 124000, ipoYear: 1957, priceStart: 44, price5YAgo: 3231, priceCurrent: 6050 },
-  { ticker: "SILVER", name: "Plata (onza)", sector: "Commodities", marketCap: 900, ipoYear: 1971, priceStart: 1.39, price5YAgo: 17.9, priceCurrent: 32.2 },
+  { ticker: "SPX", name: "S&P 500", sector: "Index", marketCap: 124000, ipoYear: 1957, priceStart: 44, price5YAgo: 3231, priceCurrent: 6881 },
+  { ticker: "SILVER", name: "Plata (onza)", sector: "Commodities", marketCap: 1800, ipoYear: 1971, priceStart: 1.39, price5YAgo: 17.9, priceCurrent: 77 },
 ];
 
 function computeCAGR(priceStart: number, priceEnd: number, years: number): number {

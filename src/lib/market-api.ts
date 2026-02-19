@@ -145,6 +145,7 @@ const BTC_STATIC_ANCHORS = [
   { date: "2022-12", price: 16500 },
   { date: "2023-12", price: 42200 },
   { date: "2024-12", price: 93000 },
+  { date: "2025-12", price: 87500 },
 ];
 
 function buildBtcFallback(): { dates: string[]; prices: number[] } {
