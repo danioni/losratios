@@ -130,6 +130,55 @@ export async function fetchFredSeries(
   return { dates, values };
 }
 
+// ── BTC Static Fallback (when CoinGecko is rate-limited) ───
+
+const BTC_STATIC_ANCHORS = [
+  { date: "2013-12", price: 750 },
+  { date: "2014-12", price: 320 },
+  { date: "2015-12", price: 430 },
+  { date: "2016-12", price: 960 },
+  { date: "2017-12", price: 14000 },
+  { date: "2018-12", price: 3800 },
+  { date: "2019-12", price: 7200 },
+  { date: "2020-12", price: 28900 },
+  { date: "2021-12", price: 47000 },
+  { date: "2022-12", price: 16500 },
+  { date: "2023-12", price: 42200 },
+  { date: "2024-12", price: 93000 },
+];
+
+function buildBtcFallback(): { dates: string[]; prices: number[] } {
+  const dates: string[] = [];
+  const prices: number[] = [];
+
+  for (let i = 0; i < BTC_STATIC_ANCHORS.length - 1; i++) {
+    const a = BTC_STATIC_ANCHORS[i];
+    const b = BTC_STATIC_ANCHORS[i + 1];
+
+    // Parse year/month from each anchor
+    const [aY, aM] = a.date.split("-").map(Number);
+    const [bY, bM] = b.date.split("-").map(Number);
+    const totalMonths = (bY - aY) * 12 + (bM - aM);
+
+    // Generate monthly points using geometric interpolation:
+    // price = a.price * (b.price / a.price) ^ (t)  where t ∈ [0,1)
+    for (let m = 0; m < totalMonths; m++) {
+      const t = m / totalMonths;
+      const year = aY + Math.floor((aM + m - 1) / 12);
+      const month = ((aM + m - 1) % 12) + 1;
+      dates.push(`${year}-${String(month).padStart(2, "0")}`);
+      prices.push(a.price * Math.pow(b.price / a.price, t));
+    }
+  }
+
+  // Append last anchor
+  const last = BTC_STATIC_ANCHORS[BTC_STATIC_ANCHORS.length - 1];
+  dates.push(last.date);
+  prices.push(last.price);
+
+  return { dates, prices };
+}
+
 // ── Merge all sources into AssetDataPoint[] ────────────────
 
 function alignToMonthlyGrid(
@@ -189,12 +238,21 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
     throw new Error("Insufficient market data from APIs");
   }
 
+  // Bug #2: Use static BTC fallback when CoinGecko is rate-limited
+  const btcData = btcHist.dates.length >= 24
+    ? btcHist
+    : buildBtcFallback();
+
+  console.log(
+    `BTC source: ${btcHist.dates.length >= 24 ? "CoinGecko live" : "static fallback"} — ${btcData.dates.length} months`,
+  );
+
   const allSeries = [
     { dates: sp500Data.dates, values: sp500Data.closes },     // 0: sp500
     { dates: nasdaqData.dates, values: nasdaqData.closes },   // 1: nasdaq
     { dates: goldData.dates, values: goldData.closes },       // 2: gold
     { dates: silverData.dates, values: silverData.closes },   // 3: silver
-    { dates: btcHist.dates, values: btcHist.prices },         // 4: btc
+    { dates: btcData.dates, values: btcData.prices },         // 4: btc
     { dates: m2Data.dates, values: m2Data.values },           // 5: m2
   ];
 
@@ -217,9 +275,9 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
     };
   });
 
-  // Filter out data points where critical fields are all zero
+  // Filter out data points where ANY critical field is zero/missing
   const filtered = result.filter(
-    (d) => d.sp500 > 0 || d.gold > 0 || d.btc > 0,
+    (d) => d.btc > 0 && d.gold > 0 && d.sp500 > 0,
   );
   if (filtered.length === 0) {
     throw new Error("All market data fields are zero — API data unusable");
