@@ -48,6 +48,64 @@ function ThemeToggle() {
   );
 }
 
+const ECOSYSTEM_SITES = [
+  { label: "El Denominador", href: "https://eldenominador.com", key: "denominador" },
+  { label: "El Numerador", href: "https://elnumerador.com", key: "numerador" },
+  { label: "Los Ratios", href: "https://losratios.com", key: "ratios", current: true },
+  { label: "El Faro Capital", href: "https://elfaro.capital", key: "faro" },
+];
+
+function EcosystemBar() {
+  const [visited, setVisited] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    // Mark current site as visited
+    localStorage.setItem("visited_ratios", "true");
+    // Check which sites have been visited
+    const v: Record<string, boolean> = {};
+    for (const site of ECOSYSTEM_SITES) {
+      v[site.key] = localStorage.getItem(`visited_${site.key}`) === "true";
+    }
+    setVisited(v);
+  }, []);
+
+  return (
+    <nav
+      className="w-full overflow-x-auto"
+      style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center gap-1 sm:gap-2 min-w-0">
+        <span className="text-[8px] sm:text-[9px] tracking-wider uppercase shrink-0" style={{ color: "var(--text-muted)" }}>
+          Todo precio es una fracción:
+        </span>
+        {ECOSYSTEM_SITES.map((site, i) => (
+          <span key={site.key} className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {i > 0 && <span className="text-[9px]" style={{ color: "var(--text-muted)", opacity: 0.4 }}>→</span>}
+            <a
+              href={site.href}
+              target={site.current ? undefined : "_blank"}
+              rel={site.current ? undefined : "noopener noreferrer"}
+              className="text-[8px] sm:text-[9px] tracking-wider uppercase transition-opacity hover:opacity-80 whitespace-nowrap"
+              style={{
+                color: site.current
+                  ? "var(--accent-green)"
+                  : visited[site.key]
+                  ? "var(--text-secondary)"
+                  : "var(--text-muted)",
+                textDecoration: site.current ? "underline" : "none",
+                textUnderlineOffset: "3px",
+                fontWeight: site.current ? 600 : 400,
+              }}
+            >
+              {site.label}
+            </a>
+          </span>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 export default function Header() {
   return (
     <header
@@ -56,6 +114,9 @@ export default function Header() {
         background: "linear-gradient(180deg, var(--ambient-glow) 0%, transparent 100%)",
       }}
     >
+      {/* Ecosystem navigation bar */}
+      <EcosystemBar />
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center justify-between gap-3">
         {/* Logo */}
         <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
@@ -99,16 +160,6 @@ export default function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <a
-            href="https://elfaro.capital"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="label-badge hidden sm:inline-flex hover:opacity-80 transition-opacity"
-          >
-            <span className="text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-              El Faro Capital
-            </span>
-          </a>
           <div className="label-badge">
             <div
               className="w-1.5 h-1.5 rounded-full pulse-dot"

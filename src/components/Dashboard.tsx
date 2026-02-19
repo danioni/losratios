@@ -297,15 +297,45 @@ function RatioChart({
   );
 }
 
+const CACHE_KEY = "losratios_market_data";
+const CACHE_TTL_HOURS = 24;
+
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
 export default function Dashboard() {
   const [range, setRange] = useState<TimeRange>("MAX");
   const [liveData, setLiveData] = useState<ComputedMarketData | null>(null);
-  const [dataSource, setDataSource] = useState<"mock" | "live">("mock");
+  const [dataSource, setDataSource] = useState<"loading" | "live" | "cache" | "error">("loading");
+  const [dataTimestamp, setDataTimestamp] = useState<number | null>(null);
   const COLORS = useThemeColors();
 
-  // Fetch live market data on mount
+  // Fetch live market data on mount with localStorage cache (24h TTL)
   useEffect(() => {
     let cancelled = false;
+
+    // Check localStorage cache first
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const ageHours = (Date.now() - timestamp) / (1000 * 60 * 60);
+        if (ageHours < CACHE_TTL_HOURS && data?.assetData?.length > 0) {
+          setLiveData(data);
+          setDataSource("cache");
+          setDataTimestamp(timestamp);
+        }
+      }
+    } catch { /* ignore corrupt cache */ }
+
+    // Always try to fetch fresh data
     fetch("/api/market-data")
       .then((res) => {
         if (!res.ok) throw new Error(`API ${res.status}`);
@@ -315,20 +345,36 @@ export default function Dashboard() {
       })
       .then((data: ComputedMarketData) => {
         if (!cancelled && data?.assetData?.length > 0 && !(data as any).error) {
+          const now = Date.now();
           setLiveData(data);
           setDataSource("live");
+          setDataTimestamp(now);
+          // Save to cache
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: now }));
+          } catch { /* localStorage full */ }
         }
       })
       .catch(() => {
-        // Silently fall back to mock data
+        if (!cancelled) {
+          // If we already loaded from cache, keep that
+          setDataSource((prev) => prev === "cache" ? "cache" : "error");
+        }
       });
     return () => { cancelled = true; };
   }, []);
 
-  // Resolve data sources: live if available, else fallback
+  const isLoading = dataSource === "loading" && !liveData;
+  const isError = dataSource === "error" && !liveData;
+
+  // Resolve data sources: live/cache if available, else fallback
   const summaries = liveData?.summaries ?? fallbackSummaries;
   const currentAssetPerformance = liveData?.assetPerformance ?? fallbackAssetPerformance;
   const sourceAssets = liveData?.assetData ?? fallbackAssetData;
+
+  const timestampLabel = dataTimestamp
+    ? `Datos al: ${formatTimestamp(dataTimestamp)}`
+    : dataSource === "live" ? "Datos en vivo" : dataSource === "cache" ? "Datos del caché" : "";
 
   const { filteredRatios, xTicks, ratioDateRange } = useMemo(() => {
     const { ratios: r } = getFilteredData(range, sourceAssets);
@@ -374,16 +420,37 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls + timestamp */}
       <div className="flex flex-wrap items-center gap-3 fade-in-up fade-in-up-2">
         <TimeRangeSelector range={range} onChange={setRange} />
         <span className="text-[10px] tabular-nums tracking-wider" style={{ color: "var(--text-muted)" }}>
           {ratioDateRange}
         </span>
-        <span className="text-[10px] tabular-nums tracking-wider ml-auto" style={{ color: "var(--text-muted)" }}>
-          {dataSource === "live" ? "Datos en vivo" : "Datos simulados"}
+        <span className="text-[10px] tabular-nums tracking-wider ml-auto flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+          {dataSource === "live" && <span className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: "var(--accent-green)" }} />}
+          {timestampLabel}
         </span>
       </div>
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex flex-col items-center justify-center py-16 space-y-4 fade-in-up">
+          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--accent-green)", borderTopColor: "transparent" }} />
+          <p className="text-[11px] tracking-wider" style={{ color: "var(--text-muted)" }}>Cargando datos de mercado...</p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {isError && (
+        <div className="card-glass rounded-xl p-6 text-center space-y-3 fade-in-up" style={{ border: "1px solid var(--accent-red)" }}>
+          <p className="text-[11px] sm:text-xs" style={{ color: "var(--accent-red)" }}>
+            No se pudieron cargar los datos en tiempo real.
+          </p>
+          <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+            Mostrando datos de referencia. Intentá recargar la página.
+          </p>
+        </div>
+      )}
 
       {/* Key metrics — 4 cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -413,6 +480,13 @@ export default function Dashboard() {
           </p>
         </div>
         <RatioChart pairDef={PAIR_DEFS[0]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
+
+        {/* Pull quote — shareable moment */}
+        <div className="text-center py-6">
+          <p className="font-serif italic text-base sm:text-lg md:text-xl leading-relaxed max-w-xl mx-auto" style={{ color: "var(--text-secondary)" }}>
+            &ldquo;No preguntes si un activo está caro o barato. Pregunta contra qué lo estás midiendo.&rdquo;
+          </p>
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════ */}
@@ -526,7 +600,7 @@ export default function Dashboard() {
         </div>
         <div className="space-y-1 pt-2">
           <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-            {dataSource === "live" ? "Datos en vivo · Actualización cada hora" : "Datos simulados · Cargando datos reales..."}
+            {dataSource === "live" ? "Datos en vivo · Actualización cada hora" : dataSource === "cache" ? `Datos del caché · ${timestampLabel}` : "Datos de referencia"}
           </p>
           <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>
             CoinGecko · FRED · Yahoo Finance
