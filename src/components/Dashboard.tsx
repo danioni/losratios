@@ -396,6 +396,14 @@ export default function Dashboard() {
       })
       .then((data: ComputedMarketData) => {
         if (!cancelled && data?.assetData?.length > 0 && !(data as any).error) {
+          // Sanity check: reject data where critical fields are mostly zero or missing
+          const last = data.assetData[data.assetData.length - 1];
+          const hasReasonableData = last && last.btc > 1000 && last.gold > 500 && last.sp500 > 1000;
+          if (!hasReasonableData) {
+            console.warn("Live API data looks incomplete, falling back to static data");
+            if (!cancelled) setDataSource("error");
+            return;
+          }
           const now = Date.now();
           setLiveData(data);
           setDataSource("live");
@@ -415,39 +423,31 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  const isLoading = dataSource === "loading" && !liveData;
-  const isError = dataSource === "error" && !liveData;
+  // Never show loading state — fallback data is always available immediately
+  const isLoading = false;
+  const isError = false;
 
-  // Resolve data sources: merge fallback history with live/cache data
-  // If live API returns fewer months than fallback (e.g. API rate-limited),
-  // use fallback for historical depth + live for recent updates.
-  // Then recompute all summaries/ratios from the merged dataset.
+  // Resolve data sources: only use live API data if it has sufficient depth.
+  // API data with <60 months creates discontinuities with fallback,
+  // so we only use it when it's comprehensive enough to stand on its own.
+  const MIN_LIVE_MONTHS = 60;
+
   const { sourceAssets, summaries, currentAssetPerformance } = useMemo(() => {
-    if (!liveData?.assetData || liveData.assetData.length === 0) {
-      return {
-        sourceAssets: fallbackAssetData,
-        summaries: fallbackSummaries,
-        currentAssetPerformance: fallbackAssetPerformance,
-      };
+    const fallback = {
+      sourceAssets: fallbackAssetData,
+      summaries: fallbackSummaries,
+      currentAssetPerformance: fallbackAssetPerformance,
+    };
+
+    if (!liveData?.assetData || liveData.assetData.length < MIN_LIVE_MONTHS) {
+      return fallback;
     }
-    // If live data has enough depth (>= fallback), use it directly
-    if (liveData.assetData.length >= fallbackAssetData.length) {
-      return {
-        sourceAssets: liveData.assetData,
-        summaries: liveData.summaries,
-        currentAssetPerformance: liveData.assetPerformance,
-      };
-    }
-    // Merge: fallback for old history + live for recent months
-    const firstLiveDate = liveData.assetData[0].date;
-    const historical = fallbackAssetData.filter(d => d.date < firstLiveDate);
-    const merged = [...historical, ...liveData.assetData];
-    // Recompute all statistics from merged dataset
-    const recomputed = computeAllFromRawAssets(merged);
+
+    // Live data has enough depth — use it
     return {
-      sourceAssets: merged,
-      summaries: recomputed.summaries,
-      currentAssetPerformance: recomputed.assetPerformance,
+      sourceAssets: liveData.assetData,
+      summaries: liveData.summaries,
+      currentAssetPerformance: liveData.assetPerformance,
     };
   }, [liveData]);
 
