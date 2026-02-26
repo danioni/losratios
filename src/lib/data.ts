@@ -66,6 +66,7 @@ export interface AssetPerformance {
   marketCap: number;       // billions USD
   ipoYear: number;
   priceStart: number;
+  price5YAgo: number;
   priceCurrent: number;
   years: number;
   cagrHistorical: number;  // % anual
@@ -424,9 +425,19 @@ const PERFORMANCE_ANCHORS: { ticker: string; name: string; sector: string; marke
   { ticker: "SILVER", name: "Plata (onza)", sector: "Commodities", marketCap: 1800, ipoYear: 1971, priceStart: 1.39, price5YAgo: 17.9, priceCurrent: 77 },
 ];
 
-function computeCAGR(priceStart: number, priceEnd: number, years: number): number {
+export function computeCAGR(priceStart: number, priceEnd: number, years: number): number {
   if (priceStart <= 0 || priceEnd <= 0 || years <= 0) return 0;
   return (Math.pow(priceEnd / priceStart, 1 / years) - 1) * 100;
+}
+
+export function getAnchorPrice(asset: 'gold' | 'silver' | 'sp500' | 'nasdaq' | 'btc' | 'm2Global', year: number): number {
+  let best = anchors[0];
+  for (const a of anchors) {
+    const aYear = parseInt(a.date);
+    if (aYear <= year) best = a;
+    if (aYear > year) break;
+  }
+  return best[asset];
 }
 
 function buildPerformanceData(): AssetPerformance[] {
@@ -443,6 +454,7 @@ function buildPerformanceData(): AssetPerformance[] {
       marketCap: a.marketCap,
       ipoYear: a.ipoYear,
       priceStart: a.priceStart,
+      price5YAgo: a.price5YAgo,
       priceCurrent: a.priceCurrent,
       years,
       cagrHistorical,

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AssetPerformance } from "@/lib/data";
+import { computeCAGR, getAnchorPrice } from "@/lib/data";
 import { useCurrencyBase } from "./CurrencyContext";
 
 interface PerformanceTableProps {
@@ -12,13 +13,69 @@ interface PerformanceTableProps {
 type SortKey = "cagrHistorical" | "cagr5Y" | "vsM2" | "ticker";
 type SortDir = "asc" | "desc";
 
+const BTC_START_YEAR = 2010;
+const M2_BENCHMARK = 7;
+
 export default function PerformanceTable({ data }: PerformanceTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("cagrHistorical");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const { base, formatValue, isUSD, symbol, level } = useCurrencyBase();
 
+  const isHardBase = base === "BTC" || base === "XAU";
+  const benchmark = isHardBase ? 0 : M2_BENCHMARK;
+
+  // Adjust CAGR for BTC/XAU base using historical anchor prices
+  const adjustedData = useMemo(() => {
+    if (!isHardBase) return data;
+
+    const baseTicker = base === "BTC" ? "btc" as const : "gold" as const;
+    const baseAssetTicker = base === "BTC" ? "BTC" : "GOLD";
+    const baseCurrentUSD = data.find(a => a.ticker === baseAssetTicker)?.priceCurrent ?? getAnchorPrice(baseTicker, 2026);
+
+    return data.map(a => {
+      let effectiveIpoYear = a.ipoYear;
+      let effectivePriceStart = a.priceStart;
+      let effectiveYears = a.years;
+
+      // For BTC base, assets before 2010 get truncated start
+      if (base === "BTC" && a.ipoYear < BTC_START_YEAR) {
+        effectiveIpoYear = BTC_START_YEAR;
+        const totalYears = 2026 - a.ipoYear;
+        const yearsToTarget = BTC_START_YEAR - a.ipoYear;
+        effectivePriceStart = a.priceStart * Math.pow(a.priceCurrent / a.priceStart, yearsToTarget / totalYears);
+        effectiveYears = 2026 - BTC_START_YEAR;
+      }
+
+      const baseAtStart = getAnchorPrice(baseTicker, effectiveIpoYear);
+      if (baseAtStart <= 0 || baseCurrentUSD <= 0) return a;
+
+      const startInBase = effectivePriceStart / baseAtStart;
+      const currentInBase = a.priceCurrent / baseCurrentUSD;
+      const cagrHist = computeCAGR(startInBase, currentInBase, effectiveYears);
+
+      // 5Y CAGR in base currency
+      const base5YUSD = getAnchorPrice(baseTicker, 2021);
+      let cagr5Y = a.cagr5Y;
+      if (base5YUSD > 0 && a.price5YAgo > 0) {
+        cagr5Y = computeCAGR(a.price5YAgo / base5YUSD, a.priceCurrent / baseCurrentUSD, 5);
+      }
+
+      const vsM2 = cagrHist - benchmark;
+
+      return {
+        ...a,
+        ipoYear: effectiveIpoYear,
+        years: effectiveYears,
+        cagrHistorical: cagrHist,
+        cagr5Y,
+        vsM2,
+        beatsM2: cagrHist > benchmark,
+      };
+    });
+  }, [data, base, isHardBase, benchmark]);
+
   const sorted = useMemo(() => {
-    return [...data].sort((a, b) => {
+    return [...adjustedData].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       if (typeof aVal === "string" && typeof bVal === "string") {
@@ -26,7 +83,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
       }
       return sortDir === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
     });
-  }, [data, sortKey, sortDir]);
+  }, [adjustedData, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -44,14 +101,35 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
   // Currency label for the price column header
   const priceLabel = isUSD ? "Precio" : `Precio (${base})`;
 
+  // Dynamic labels based on base currency
+  const vsLabel = base === "BTC" ? "vs BTC" : base === "XAU" ? "vs Oro" : "vs M2 (7%)";
+  const separatorText = base === "BTC"
+    ? "No superan BTC — pierden contra el activo m\u00e1s escaso"
+    : base === "XAU"
+    ? "No superan Oro — pierden contra dinero duro"
+    : "No superan M2 (7% anual) — contexto, no universo ganador";
+  const loserLabel = base === "BTC"
+    ? "No supera BTC"
+    : base === "XAU"
+    ? "No supera Oro"
+    : "No supera denominador";
+
   return (
     <div className="space-y-6 fade-in-up fade-in-up-3">
       <div className="max-w-2xl">
         <h3 className="font-serif text-lg sm:text-xl tracking-wide mb-3" style={{ color: "var(--text-primary)" }}>
-          ¿Qué activos realmente ganan contra el denominador?
+          {base === "BTC"
+            ? "\u00bfQu\u00e9 activos realmente ganan contra Bitcoin?"
+            : base === "XAU"
+            ? "\u00bfQu\u00e9 activos realmente ganan contra el oro?"
+            : "\u00bfQu\u00e9 activos realmente ganan contra el denominador?"}
         </h3>
         <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-          M2 Global crece ~7% por año. Si tu activo no supera eso, no estás ganando — estás perdiendo en términos reales. Solo los activos que superan esta línea entran al análisis. La mayoría de los &ldquo;activos seguros&rdquo; no le ganan a la impresora.
+          {base === "BTC"
+            ? "Midiendo en BTC. Si tu activo no supera al activo m\u00e1s escaso, est\u00e1s perdiendo en los t\u00e9rminos m\u00e1s exigentes. Pocos sobreviven esta vara."
+            : base === "XAU"
+            ? "Midiendo en oro. Si tu activo no supera 5,000 a\u00f1os de dinero duro, est\u00e1s perdiendo en t\u00e9rminos reales."
+            : "M2 Global crece ~7% por a\u00f1o. Si tu activo no supera eso, no est\u00e1s ganando \u2014 est\u00e1s perdiendo en t\u00e9rminos reales. Solo los activos que superan esta l\u00ednea entran al an\u00e1lisis. La mayor\u00eda de los \u201cactivos seguros\u201d no le ganan a la impresora."}
         </p>
       </div>
 
@@ -65,7 +143,13 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
             color: level === 4 ? "var(--accent-gold)" : level === 3 ? "var(--accent-amber)" : "var(--text-secondary)",
           }}
         >
-          Precios convertidos a {base} ({symbol}) al tipo de cambio actual. CAGR en USD — la conversión cambia los nominales, no el rendimiento porcentual (asumiendo FX constante).
+          {base === "BTC" ? (
+            <>CAGR recalculado en BTC. Mide el rendimiento real contra el activo m&aacute;s escaso. Pocos portfolios sobreviven esta vara.</>
+          ) : base === "XAU" ? (
+            <>CAGR recalculado en onzas de oro. Mide el rendimiento real contra 5,000 a&ntilde;os de dinero duro.</>
+          ) : (
+            <>Precios convertidos a {base} ({symbol}) al tipo de cambio actual. CAGR en USD &mdash; la conversi&oacute;n cambia los nominales, no el rendimiento porcentual (asumiendo FX constante).</>
+          )}
         </div>
       )}
 
@@ -89,7 +173,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                   CAGR 5Y {sortIcon("cagr5Y")}
                 </th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium cursor-pointer" style={{ color: "var(--text-muted)" }} onClick={() => toggleSort("vsM2")}>
-                  vs M2 (7%) {sortIcon("vsM2")}
+                  {vsLabel} {sortIcon("vsM2")}
                 </th>
                 <th className="text-center py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Universo</th>
               </tr>
@@ -162,7 +246,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
                       <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-                        No superan M2 (7% anual) — contexto, no universo ganador
+                        {separatorText}
                       </span>
                       <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
                     </div>
@@ -203,7 +287,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                   </td>
                   <td className="py-2.5 px-2 text-center">
                     <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-                      No supera denominador
+                      {loserLabel}
                     </span>
                   </td>
                 </tr>

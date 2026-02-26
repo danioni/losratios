@@ -47,9 +47,7 @@ export default function CurrencySelector() {
   const grouped = [4, 3, 2, 1] as const;
 
   return (
-    <div className="w-full" style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-subtle)" }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center gap-3 min-w-0 flex-wrap">
           <span
             className="text-[8px] sm:text-[9px] tracking-wider uppercase shrink-0"
             style={{ color: "var(--text-muted)" }}
@@ -195,8 +193,6 @@ export default function CurrencySelector() {
               {levelMessage}
             </span>
           )}
-        </div>
-      </div>
     </div>
   );
 }

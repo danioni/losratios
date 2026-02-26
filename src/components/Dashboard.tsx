@@ -31,6 +31,7 @@ import {
 import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
 import PerformanceTable from "./PerformanceTable";
+import CurrencySelector from "./CurrencySelector";
 import { useCurrencyBase } from "./CurrencyContext";
 
 type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
@@ -223,18 +224,26 @@ function RatioChart({
     };
   }, [filteredRatios, pairDef.key]);
 
-  // Compute per-pair date range (BTC pairs start at 2010, not 1971)
-  const { pairDateRange: actualDateRange, pairStartLabel } = useMemo(() => {
+  // Compute per-pair date range AND filter chart data (BTC pairs start at 2010, not 1971)
+  const { pairDateRange: actualDateRange, pairStartLabel, visibleChartData, visibleXTicks } = useMemo(() => {
     const startStr = `${pairDef.startYear}-01`;
     const firstIdx = filteredRatios.findIndex(d => d.date >= startStr);
     const startDate = firstIdx >= 0 ? filteredRatios[firstIdx].date : filteredRatios[0]?.date || "";
     const now = new Date();
     const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // Filter chart data to pair's actual date range
+    const chartFiltered = bollingerChartData.filter(d => d.date >= startStr);
+    const dates = chartFiltered.map(d => d.date);
+    const ticks = dates.length <= 24
+      ? dates.filter((_, i) => i % 3 === 0)
+      : dates.filter((_, i) => i % 12 === 0);
     return {
       pairDateRange: startDate ? formatDateRange(startDate, endDate) : ratioDateRange,
       pairStartLabel: formatDateLabel(startDate),
+      visibleChartData: chartFiltered,
+      visibleXTicks: ticks,
     };
-  }, [filteredRatios, pairDef.startYear, ratioDateRange]);
+  }, [filteredRatios, pairDef.startYear, ratioDateRange, bollingerChartData]);
 
   const formatDate = (d: string) => d.length <= 4 ? d : d.split("-")[0];
   const getColorValue = (colorKey: string): string => {
@@ -302,11 +311,11 @@ function RatioChart({
       {/* Ratio chart with Bollinger bands */}
       <div className="h-[280px] sm:h-[360px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={bollingerChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+          <ComposedChart data={visibleChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
-              ticks={xTicks}
+              ticks={visibleXTicks}
               tickFormatter={formatDate}
               tick={{ fill: "var(--text-muted)", fontSize: 10 }}
               axisLine={false}
@@ -583,23 +592,6 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Currency base note — ratios are dimensionless */}
-      {!isUSD && (
-        <div
-          className="rounded-lg px-4 py-2.5 text-[10px] sm:text-[11px] leading-relaxed"
-          style={{
-            background: level === 4 ? "var(--accent-gold-bg)" : level === 3 ? "var(--accent-amber-bg)" : "var(--accent-green-bg)",
-            border: `1px solid ${level === 4 ? "var(--accent-gold-border)" : level === 3 ? "var(--accent-amber-border)" : "var(--accent-green-border)"}`,
-            color: level === 4 ? "var(--accent-gold)" : level === 3 ? "var(--accent-amber)" : "var(--text-secondary)",
-          }}
-        >
-          <span className="font-medium">Midiendo en {base}.</span>{" "}
-          Los ratios entre activos (BTC/Oro, Oro/S&P) son adimensionales — no cambian con la moneda base.
-          Los precios nominales y la tabla de performance sí se convierten.
-          {levelMessage && <span className="block mt-1" style={{ color: "var(--text-muted)" }}>{levelMessage}</span>}
-        </div>
-      )}
-
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 1 — BTC/Oro: EL RATIO CENTRAL                 */}
       {/* ═══════════════════════════════════════════════════════ */}
@@ -671,6 +663,7 @@ export default function Dashboard() {
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 5 — Performance Table (Universe of Winners)    */}
       {/* ═══════════════════════════════════════════════════════ */}
+      <CurrencySelector />
       <PerformanceTable data={currentAssetPerformance} colors={COLORS} />
 
       {/* ═══════════════════════════════════════════════════════ */}
