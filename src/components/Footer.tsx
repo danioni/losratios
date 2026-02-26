@@ -45,6 +45,42 @@ export default function Footer() {
           ))}
         </div>
 
+        {/* Methodology note — collapsible */}
+        <details className="rounded-lg" style={{ border: "1px solid var(--border-subtle)" }}>
+          <summary
+            className="px-4 py-3 cursor-pointer text-[10px] sm:text-[11px] tracking-wider uppercase font-medium select-none"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Metodolog&iacute;a
+          </summary>
+          <div className="px-4 pb-4 space-y-3 text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Fuentes de precios</p>
+              <ul className="space-y-0.5 pl-3">
+                <li>BTC: CoinGecko (historia + precio actual)</li>
+                <li>Oro (GC=F), Plata (SI=F), S&amp;P 500 (^GSPC), Nasdaq (^IXIC): Yahoo Finance</li>
+                <li>M2 Global (M2SL): FRED (Federal Reserve Economic Data)</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Frecuencia de datos</p>
+              <p>Series mensuales interpoladas entre puntos de anclaje anuales (1971&ndash;2026). El &uacute;ltimo punto se actualiza con precios en vivo cada hora.</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>CAGR hist&oacute;rico</p>
+              <p>El periodo de c&aacute;lculo var&iacute;a por activo seg&uacute;n disponibilidad de datos. BTC desde 2009, acciones individuales desde su IPO, Oro/Plata/S&amp;P/Nasdaq desde 1971. La columna &ldquo;Desde&rdquo; en la tabla muestra el a&ntilde;o de inicio de cada c&aacute;lculo.</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Z-scores</p>
+              <p>Calculados sobre la distribuci&oacute;n completa (full-sample) del ratio desde la fecha de inicio del par, no sobre una ventana rolling. Para ratios que abarcan &oacute;rdenes de magnitud (BTC/Oro, BTC/S&amp;P), se usa escala logar&iacute;tmica (media geom&eacute;trica y desviaci&oacute;n est&aacute;ndar en log-space).</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Se&ntilde;ales</p>
+              <p>Las se&ntilde;ales de &ldquo;oportunidad de acumulaci&oacute;n&rdquo; son observaciones estad&iacute;sticas de mean reversion hist&oacute;rica, no predicciones. Un z-score extremo indica que el ratio est&aacute; lejos de su media hist&oacute;rica, no que vaya a revertir en un plazo determinado.</p>
+            </div>
+          </div>
+        </details>
+
         {/* CTA + attribution */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-3">

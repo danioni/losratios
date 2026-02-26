@@ -81,6 +81,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                 </th>
                 <th className="text-left py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Sector</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>{priceLabel}</th>
+                <th className="text-center py-2 px-2 tracking-wider uppercase font-medium hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Desde</th>
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium cursor-pointer" style={{ color: "var(--text-muted)" }} onClick={() => toggleSort("cagrHistorical")}>
                   CAGR Hist {sortIcon("cagrHistorical")}
                 </th>
@@ -111,6 +112,9 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums hidden lg:table-cell" style={{ color: "var(--text-primary)" }}>
                     {formatValue(a.priceCurrent)}
+                  </td>
+                  <td className="py-2.5 px-2 text-center tabular-nums hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
+                    {a.ipoYear}
                   </td>
                   <td className="py-2.5 px-2 text-right">
                     <span
@@ -154,7 +158,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
               {/* Separator */}
               {losers.length > 0 && (
                 <tr>
-                  <td colSpan={8} className="py-3 px-2">
+                  <td colSpan={9} className="py-3 px-2">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
                       <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
@@ -182,6 +186,9 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>
                     {formatValue(a.priceCurrent)}
+                  </td>
+                  <td className="py-2.5 px-2 text-center tabular-nums hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
+                    {a.ipoYear}
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums" style={{ color: "var(--text-muted)" }}>
                     {a.cagrHistorical.toFixed(1)}%

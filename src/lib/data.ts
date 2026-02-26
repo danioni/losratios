@@ -77,12 +77,12 @@ export interface AssetPerformance {
 // ============================================================
 // PAIR DEFINITIONS — only the 5 that matter
 // ============================================================
-export const PAIR_DEFS: { name: string; pair: string; key: keyof ClassRatioDataPoint; description: string; color: string }[] = [
-  { name: "BTC ÷ Oro", pair: "BTC / Oro", key: "btcGold", description: "Market share del digital gold — ¿está ganando el argumento?", color: "gold" },
-  { name: "Oro ÷ S&P 500", pair: "Oro / S&P 500", key: "goldSp500", description: "Fear vs greed — protección vs crecimiento", color: "amber" },
-  { name: "BTC ÷ S&P 500", pair: "BTC / S&P 500", key: "btcSp500", description: "Hard money vs capital productivo", color: "cyan" },
-  { name: "Nasdaq ÷ S&P 500", pair: "Nasdaq / S&P 500", key: "nasdaqSp500", description: "Growth vs quality — el ciclo dentro del ciclo", color: "blue" },
-  { name: "Oro ÷ Plata", pair: "Oro / Plata", key: "goldSilver", description: "Escasez pura vs escasez con utilidad — >80 = plata barata", color: "red" },
+export const PAIR_DEFS: { name: string; pair: string; key: keyof ClassRatioDataPoint; description: string; color: string; startYear: number }[] = [
+  { name: "BTC ÷ Oro", pair: "BTC / Oro", key: "btcGold", description: "Market share del digital gold — ¿está ganando el argumento?", color: "gold", startYear: 2010 },
+  { name: "Oro ÷ S&P 500", pair: "Oro / S&P 500", key: "goldSp500", description: "Fear vs greed — protección vs crecimiento", color: "amber", startYear: 1971 },
+  { name: "BTC ÷ S&P 500", pair: "BTC / S&P 500", key: "btcSp500", description: "Hard money vs capital productivo", color: "cyan", startYear: 2010 },
+  { name: "Nasdaq ÷ S&P 500", pair: "Nasdaq / S&P 500", key: "nasdaqSp500", description: "Growth vs quality — el ciclo dentro del ciclo", color: "blue", startYear: 1971 },
+  { name: "Oro ÷ Plata", pair: "Oro / Plata", key: "goldSilver", description: "Escasez pura vs escasez con utilidad — >80 = plata barata", color: "red", startYear: 1971 },
 ];
 
 const SMA_LONG = 200;  // meses — ventana para media y z-score

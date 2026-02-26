@@ -223,6 +223,19 @@ function RatioChart({
     };
   }, [filteredRatios, pairDef.key]);
 
+  // Compute per-pair date range (BTC pairs start at 2010, not 1971)
+  const { pairDateRange: actualDateRange, pairStartLabel } = useMemo(() => {
+    const startStr = `${pairDef.startYear}-01`;
+    const firstIdx = filteredRatios.findIndex(d => d.date >= startStr);
+    const startDate = firstIdx >= 0 ? filteredRatios[firstIdx].date : filteredRatios[0]?.date || "";
+    const now = new Date();
+    const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return {
+      pairDateRange: startDate ? formatDateRange(startDate, endDate) : ratioDateRange,
+      pairStartLabel: formatDateLabel(startDate),
+    };
+  }, [filteredRatios, pairDef.startYear, ratioDateRange]);
+
   const formatDate = (d: string) => d.length <= 4 ? d : d.split("-")[0];
   const getColorValue = (colorKey: string): string => {
     return COLORS[colorKey as keyof typeof COLORS] || COLORS.cyan;
@@ -247,7 +260,7 @@ function RatioChart({
   return (
     <ChartSection
       title={`${pairDef.name}`}
-      subtitle={`${ratioDateRange} · Actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · z-score: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
+      subtitle={`${actualDateRange} · Actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · z-score: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
       delay={3}
     >
       {/* Z-score indicator bar */}
@@ -279,6 +292,11 @@ function RatioChart({
       {/* Z-score explanation in plain language */}
       <p className="text-[10px] sm:text-[11px] mb-4 leading-relaxed" style={{ color: pairStats.zScore > 1 ? "var(--accent-red)" : pairStats.zScore < -1 ? "var(--accent-green)" : "var(--text-muted)" }}>
         {pairStats.zScore >= 0 ? "+" : ""}{pairStats.zScore.toFixed(1)}σ = {zExplanation}
+      </p>
+
+      {/* Z-score methodology note */}
+      <p className="text-[9px] mb-4 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
+        z-score calculado sobre la distribución completa del ratio desde {pairStartLabel}. Media y desviación estándar históricas full-sample.
       </p>
 
       {/* Ratio chart with Bollinger bands */}
