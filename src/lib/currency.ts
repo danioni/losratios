@@ -63,7 +63,10 @@ export const CURRENCIES: CurrencyDef[] = [
 // ============================================================
 const FX_ANCHORS: Partial<Record<CurrencyCode, { year: number; rate: number }[]>> = {
   EUR: [
+    // Euro exists since 1999. Pre-1999 rates are synthetic (from DEM via 1 EUR = 1.95583 DEM)
+    // We keep them for CAGR continuity but firstYear display should note this
     { year: 1971, rate: 1.759 }, { year: 1980, rate: 0.931 }, { year: 1990, rate: 0.828 },
+    { year: 1999, rate: 1.066 }, // actual Euro launch
     { year: 2000, rate: 1.085 }, { year: 2010, rate: 0.755 }, { year: 2015, rate: 0.920 },
     { year: 2020, rate: 0.818 }, { year: 2021, rate: 0.879 }, { year: 2024, rate: 0.966 },
     { year: 2025, rate: 0.852 }, { year: 2026, rate: 0.848 },
@@ -300,6 +303,117 @@ export function convertCAGR(
   const usdDecimal = cagrUSD / 100;
   const fxGrowth = Math.pow(fxEnd / fxStart, 1 / fxYears);
   return ((1 + usdDecimal) * fxGrowth - 1) * 100;
+}
+
+// ============================================================
+// Purchasing Power Depreciation Data — for the "Poder Adquisitivo Global" section
+// ============================================================
+const M2_ANNUAL = 0.07; // Global M2 expansion ~7%/year
+
+export interface CurrencyDepreciationRow {
+  code: CurrencyCode;
+  name: string;
+  flag: string;
+  country: string;
+  firstYear: number | null;
+  /** Annual depreciation vs USD (negative = losing value, positive = gaining) */
+  annualDepVsUSD: number;
+  /** Annual global purchasing power change (dep + M2 debasement) */
+  annualGlobalLoss: number;
+  level: 1 | 2 | 3 | 4;
+}
+
+export function getCurrencyDepreciationData(): CurrencyDepreciationRow[] {
+  const END_YEAR = 2026;
+  const rows: CurrencyDepreciationRow[] = [];
+
+  for (const curr of CURRENCIES) {
+    const { code, name, flag, country, level } = curr;
+
+    // BTC and XAU: compute as asset appreciation vs USD (inverse of depreciation)
+    if (code === "BTC") {
+      // BTC: 0.001 → 67650 from 2009, but use 2010 for comparability
+      const startPrice = 0.30; // ~2010 anchor
+      const endPrice = 67650;
+      const years = END_YEAR - 2010;
+      const annualAppreciation = Math.pow(endPrice / startPrice, 1 / years) - 1;
+      rows.push({
+        code, name, flag, country, firstYear: 2010, level,
+        annualDepVsUSD: annualAppreciation * 100,
+        annualGlobalLoss: ((1 + annualAppreciation) / (1 + M2_ANNUAL) - 1) * 100,
+      });
+      continue;
+    }
+    if (code === "XAU") {
+      const startPrice = 35; // 1971
+      const endPrice = 5162;
+      const years = END_YEAR - 1971;
+      const annualAppreciation = Math.pow(endPrice / startPrice, 1 / years) - 1;
+      rows.push({
+        code, name, flag, country, firstYear: 1971, level,
+        annualDepVsUSD: annualAppreciation * 100,
+        annualGlobalLoss: ((1 + annualAppreciation) / (1 + M2_ANNUAL) - 1) * 100,
+      });
+      continue;
+    }
+
+    // USD: 0% vs itself, but loses to M2
+    if (code === "USD") {
+      rows.push({
+        code, name, flag, country, firstYear: null, level,
+        annualDepVsUSD: 0,
+        annualGlobalLoss: -M2_ANNUAL * 100,
+      });
+      continue;
+    }
+
+    // PAB and SVC (dollarized): same as USD
+    if (code === "PAB" || code === "SVC") {
+      rows.push({
+        code, name, flag, country, firstYear: null, level,
+        annualDepVsUSD: 0,
+        annualGlobalLoss: -M2_ANNUAL * 100,
+      });
+      continue;
+    }
+
+    // Fiat currencies: compute from FX anchors
+    const anchors = FX_ANCHORS[code];
+    if (!anchors || anchors.length < 2) {
+      rows.push({
+        code, name, flag, country, firstYear: null, level,
+        annualDepVsUSD: 0,
+        annualGlobalLoss: -M2_ANNUAL * 100,
+      });
+      continue;
+    }
+
+    const firstAnchor = anchors[0];
+    const lastAnchor = anchors[anchors.length - 1];
+    const fxYears = lastAnchor.year - firstAnchor.year;
+    if (fxYears <= 0 || firstAnchor.rate <= 0) continue;
+
+    // FX rate growth: rate going up = currency losing purchasing power
+    const annualFXGrowth = Math.pow(lastAnchor.rate / firstAnchor.rate, 1 / fxYears) - 1;
+    // Purchasing power change vs USD: how much a unit of this currency buys in USD each year
+    // If FX rate doubles (growth=1.0), purchasing power halves: 1/2 - 1 = -50%
+    const annualDep = (1 / (1 + annualFXGrowth) - 1) * 100;
+    // Global purchasing power: also account for USD losing to M2 expansion
+    const annualGlobal = ((1 / (1 + annualFXGrowth)) * (1 / (1 + M2_ANNUAL)) - 1) * 100;
+
+    rows.push({
+      code, name, flag, country,
+      firstYear: firstAnchor.year,
+      annualDepVsUSD: annualDep,
+      annualGlobalLoss: annualGlobal,
+      level,
+    });
+  }
+
+  // Sort by global loss (worst first = most negative)
+  rows.sort((a, b) => a.annualGlobalLoss - b.annualGlobalLoss);
+
+  return rows;
 }
 
 // Get the pedagogical message for the current level

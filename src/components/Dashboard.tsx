@@ -32,6 +32,7 @@ import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
 import PerformanceTable from "./PerformanceTable";
 import CurrencySelector from "./CurrencySelector";
+import CurrencyDepreciation from "./CurrencyDepreciation";
 import { useCurrencyBase } from "./CurrencyContext";
 
 type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
@@ -707,6 +708,7 @@ export default function Dashboard() {
       {/* SECTION 5 — Performance Table (Universe of Winners)    */}
       {/* ═══════════════════════════════════════════════════════ */}
       <CurrencySelector />
+      <CurrencyDepreciation />
       <PerformanceTable data={currentAssetPerformance} colors={COLORS} />
 
       {/* ═══════════════════════════════════════════════════════ */}
