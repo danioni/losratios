@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { AssetPerformance } from "@/lib/data";
 import { computeCAGR, getAnchorPrice } from "@/lib/data";
+import { convertCAGR } from "@/lib/currency";
 import { useCurrencyBase } from "./CurrencyContext";
 
 interface PerformanceTableProps {
@@ -24,13 +25,52 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
   const isHardBase = base === "BTC" || base === "XAU";
   const benchmark = isHardBase ? 0 : M2_BENCHMARK;
 
-  // Adjust CAGR for BTC/XAU base using historical anchor prices
+  // For hard bases, use the live price of the base asset for conversions
+  // instead of the static FX rate in currency.ts (avoids mismatch)
+  const baseAssetTicker = base === "BTC" ? "BTC" : base === "XAU" ? "GOLD" : null;
+  const baseCurrentUSD = isHardBase
+    ? (data.find(a => a.ticker === baseAssetTicker)?.priceCurrent ?? 0)
+    : 0;
+
+  const formatPrice = (asset: typeof data[0]) => {
+    if (isHardBase && baseCurrentUSD > 0) {
+      // Base asset always shows exactly 1.0000
+      if (asset.ticker === baseAssetTicker) {
+        return base === "BTC" ? "₿1.0000" : "1.0000 oz";
+      }
+      // Other assets: divide by live base price
+      const valueInBase = asset.priceCurrent / baseCurrentUSD;
+      if (base === "BTC") {
+        if (valueInBase >= 1) return `₿${valueInBase.toFixed(2)}`;
+        if (valueInBase >= 0.01) return `₿${valueInBase.toFixed(4)}`;
+        if (valueInBase >= 0.0001) return `₿${valueInBase.toFixed(6)}`;
+        return `₿${valueInBase.toExponential(2)}`;
+      }
+      // XAU
+      if (valueInBase >= 1) return `${valueInBase.toFixed(2)} oz`;
+      if (valueInBase >= 0.01) return `${valueInBase.toFixed(4)} oz`;
+      return `${valueInBase.toExponential(2)} oz`;
+    }
+    return formatValue(asset.priceCurrent);
+  };
+
+  // Adjust CAGR for non-USD bases
   const adjustedData = useMemo(() => {
+    // Fiat currencies: adjust CAGR using historical FX depreciation
+    if (!isHardBase && !isUSD) {
+      return data.map(a => {
+        const cagrHist = convertCAGR(a.cagrHistorical, base, a.ipoYear, 2026);
+        const cagr5Y = convertCAGR(a.cagr5Y, base, 2021, 2026);
+        const vsM2 = cagrHist - benchmark;
+        return { ...a, cagrHistorical: cagrHist, cagr5Y, vsM2, beatsM2: cagrHist > benchmark };
+      });
+    }
+
     if (!isHardBase) return data;
 
+    // BTC/XAU base: recalculate CAGR using historical asset anchor prices
     const baseTicker = base === "BTC" ? "btc" as const : "gold" as const;
-    const baseAssetTicker = base === "BTC" ? "BTC" : "GOLD";
-    const baseCurrentUSD = data.find(a => a.ticker === baseAssetTicker)?.priceCurrent ?? getAnchorPrice(baseTicker, 2026);
+    const baseUSD = baseCurrentUSD > 0 ? baseCurrentUSD : getAnchorPrice(baseTicker, 2026);
 
     return data.map(a => {
       let effectiveIpoYear = a.ipoYear;
@@ -47,17 +87,17 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
       }
 
       const baseAtStart = getAnchorPrice(baseTicker, effectiveIpoYear);
-      if (baseAtStart <= 0 || baseCurrentUSD <= 0) return a;
+      if (baseAtStart <= 0 || baseUSD <= 0) return a;
 
       const startInBase = effectivePriceStart / baseAtStart;
-      const currentInBase = a.priceCurrent / baseCurrentUSD;
+      const currentInBase = a.priceCurrent / baseUSD;
       const cagrHist = computeCAGR(startInBase, currentInBase, effectiveYears);
 
       // 5Y CAGR in base currency
       const base5YUSD = getAnchorPrice(baseTicker, 2021);
       let cagr5Y = a.cagr5Y;
       if (base5YUSD > 0 && a.price5YAgo > 0) {
-        cagr5Y = computeCAGR(a.price5YAgo / base5YUSD, a.priceCurrent / baseCurrentUSD, 5);
+        cagr5Y = computeCAGR(a.price5YAgo / base5YUSD, a.priceCurrent / baseUSD, 5);
       }
 
       const vsM2 = cagrHist - benchmark;
@@ -72,7 +112,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
         beatsM2: cagrHist > benchmark,
       };
     });
-  }, [data, base, isHardBase, benchmark]);
+  }, [data, base, isHardBase, isUSD, benchmark, baseCurrentUSD]);
 
   const sorted = useMemo(() => {
     return [...adjustedData].sort((a, b) => {
@@ -195,7 +235,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                     </span>
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums hidden lg:table-cell" style={{ color: "var(--text-primary)" }}>
-                    {formatValue(a.priceCurrent)}
+                    {formatPrice(a)}
                   </td>
                   <td className="py-2.5 px-2 text-center tabular-nums hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
                     {a.ipoYear}
@@ -269,7 +309,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                     </span>
                   </td>
                   <td className="py-2.5 px-2 text-right tabular-nums hidden lg:table-cell" style={{ color: "var(--text-muted)" }}>
-                    {formatValue(a.priceCurrent)}
+                    {formatPrice(a)}
                   </td>
                   <td className="py-2.5 px-2 text-center tabular-nums hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
                     {a.ipoYear}

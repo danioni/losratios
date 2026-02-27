@@ -29,32 +29,137 @@ export interface CurrencyDef {
 // Nivel 1: fiat hispano — aquí es donde se ve la masacre
 export const CURRENCIES: CurrencyDef[] = [
   // ── Nivel 4: La vara más exigente ──
-  { code: "BTC", name: "Bitcoin", flag: "₿", symbol: "₿", level: 4, rateVsUSD: 1 / 98000, country: "Descentralizado" },
+  { code: "BTC", name: "Bitcoin", flag: "₿", symbol: "₿", level: 4, rateVsUSD: 1 / 67650, country: "Descentralizado" },
   // ── Nivel 3: Dinero duro ──
-  { code: "XAU", name: "Oro (oz)", flag: "🥇", symbol: "XAU", level: 3, rateVsUSD: 1 / 2870, country: "Global" },
+  { code: "XAU", name: "Oro (oz)", flag: "🥇", symbol: "XAU", level: 3, rateVsUSD: 1 / 5162, country: "Global" },
   // ── Nivel 2: Fiat global ──
   { code: "USD", name: "Dólar USA", flag: "🇺🇸", symbol: "$", level: 2, rateVsUSD: 1, country: "Estados Unidos" },
-  { code: "EUR", name: "Euro", flag: "🇪🇺", symbol: "€", level: 2, rateVsUSD: 0.92, country: "Eurozona" },
-  { code: "BRL", name: "Real", flag: "🇧🇷", symbol: "R$", level: 2, rateVsUSD: 5.8, country: "Brasil" },
+  { code: "EUR", name: "Euro", flag: "🇪🇺", symbol: "€", level: 2, rateVsUSD: 0.848, country: "Eurozona" },
+  { code: "BRL", name: "Real", flag: "🇧🇷", symbol: "R$", level: 2, rateVsUSD: 5.15, country: "Brasil" },
   // ── Nivel 1: Fiat hispano — la masacre ──
-  { code: "MXN", name: "Peso MX", flag: "🇲🇽", symbol: "MX$", level: 1, rateVsUSD: 20.5, country: "México" },
-  { code: "CLP", name: "Peso CL", flag: "🇨🇱", symbol: "CL$", level: 1, rateVsUSD: 950, country: "Chile" },
-  { code: "COP", name: "Peso CO", flag: "🇨🇴", symbol: "CO$", level: 1, rateVsUSD: 4150, country: "Colombia" },
-  { code: "ARS", name: "Peso AR", flag: "🇦🇷", symbol: "AR$", level: 1, rateVsUSD: 1065, country: "Argentina" },
-  { code: "PEN", name: "Sol", flag: "🇵🇪", symbol: "S/", level: 1, rateVsUSD: 3.72, country: "Perú" },
-  { code: "UYU", name: "Peso UY", flag: "🇺🇾", symbol: "UY$", level: 1, rateVsUSD: 43.5, country: "Uruguay" },
-  { code: "PYG", name: "Guaraní", flag: "🇵🇾", symbol: "₲", level: 1, rateVsUSD: 7850, country: "Paraguay" },
+  { code: "MXN", name: "Peso MX", flag: "🇲🇽", symbol: "MX$", level: 1, rateVsUSD: 17.24, country: "México" },
+  { code: "CLP", name: "Peso CL", flag: "🇨🇱", symbol: "CL$", level: 1, rateVsUSD: 866, country: "Chile" },
+  { code: "COP", name: "Peso CO", flag: "🇨🇴", symbol: "CO$", level: 1, rateVsUSD: 3749, country: "Colombia" },
+  { code: "ARS", name: "Peso AR", flag: "🇦🇷", symbol: "AR$", level: 1, rateVsUSD: 1406, country: "Argentina" },
+  { code: "PEN", name: "Sol", flag: "🇵🇪", symbol: "S/", level: 1, rateVsUSD: 3.36, country: "Perú" },
+  { code: "UYU", name: "Peso UY", flag: "🇺🇾", symbol: "UY$", level: 1, rateVsUSD: 38.4, country: "Uruguay" },
+  { code: "PYG", name: "Guaraní", flag: "🇵🇾", symbol: "₲", level: 1, rateVsUSD: 6441, country: "Paraguay" },
   { code: "BOB", name: "Boliviano", flag: "🇧🇴", symbol: "Bs", level: 1, rateVsUSD: 6.91, country: "Bolivia" },
-  { code: "CRC", name: "Colón CR", flag: "🇨🇷", symbol: "₡", level: 1, rateVsUSD: 510, country: "Costa Rica" },
-  { code: "GTQ", name: "Quetzal", flag: "🇬🇹", symbol: "Q", level: 1, rateVsUSD: 7.72, country: "Guatemala" },
-  { code: "HNL", name: "Lempira", flag: "🇭🇳", symbol: "L", level: 1, rateVsUSD: 25.4, country: "Honduras" },
+  { code: "CRC", name: "Colón CR", flag: "🇨🇷", symbol: "₡", level: 1, rateVsUSD: 473, country: "Costa Rica" },
+  { code: "GTQ", name: "Quetzal", flag: "🇬🇹", symbol: "Q", level: 1, rateVsUSD: 7.67, country: "Guatemala" },
+  { code: "HNL", name: "Lempira", flag: "🇭🇳", symbol: "L", level: 1, rateVsUSD: 26.5, country: "Honduras" },
   { code: "NIO", name: "Córdoba", flag: "🇳🇮", symbol: "C$", level: 1, rateVsUSD: 36.8, country: "Nicaragua" },
-  { code: "DOP", name: "Peso RD", flag: "🇩🇴", symbol: "RD$", level: 1, rateVsUSD: 61.5, country: "Rep. Dominicana" },
+  { code: "DOP", name: "Peso RD", flag: "🇩🇴", symbol: "RD$", level: 1, rateVsUSD: 60.2, country: "Rep. Dominicana" },
   { code: "PAB", name: "Balboa", flag: "🇵🇦", symbol: "B/.", level: 1, rateVsUSD: 1, country: "Panamá" },
-  { code: "CUP", name: "Peso CU", flag: "🇨🇺", symbol: "CU$", level: 1, rateVsUSD: 120, country: "Cuba" },
-  { code: "VES", name: "Bolívar", flag: "🇻🇪", symbol: "Bs.S", level: 1, rateVsUSD: 56, country: "Venezuela" },
+  { code: "CUP", name: "Peso CU", flag: "🇨🇺", symbol: "CU$", level: 1, rateVsUSD: 24, country: "Cuba" },
+  { code: "VES", name: "Bolívar", flag: "🇻🇪", symbol: "Bs.S", level: 1, rateVsUSD: 411, country: "Venezuela" },
   { code: "SVC", name: "ex-Colón SV", flag: "🇸🇻", symbol: "₡SV", level: 1, rateVsUSD: 1, country: "El Salvador (USD/BTC)" },
 ];
+
+// ============================================================
+// Historical FX anchors (units of local currency per 1 USD)
+// All normalized to CURRENT currency unit (post all redenominations)
+// Sources: FRED/Penn World Table (1971-2010), XE.com (2015-2026)
+// ============================================================
+const FX_ANCHORS: Partial<Record<CurrencyCode, { year: number; rate: number }[]>> = {
+  EUR: [
+    { year: 1971, rate: 1.759 }, { year: 1980, rate: 0.931 }, { year: 1990, rate: 0.828 },
+    { year: 2000, rate: 1.085 }, { year: 2010, rate: 0.755 }, { year: 2015, rate: 0.920 },
+    { year: 2020, rate: 0.818 }, { year: 2021, rate: 0.879 }, { year: 2024, rate: 0.966 },
+    { year: 2025, rate: 0.852 }, { year: 2026, rate: 0.848 },
+  ],
+  BRL: [
+    { year: 2000, rate: 1.829 }, { year: 2010, rate: 1.759 }, { year: 2015, rate: 3.961 },
+    { year: 2020, rate: 5.194 }, { year: 2021, rate: 5.571 }, { year: 2024, rate: 6.185 },
+    { year: 2025, rate: 5.504 }, { year: 2026, rate: 5.152 },
+  ],
+  MXN: [
+    { year: 1971, rate: 0.0125 }, { year: 1980, rate: 0.023 }, { year: 1990, rate: 2.813 },
+    { year: 2000, rate: 9.456 }, { year: 2010, rate: 12.636 }, { year: 2015, rate: 17.250 },
+    { year: 2020, rate: 19.894 }, { year: 2021, rate: 20.495 }, { year: 2024, rate: 20.863 },
+    { year: 2025, rate: 18.007 }, { year: 2026, rate: 17.242 },
+  ],
+  ARS: [
+    { year: 1990, rate: 0.488 }, { year: 2000, rate: 1.0 }, { year: 2010, rate: 3.896 },
+    { year: 2015, rate: 12.943 }, { year: 2020, rate: 84.068 }, { year: 2021, rate: 102.682 },
+    { year: 2024, rate: 1031 }, { year: 2025, rate: 1451 }, { year: 2026, rate: 1406 },
+  ],
+  CLP: [
+    { year: 1971, rate: 0.012 }, { year: 1980, rate: 39 }, { year: 1990, rate: 305 },
+    { year: 2000, rate: 540 }, { year: 2010, rate: 510 }, { year: 2015, rate: 709 },
+    { year: 2020, rate: 710 }, { year: 2021, rate: 851 }, { year: 2024, rate: 994 },
+    { year: 2025, rate: 900 }, { year: 2026, rate: 866 },
+  ],
+  COP: [
+    { year: 1971, rate: 19.9 }, { year: 1980, rate: 47.3 }, { year: 1990, rate: 502 },
+    { year: 2000, rate: 2088 }, { year: 2010, rate: 1899 }, { year: 2015, rate: 3174 },
+    { year: 2020, rate: 3420 }, { year: 2021, rate: 4070 }, { year: 2024, rate: 4406 },
+    { year: 2025, rate: 3770 }, { year: 2026, rate: 3749 },
+  ],
+  PEN: [
+    { year: 2000, rate: 3.49 }, { year: 2010, rate: 2.825 }, { year: 2015, rate: 3.409 },
+    { year: 2020, rate: 3.617 }, { year: 2021, rate: 3.987 }, { year: 2024, rate: 3.760 },
+    { year: 2025, rate: 3.365 }, { year: 2026, rate: 3.355 },
+  ],
+  UYU: [
+    { year: 2000, rate: 12.1 }, { year: 2010, rate: 20.06 }, { year: 2015, rate: 29.9 },
+    { year: 2020, rate: 42.35 }, { year: 2021, rate: 44.72 }, { year: 2024, rate: 43.7 },
+    { year: 2025, rate: 39.06 }, { year: 2026, rate: 38.42 },
+  ],
+  PYG: [
+    { year: 1971, rate: 126 }, { year: 1980, rate: 126 }, { year: 1990, rate: 1230 },
+    { year: 2000, rate: 3486 }, { year: 2010, rate: 4743 }, { year: 2015, rate: 5782 },
+    { year: 2020, rate: 6913 }, { year: 2021, rate: 6798 }, { year: 2024, rate: 7814 },
+    { year: 2025, rate: 6671 }, { year: 2026, rate: 6441 },
+  ],
+  BOB: [
+    { year: 1990, rate: 3.17 }, { year: 2000, rate: 6.18 }, { year: 2010, rate: 7.02 },
+    { year: 2015, rate: 6.90 }, { year: 2020, rate: 6.89 }, { year: 2021, rate: 6.90 },
+    { year: 2024, rate: 6.92 }, { year: 2025, rate: 6.93 }, { year: 2026, rate: 6.91 },
+  ],
+  CRC: [
+    { year: 1971, rate: 6.63 }, { year: 1980, rate: 8.57 }, { year: 1990, rate: 91.6 },
+    { year: 2000, rate: 308 }, { year: 2010, rate: 524 }, { year: 2015, rate: 537 },
+    { year: 2020, rate: 609 }, { year: 2021, rate: 642 }, { year: 2024, rate: 508 },
+    { year: 2025, rate: 497 }, { year: 2026, rate: 473 },
+  ],
+  GTQ: [
+    { year: 1971, rate: 1.0 }, { year: 1980, rate: 1.0 }, { year: 1990, rate: 4.49 },
+    { year: 2000, rate: 7.76 }, { year: 2010, rate: 8.06 }, { year: 2015, rate: 7.63 },
+    { year: 2020, rate: 7.79 }, { year: 2021, rate: 7.72 }, { year: 2024, rate: 7.71 },
+    { year: 2025, rate: 7.67 }, { year: 2026, rate: 7.67 },
+  ],
+  HNL: [
+    { year: 1971, rate: 2.0 }, { year: 1980, rate: 2.0 }, { year: 1990, rate: 4.11 },
+    { year: 2000, rate: 14.84 }, { year: 2010, rate: 18.9 }, { year: 2015, rate: 22.25 },
+    { year: 2020, rate: 24.09 }, { year: 2021, rate: 24.4 }, { year: 2024, rate: 25.42 },
+    { year: 2025, rate: 26.4 }, { year: 2026, rate: 26.49 },
+  ],
+  NIO: [
+    { year: 2000, rate: 12.68 }, { year: 2010, rate: 21.36 }, { year: 2015, rate: 27.65 },
+    { year: 2020, rate: 34.92 }, { year: 2021, rate: 35.4 }, { year: 2024, rate: 36.81 },
+    { year: 2025, rate: 36.81 }, { year: 2026, rate: 36.76 },
+  ],
+  DOP: [
+    { year: 1971, rate: 1.0 }, { year: 1980, rate: 1.0 }, { year: 1990, rate: 8.53 },
+    { year: 2000, rate: 16.42 }, { year: 2010, rate: 36.88 }, { year: 2015, rate: 45.53 },
+    { year: 2020, rate: 58.16 }, { year: 2021, rate: 57.29 }, { year: 2024, rate: 61.11 },
+    { year: 2025, rate: 63.09 }, { year: 2026, rate: 60.19 },
+  ],
+  VES: [
+    { year: 2010, rate: 2.59e-11 }, { year: 2015, rate: 6.3e-11 },
+    { year: 2021, rate: 4.588 }, { year: 2024, rate: 51.96 },
+    { year: 2025, rate: 298 }, { year: 2026, rate: 411 },
+  ],
+  SVC: [
+    { year: 1971, rate: 2.5 }, { year: 1990, rate: 8.03 }, { year: 2000, rate: 8.75 },
+    { year: 2026, rate: 8.75 }, // dollarized since 2001
+  ],
+  CUP: [
+    { year: 1971, rate: 1.0 }, { year: 2000, rate: 21.0 }, { year: 2010, rate: 24.0 },
+    { year: 2021, rate: 24.0 }, { year: 2026, rate: 24.0 },
+  ],
+};
 
 export function getCurrency(code: CurrencyCode): CurrencyDef {
   return CURRENCIES.find(c => c.code === code) ?? CURRENCIES[2]; // fallback USD
@@ -100,28 +205,59 @@ export function formatUSDAs(valueInUSD: number, code: CurrencyCode): string {
   return formatInCurrency(converted, code);
 }
 
-// Recalculate CAGR in a different base currency
-// Simplified: assumes current FX rate was constant (no historical FX data)
-// This is actually the correct simplification because:
-// FX-adjusted CAGR ≈ USD CAGR + currency depreciation CAGR
-// The constant-FX assumption makes the point even MORE dramatic
+// Get interpolated FX rate for a given currency and year
+export function getFXRate(code: CurrencyCode, year: number): number | null {
+  if (code === "USD" || code === "PAB") return 1; // always 1:1
+  if (code === "BTC" || code === "XAU") return null; // handled separately
+
+  const anchors = FX_ANCHORS[code];
+  if (!anchors || anchors.length === 0) return null;
+
+  // Before first anchor
+  if (year <= anchors[0].year) return anchors[0].rate;
+  // After last anchor
+  if (year >= anchors[anchors.length - 1].year) return anchors[anchors.length - 1].rate;
+
+  // Find surrounding anchors and interpolate geometrically
+  for (let i = 0; i < anchors.length - 1; i++) {
+    if (year >= anchors[i].year && year <= anchors[i + 1].year) {
+      const a = anchors[i];
+      const b = anchors[i + 1];
+      const t = (year - a.year) / (b.year - a.year);
+      // Geometric interpolation for FX rates (exponential depreciation)
+      if (a.rate > 0 && b.rate > 0) {
+        return a.rate * Math.pow(b.rate / a.rate, t);
+      }
+      return a.rate + (b.rate - a.rate) * t; // linear fallback
+    }
+  }
+  return anchors[anchors.length - 1].rate;
+}
+
+// Recalculate CAGR in a different base currency using historical FX data
+// CAGR_local = ((P_end * FX_end) / (P_start * FX_start))^(1/years) - 1
+// Which simplifies to: (1 + CAGR_USD) * (FX_end/FX_start)^(1/years) - 1
 export function convertCAGR(
   cagrUSD: number,
-  _code: CurrencyCode,
+  code: CurrencyCode,
+  startYear?: number,
+  endYear?: number,
 ): number {
-  // CAGR is a percentage — it doesn't change with currency conversion
-  // IF we assume the FX rate was constant over the period.
-  // The magic is: when you convert the PRICES (start and end) to the
-  // new currency and recalculate CAGR, you get the same CAGR.
-  // Because: (P_end * FX) / (P_start * FX) = P_end / P_start
-  //
-  // The REAL impact shows when we compare the CAGR vs the local inflation
-  // or when we show absolute values. The CAGR itself stays the same
-  // under constant-FX assumption.
-  //
-  // What DOES change: the nominal price display. $100K BTC in pesos
-  // looks like CL$95,000,000 — that's the shock value.
-  return cagrUSD;
+  if (code === "USD" || code === "PAB" || code === "BTC" || code === "XAU") return cagrUSD;
+
+  const start = startYear ?? 2000;
+  const end = endYear ?? 2026;
+  const years = end - start;
+  if (years <= 0) return cagrUSD;
+
+  const fxStart = getFXRate(code, start);
+  const fxEnd = getFXRate(code, end);
+  if (!fxStart || !fxEnd || fxStart <= 0) return cagrUSD;
+
+  // Compound USD CAGR with FX depreciation
+  const usdDecimal = cagrUSD / 100;
+  const fxGrowth = Math.pow(fxEnd / fxStart, 1 / years);
+  return ((1 + usdDecimal) * fxGrowth - 1) * 100;
 }
 
 // Get the pedagogical message for the current level

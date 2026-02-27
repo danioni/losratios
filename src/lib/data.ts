@@ -144,11 +144,17 @@ const anchors: AssetDataPoint[] = [
   { date: "2023", gold: 2063, silver: 24.1, sp500: 4770, nasdaq: 15011, btc: 42200, m2Global: 104 },
   { date: "2024", gold: 2625, silver: 30.5, sp500: 5881, nasdaq: 19310, btc: 93000, m2Global: 110 },
   { date: "2025", gold: 4315, silver: 72, sp500: 6845, nasdaq: 23242, btc: 87500, m2Global: 114 },
-  { date: "2026", gold: 4983, silver: 77, sp500: 6881, nasdaq: 22705, btc: 66676, m2Global: 118 },
+  { date: "2026", gold: 5162, silver: 87, sp500: 6901, nasdaq: 22878, btc: 67650, m2Global: 118 },
 ];
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+// Geometric interpolation: a * (b/a)^t — correct for exponential assets like BTC
+function glerp(a: number, b: number, t: number): number {
+  if (a <= 0 || b <= 0) return lerp(a, b, t);
+  return a * Math.pow(b / a, t);
 }
 
 function generateMonthlyData(): AssetDataPoint[] {
@@ -166,7 +172,7 @@ function generateMonthlyData(): AssetDataPoint[] {
         silver: lerp(a.silver, b.silver, t) * n2(),
         sp500: lerp(a.sp500, b.sp500, t) * n2(),
         nasdaq: lerp(a.nasdaq, b.nasdaq, t) * n2(),
-        btc: lerp(a.btc, b.btc, t) * n1(),
+        btc: glerp(a.btc, b.btc, t) * n1(),
         m2Global: lerp(a.m2Global, b.m2Global, t) * n2(),
       });
     }
@@ -409,20 +415,21 @@ const M2_BENCHMARK = 7; // M2 Global CAGR ~7% anual
 
 const PERFORMANCE_ANCHORS: { ticker: string; name: string; sector: string; marketCap: number; ipoYear: number; priceStart: number; price5YAgo: number; priceCurrent: number }[] = [
   // Universe of winners — assets that historically beat M2
-  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1330, ipoYear: 2009, priceStart: 0.001, price5YAgo: 7200, priceCurrent: 66676 },
-  { ticker: "GOLD", name: "Oro (onza)", sector: "Commodities", marketCap: 18200, ipoYear: 1971, priceStart: 35, price5YAgo: 1517, priceCurrent: 4983 },
-  { ticker: "AAPL", name: "Apple", sector: "Tech", marketCap: 3900, ipoYear: 1980, priceStart: 0.10, price5YAgo: 75, priceCurrent: 265 },
-  { ticker: "MSFT", name: "Microsoft", sector: "Tech", marketCap: 2970, ipoYear: 1986, priceStart: 0.10, price5YAgo: 160, priceCurrent: 400 },
-  { ticker: "GOOGL", name: "Alphabet", sector: "Tech", marketCap: 3700, ipoYear: 2004, priceStart: 2.50, price5YAgo: 73, priceCurrent: 303 },
-  { ticker: "NVDA", name: "NVIDIA", sector: "Tech", marketCap: 4600, ipoYear: 1999, priceStart: 1.50, price5YAgo: 59, priceCurrent: 188 },
-  { ticker: "META", name: "Meta", sector: "Tech", marketCap: 1630, ipoYear: 2012, priceStart: 38, price5YAgo: 208, priceCurrent: 643 },
-  { ticker: "V", name: "Visa", sector: "Finance", marketCap: 620, ipoYear: 2008, priceStart: 11, price5YAgo: 188, priceCurrent: 320 },
-  { ticker: "MA", name: "Mastercard", sector: "Finance", marketCap: 480, ipoYear: 2006, priceStart: 3.90, price5YAgo: 317, priceCurrent: 522 },
-  { ticker: "COST", name: "Costco", sector: "Consumer", marketCap: 450, ipoYear: 1985, priceStart: 2.50, price5YAgo: 335, priceCurrent: 1008 },
-  { ticker: "BRK.B", name: "Berkshire Hathaway", sector: "Finance", marketCap: 1120, ipoYear: 1996, priceStart: 23, price5YAgo: 220, priceCurrent: 503 },
+  // price5YAgo = Feb 2021 prices, priceCurrent = Feb 2026 prices
+  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1340, ipoYear: 2009, priceStart: 0.001, price5YAgo: 33593, priceCurrent: 67650 },
+  { ticker: "GOLD", name: "Oro (onza)", sector: "Commodities", marketCap: 18200, ipoYear: 1971, priceStart: 35, price5YAgo: 1854, priceCurrent: 5162 },
+  { ticker: "AAPL", name: "Apple", sector: "Tech", marketCap: 3900, ipoYear: 1980, priceStart: 0.10, price5YAgo: 130, priceCurrent: 274 },
+  { ticker: "MSFT", name: "Microsoft", sector: "Tech", marketCap: 2970, ipoYear: 1986, priceStart: 0.10, price5YAgo: 229, priceCurrent: 399 },
+  { ticker: "GOOGL", name: "Alphabet", sector: "Tech", marketCap: 3700, ipoYear: 2004, priceStart: 2.50, price5YAgo: 94, priceCurrent: 306 },
+  { ticker: "NVDA", name: "NVIDIA", sector: "Tech", marketCap: 4600, ipoYear: 1999, priceStart: 1.50, price5YAgo: 13.2, priceCurrent: 185 },
+  { ticker: "META", name: "Meta", sector: "Tech", marketCap: 1630, ipoYear: 2012, priceStart: 38, price5YAgo: 260, priceCurrent: 653 },
+  { ticker: "V", name: "Visa", sector: "Finance", marketCap: 620, ipoYear: 2008, priceStart: 11, price5YAgo: 191, priceCurrent: 313 },
+  { ticker: "MA", name: "Mastercard", sector: "Finance", marketCap: 480, ipoYear: 2006, priceStart: 3.90, price5YAgo: 313, priceCurrent: 496 },
+  { ticker: "COST", name: "Costco", sector: "Consumer", marketCap: 450, ipoYear: 1985, priceStart: 2.50, price5YAgo: 331, priceCurrent: 987 },
+  { ticker: "BRK.B", name: "Berkshire Hathaway", sector: "Finance", marketCap: 1120, ipoYear: 1996, priceStart: 23, price5YAgo: 229, priceCurrent: 494 },
   // Context assets that DON'T beat M2 — shown for comparison
-  { ticker: "SPX", name: "S&P 500", sector: "Index", marketCap: 124000, ipoYear: 1957, priceStart: 44, price5YAgo: 3231, priceCurrent: 6881 },
-  { ticker: "SILVER", name: "Plata (onza)", sector: "Commodities", marketCap: 1800, ipoYear: 1971, priceStart: 1.39, price5YAgo: 17.9, priceCurrent: 77 },
+  { ticker: "SPX", name: "S&P 500", sector: "Index", marketCap: 124000, ipoYear: 1957, priceStart: 44, price5YAgo: 3773, priceCurrent: 6901 },
+  { ticker: "SILVER", name: "Plata (onza)", sector: "Commodities", marketCap: 1800, ipoYear: 1971, priceStart: 1.39, price5YAgo: 28.5, priceCurrent: 87 },
 ];
 
 export function computeCAGR(priceStart: number, priceEnd: number, years: number): number {
@@ -440,12 +447,31 @@ export function getAnchorPrice(asset: 'gold' | 'silver' | 'sp500' | 'nasdaq' | '
   return best[asset];
 }
 
-function buildPerformanceData(): AssetPerformance[] {
+// Map PERFORMANCE_ANCHORS tickers to AssetDataPoint keys for live price overrides
+const TICKER_TO_ASSET_KEY: Partial<Record<string, keyof AssetDataPoint>> = {
+  BTC: "btc",
+  GOLD: "gold",
+  SPX: "sp500",
+  SILVER: "silver",
+};
+
+function buildPerformanceData(liveLastPoint?: AssetDataPoint): AssetPerformance[] {
   const currentYear = 2026;
   return PERFORMANCE_ANCHORS.map(a => {
+    let priceCurrent = a.priceCurrent;
+
+    // Override with live API data when available
+    if (liveLastPoint) {
+      const assetKey = TICKER_TO_ASSET_KEY[a.ticker];
+      if (assetKey) {
+        const livePrice = liveLastPoint[assetKey] as number;
+        if (livePrice > 0) priceCurrent = livePrice;
+      }
+    }
+
     const years = currentYear - a.ipoYear;
-    const cagrHistorical = computeCAGR(a.priceStart, a.priceCurrent, years);
-    const cagr5Y = computeCAGR(a.price5YAgo, a.priceCurrent, 5);
+    const cagrHistorical = computeCAGR(a.priceStart, priceCurrent, years);
+    const cagr5Y = computeCAGR(a.price5YAgo, priceCurrent, 5);
     const vsM2 = cagrHistorical - M2_BENCHMARK;
     return {
       ticker: a.ticker,
@@ -455,7 +481,7 @@ function buildPerformanceData(): AssetPerformance[] {
       ipoYear: a.ipoYear,
       priceStart: a.priceStart,
       price5YAgo: a.price5YAgo,
-      priceCurrent: a.priceCurrent,
+      priceCurrent,
       years,
       cagrHistorical,
       cagr5Y,
@@ -497,7 +523,8 @@ export function computeAllFromRawAssets(assets: AssetDataPoint[]): ComputedMarke
   const ratioD = computeRatios(assets);
   const sumsD = buildSummaries(ratioD);
   const rotD = buildRotationSignals(sumsD);
-  const perfD = buildPerformanceData(); // static anchors (CAGR benchmarks)
+  const lastPoint = assets.length > 0 ? assets[assets.length - 1] : undefined;
+  const perfD = buildPerformanceData(lastPoint); // uses live prices when available
 
   return {
     assetData: assets,
