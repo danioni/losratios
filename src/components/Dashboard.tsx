@@ -525,10 +525,10 @@ export default function Dashboard() {
       {/* ═══════════════════════════════════════════════════════ */}
       <div className="text-center space-y-5 py-8 sm:py-12 fade-in-up fade-in-up-1">
         <h2 className="font-serif text-2xl sm:text-4xl md:text-5xl tracking-wide leading-tight" style={{ color: "var(--text-primary)" }}>
-          Deja de medir en dólares.
+          No hay precios absolutos.
         </h2>
         <p className="font-serif italic text-base sm:text-xl md:text-2xl" style={{ color: "var(--accent-green)" }}>
-          El dólar es la vara que se encoge.
+          Solo ratios mal leídos.
         </p>
         <div className="max-w-2xl mx-auto space-y-3">
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
@@ -541,6 +541,49 @@ export default function Dashboard() {
           </p>
           <p className="text-[11px] sm:text-xs font-medium" style={{ color: "var(--accent-green)" }}>
             La respuesta está en los ratios.
+          </p>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ¿Cómo leer un ratio? — Educational section             */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <div className="fade-in-up fade-in-up-2">
+        <div className="card-glass card-accent-left rounded-xl p-6 sm:p-8">
+          <h3 className="font-serif text-lg sm:text-xl mb-4" style={{ color: "var(--text-primary)" }}>
+            &iquest;C&oacute;mo leer un ratio?
+          </h3>
+          <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 mb-5">
+            <div className="space-y-2">
+              <div className="text-sm font-medium" style={{ color: "var(--accent-green)" }}>
+                1. El ratio sube
+              </div>
+              <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                El numerador gana terreno vs el denominador. Si BTC/Oro sube, Bitcoin est&aacute; capturando m&aacute;s valor relativo al oro.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium" style={{ color: "var(--accent-amber)" }}>
+                2. El z-score extremo
+              </div>
+              <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                Un z-score de +2&sigma; o -2&sigma; indica que el ratio est&aacute; muy lejos de su media hist&oacute;rica. Los desequilibrios tienden a revertir &mdash; no predicen cu&aacute;ndo.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium" style={{ color: "var(--accent-cyan)" }}>
+                3. La se&ntilde;al de rotaci&oacute;n
+              </div>
+              <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                Cuando un ratio est&aacute; barato hist&oacute;ricamente, puede ser oportunidad de acumular el numerador. Los ratios revelan lo que los precios en fiat ocultan.
+              </p>
+            </div>
+          </div>
+          <div className="divider-gradient mb-4" />
+          <p className="text-[10px] sm:text-[11px] leading-relaxed italic" style={{ color: "var(--text-muted)" }}>
+            Todo precio es una fracci&oacute;n. El <a href="https://eldenominador.com" target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-80" style={{ color: "var(--accent-amber)", textDecoration: "underline", textUnderlineOffset: "2px" }}>denominador</a> se encoge.
+            El <a href="https://elnumerador.com" target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-80" style={{ color: "var(--accent-cyan)", textDecoration: "underline", textUnderlineOffset: "2px" }}>numerador</a> protege.
+            Los ratios miden la distancia entre ambos.
           </p>
         </div>
       </div>
@@ -707,22 +750,6 @@ export default function Dashboard() {
             Los Ratios
           </a>
           <span style={{ color: "var(--text-muted)" }}>cómo comparar sin la vara que se encoge</span>
-        </div>
-        <div className="pt-4">
-          <a
-            href="https://elfaro.capital"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-[11px] sm:text-xs tracking-wider uppercase font-medium transition-all hover:opacity-90"
-            style={{
-              background: "var(--accent-green-bg-active)",
-              color: "var(--accent-green)",
-              border: "1px solid var(--accent-green-border-active)",
-              boxShadow: "var(--accent-green-glow)",
-            }}
-          >
-            ¿Qué hacer con eso? → El Faro Capital
-          </a>
         </div>
         <div className="space-y-1 pt-2">
           <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>

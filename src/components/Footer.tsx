@@ -81,6 +81,18 @@ export default function Footer() {
           </div>
         </details>
 
+        {/* Ecosystem tagline */}
+        <div className="text-center">
+          <p className="text-[9px] sm:text-[10px] tracking-[0.15em] uppercase" style={{ color: "var(--text-muted)" }}>
+            Parte del ecosistema{" "}
+            <a href="https://eldenominador.com" target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-80" style={{ color: "var(--text-secondary)" }}>eldenominador</a>
+            {" · "}
+            <a href="https://elnumerador.com" target="_blank" rel="noopener noreferrer" className="transition-opacity hover:opacity-80" style={{ color: "var(--text-secondary)" }}>elnumerador</a>
+            {" · "}
+            <span style={{ color: "var(--accent-green)" }}>losratios</span>
+          </p>
+        </div>
+
         {/* CTA + attribution */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
           <div className="flex items-center gap-3">
@@ -112,16 +124,7 @@ export default function Footer() {
               </svg>
             </div>
             <span className="text-[10px] tracking-wider" style={{ color: "var(--text-muted)" }}>
-              Una herramienta de{" "}
-              <a
-                href="https://elfaro.capital"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition-opacity hover:opacity-80"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                El Faro Capital
-              </a>
+              losratios.com
             </span>
           </div>
           <span className="text-[9px] tabular-nums" style={{ color: "var(--text-muted)" }}>

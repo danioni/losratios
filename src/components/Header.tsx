@@ -52,7 +52,6 @@ const ECOSYSTEM_SITES = [
   { label: "El Denominador", href: "https://eldenominador.com", key: "denominador" },
   { label: "El Numerador", href: "https://elnumerador.com", key: "numerador" },
   { label: "Los Ratios", href: "https://losratios.com", key: "ratios", current: true },
-  { label: "El Faro Capital", href: "https://elfaro.capital", key: "faro" },
 ];
 
 function EcosystemBar() {
