@@ -38,9 +38,9 @@ export const CURRENCIES: CurrencyDef[] = [
   { code: "BRL", name: "Real", flag: "🇧🇷", symbol: "R$", level: 2, rateVsUSD: 5.15, country: "Brasil" },
   // ── Nivel 1: Fiat hispano — la masacre ──
   { code: "MXN", name: "Peso MX", flag: "🇲🇽", symbol: "MX$", level: 1, rateVsUSD: 17.24, country: "México" },
-  { code: "CLP", name: "Peso CL", flag: "🇨🇱", symbol: "CL$", level: 1, rateVsUSD: 866, country: "Chile" },
+  { code: "CLP", name: "Peso CL", flag: "🇨🇱", symbol: "CL$", level: 1, rateVsUSD: 857, country: "Chile" },
   { code: "COP", name: "Peso CO", flag: "🇨🇴", symbol: "CO$", level: 1, rateVsUSD: 3749, country: "Colombia" },
-  { code: "ARS", name: "Peso AR", flag: "🇦🇷", symbol: "AR$", level: 1, rateVsUSD: 1406, country: "Argentina" },
+  { code: "ARS", name: "Peso AR", flag: "🇦🇷", symbol: "AR$", level: 1, rateVsUSD: 1408, country: "Argentina" },
   { code: "PEN", name: "Sol", flag: "🇵🇪", symbol: "S/", level: 1, rateVsUSD: 3.36, country: "Perú" },
   { code: "UYU", name: "Peso UY", flag: "🇺🇾", symbol: "UY$", level: 1, rateVsUSD: 38.4, country: "Uruguay" },
   { code: "PYG", name: "Guaraní", flag: "🇵🇾", symbol: "₲", level: 1, rateVsUSD: 6441, country: "Paraguay" },
@@ -69,9 +69,20 @@ const FX_ANCHORS: Partial<Record<CurrencyCode, { year: number; rate: number }[]>
     { year: 2025, rate: 0.852 }, { year: 2026, rate: 0.848 },
   ],
   BRL: [
-    { year: 2000, rate: 1.829 }, { year: 2010, rate: 1.759 }, { year: 2015, rate: 3.961 },
-    { year: 2020, rate: 5.194 }, { year: 2021, rate: 5.571 }, { year: 2024, rate: 6.185 },
-    { year: 2025, rate: 5.504 }, { year: 2026, rate: 5.152 },
+    // Normalized to current BRL (1 BRL = 2.75e12 cruzeiros novos)
+    { year: 1971, rate: 1.80e-12 }, // 4.95 Cr$/USD
+    { year: 1980, rate: 1.60e-11 }, // 43.89 Cr$/USD
+    { year: 1985, rate: 1.21e-9 },  // 3,318 Cr$/USD (pre-cruzado, hyperinflation)
+    { year: 1990, rate: 4.99e-6 },  // 13.7 Cr$(1990)/USD
+    { year: 1995, rate: 0.847 },    // first full year of BRL
+    { year: 2000, rate: 1.829 },
+    { year: 2010, rate: 1.759 },
+    { year: 2015, rate: 3.961 },
+    { year: 2020, rate: 5.194 },
+    { year: 2021, rate: 5.571 },
+    { year: 2024, rate: 6.185 },
+    { year: 2025, rate: 5.504 },
+    { year: 2026, rate: 5.152 },
   ],
   MXN: [
     { year: 1971, rate: 0.0125 }, { year: 1980, rate: 0.023 }, { year: 1990, rate: 2.813 },
@@ -80,15 +91,25 @@ const FX_ANCHORS: Partial<Record<CurrencyCode, { year: number; rate: number }[]>
     { year: 2025, rate: 18.007 }, { year: 2026, rate: 17.242 },
   ],
   ARS: [
-    { year: 1990, rate: 0.488 }, { year: 2000, rate: 1.0 }, { year: 2010, rate: 3.896 },
-    { year: 2015, rate: 12.943 }, { year: 2020, rate: 84.068 }, { year: 2021, rate: 102.682 },
-    { year: 2024, rate: 1031 }, { year: 2025, rate: 1451 }, { year: 2026, rate: 1406 },
+    // Normalized to current ARS (1 ARS = 10^11 pesos ley = 10^13 pesos moneda nacional)
+    { year: 1971, rate: 4.52e-11 }, // ~5 pesos ley/USD (FRED normalized)
+    { year: 1980, rate: 1.8e-8 },   // ~1,800 pesos ley/USD (pre-Malvinas)
+    { year: 1990, rate: 0.488 },     // ~4,876 australes/USD
+    { year: 2000, rate: 1.0 },       // convertibilidad 1:1
+    { year: 2010, rate: 3.896 },
+    { year: 2015, rate: 12.943 },
+    { year: 2020, rate: 84.068 },
+    { year: 2021, rate: 102.682 },
+    { year: 2024, rate: 1031 },
+    { year: 2025, rate: 1370 },      // ~dic 2025 (crawling peg Milei)
+    { year: 2026, rate: 1406 },
   ],
   CLP: [
     { year: 1971, rate: 0.012 }, { year: 1980, rate: 39 }, { year: 1990, rate: 305 },
     { year: 2000, rate: 540 }, { year: 2010, rate: 510 }, { year: 2015, rate: 709 },
-    { year: 2020, rate: 710 }, { year: 2021, rate: 851 }, { year: 2024, rate: 994 },
-    { year: 2025, rate: 900 }, { year: 2026, rate: 866 },
+    { year: 2020, rate: 750 },  // corrected (710 was intra-year low)
+    { year: 2021, rate: 851 }, { year: 2024, rate: 994 },
+    { year: 2025, rate: 900 }, { year: 2026, rate: 857 }, // updated to current
   ],
   COP: [
     { year: 1971, rate: 19.9 }, { year: 1980, rate: 47.3 }, { year: 1990, rate: 502 },
