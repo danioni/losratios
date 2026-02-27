@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { AssetPerformance } from "@/lib/data";
 import { computeCAGR, getAnchorPrice } from "@/lib/data";
-import { convertCAGR } from "@/lib/currency";
+import { convertCAGR, getFirstFXYear } from "@/lib/currency";
 import { useCurrencyBase } from "./CurrencyContext";
 
 interface PerformanceTableProps {
@@ -192,9 +192,20 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
             <>CAGR recalculado en BTC. Mide el rendimiento real contra el activo m&aacute;s escaso. Pocos portfolios sobreviven esta vara.</>
           ) : base === "XAU" ? (
             <>CAGR recalculado en onzas de oro. Mide el rendimiento real contra 5,000 a&ntilde;os de dinero duro.</>
-          ) : (
-            <>Precios convertidos a {base} ({symbol}) al tipo de cambio actual. CAGR en USD &mdash; la conversi&oacute;n cambia los nominales, no el rendimiento porcentual (asumiendo FX constante).</>
-          )}
+          ) : (() => {
+            const fxYear = getFirstFXYear(base);
+            const isRecent = fxYear && fxYear >= 1990;
+            return (
+              <>
+                CAGR ajustado por depreciaci&oacute;n hist&oacute;rica del {base} vs USD.
+                {isRecent ? (
+                  <> Datos FX confiables desde <strong>{fxYear}</strong> &mdash; antes de eso, redenominaciones sucesivas hacen imposible el rastreo continuo. Los resets monetarios en Am&eacute;rica Latina son frecuentes y recientes.</>
+                ) : fxYear && fxYear < 1990 ? (
+                  <> Serie FX desde {fxYear}, normalizada a la unidad monetaria actual (post todas las redenominaciones).</>
+                ) : null}
+              </>
+            );
+          })()}
         </div>
       )}
 

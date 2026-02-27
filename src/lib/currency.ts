@@ -255,9 +255,19 @@ export function getFXRate(code: CurrencyCode, year: number): number | null {
   return anchors[anchors.length - 1].rate;
 }
 
+// Get the first year with reliable FX data for a currency
+export function getFirstFXYear(code: CurrencyCode): number | null {
+  if (code === "USD" || code === "PAB") return 1900; // always available
+  if (code === "BTC" || code === "XAU") return null;
+  const anchors = FX_ANCHORS[code];
+  if (!anchors || anchors.length === 0) return null;
+  return anchors[0].year;
+}
+
 // Recalculate CAGR in a different base currency using historical FX data
-// CAGR_local = ((P_end * FX_end) / (P_start * FX_start))^(1/years) - 1
-// Which simplifies to: (1 + CAGR_USD) * (FX_end/FX_start)^(1/years) - 1
+// When the asset predates available FX data, we compute the FX depreciation
+// rate only over the period with reliable data and apply it to the full CAGR.
+// This avoids clamping (which dilutes the real depreciation rate).
 export function convertCAGR(
   cagrUSD: number,
   code: CurrencyCode,
@@ -271,13 +281,24 @@ export function convertCAGR(
   const years = end - start;
   if (years <= 0) return cagrUSD;
 
-  const fxStart = getFXRate(code, start);
-  const fxEnd = getFXRate(code, end);
-  if (!fxStart || !fxEnd || fxStart <= 0) return cagrUSD;
+  const anchors = FX_ANCHORS[code];
+  if (!anchors || anchors.length === 0) return cagrUSD;
 
-  // Compound USD CAGR with FX depreciation
+  const firstFXYear = anchors[0].year;
+  const fxEnd = getFXRate(code, end);
+  if (!fxEnd || fxEnd <= 0) return cagrUSD;
+
+  // Use the actual FX data period (don't clamp pre-anchor years)
+  const effectiveFXStart = Math.max(start, firstFXYear);
+  const fxStart = getFXRate(code, effectiveFXStart);
+  if (!fxStart || fxStart <= 0) return cagrUSD;
+
+  // FX depreciation rate computed only over the period with real data
+  const fxYears = end - effectiveFXStart;
+  if (fxYears <= 0) return cagrUSD;
+
   const usdDecimal = cagrUSD / 100;
-  const fxGrowth = Math.pow(fxEnd / fxStart, 1 / years);
+  const fxGrowth = Math.pow(fxEnd / fxStart, 1 / fxYears);
   return ((1 + usdDecimal) * fxGrowth - 1) * 100;
 }
 
