@@ -73,6 +73,11 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
     const baseUSD = baseCurrentUSD > 0 ? baseCurrentUSD : getAnchorPrice(baseTicker, 2026);
 
     return data.map(a => {
+      // Base asset measured in itself is always 1.0 — CAGR is 0%
+      if (a.ticker === baseAssetTicker) {
+        return { ...a, cagrHistorical: 0, cagr5Y: 0, vsM2: 0, beatsM2: false };
+      }
+
       let effectiveIpoYear = a.ipoYear;
       let effectivePriceStart = a.priceStart;
       let effectiveYears = a.years;
