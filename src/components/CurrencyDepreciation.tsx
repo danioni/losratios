@@ -210,12 +210,13 @@ export default function CurrencyDepreciation() {
           className="text-[9px] sm:text-[10px] mt-4 leading-relaxed"
           style={{ color: "var(--text-muted)" }}
         >
-          <strong style={{ color: "var(--text-secondary)" }}>vs USD/a&ntilde;o</strong>: depreciaci&oacute;n
-          anual contra el d&oacute;lar.{" "}
+          <strong style={{ color: "var(--text-secondary)" }}>vs USD/a&ntilde;o</strong>: cambio anual
+          de poder adquisitivo contra el d&oacute;lar.{" "}
           <strong style={{ color: "var(--text-secondary)" }}>Global/a&ntilde;o</strong>: p&eacute;rdida
           total de poder adquisitivo (incluye expansi&oacute;n M2 global ~7%/a&ntilde;o).
           Los resets monetarios en Am&eacute;rica Latina son frecuentes &mdash; &ldquo;Desde&rdquo;
           indica el a&ntilde;o m&aacute;s antiguo con datos confiables.
+          EUR pre-1999: serie sint&eacute;tica derivada del Marco Alem&aacute;n (metodolog&iacute;a BCE, 1&nbsp;EUR&nbsp;=&nbsp;1.95583&nbsp;DEM).
         </p>
       </div>
     </div>
