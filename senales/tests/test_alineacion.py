@@ -19,13 +19,13 @@ def test_todas_las_observaciones_caen_en_miercoles(walcl, tga, rrp):
 
 def test_el_tga_se_engancha_por_fecha_exacta(walcl, tga, rrp):
     tabla = alinear_a_miercoles(walcl, tga, rrp, date(2020, 1, 1)).set_index("fecha")
-    assert tabla.loc[pd.Timestamp("2026-09-16"), "tga"] == pytest.approx(877.0)
+    assert tabla.loc[pd.Timestamp("2026-09-16"), "tga"] == pytest.approx(991.708)
 
 
 def test_el_rrp_del_miercoles_se_toma_de_ese_dia(walcl, tga, rrp):
     tabla = alinear_a_miercoles(walcl, tga, rrp, date(2020, 1, 1)).set_index("fecha")
     fila = tabla.loc[pd.Timestamp("2026-09-16")]
-    assert fila["rrp"] == pytest.approx(4.0)
+    assert fila["rrp"] == pytest.approx(5.375)
     assert fila["rrp_fecha_origen"] == pd.Timestamp("2026-09-16")
 
 

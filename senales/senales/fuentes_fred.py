@@ -24,6 +24,11 @@ from senales.nucleo import normalizar_texto
 
 TIEMPO_LIMITE = 60
 
+# Cuántas líneas del .txt de FRED se miran buscando la declaración de unidad.
+# El encabezado real ronda las diez líneas; el margen es para que un campo nuevo
+# no rompa la lectura.
+LINEAS_ENCABEZADO_METADATOS = 40
+
 # Texto de FRED -> clave de unidad interna.
 EQUIVALENCIAS_UNIDAD = {
     "millions of u.s. dollars": "millones",
@@ -120,29 +125,55 @@ def leer_csv_crudo(ruta: Path, serie: SerieFRED) -> pd.Series:
     return resultado * serie.factor
 
 
-def unidad_declarada(serie: SerieFRED, sesion: requests.Session | None = None) -> str | None:
-    """Lee la unidad que FRED declara para la serie. None si no se pudo leer.
+def unidad_declarada(
+    serie: SerieFRED, sesion: requests.Session | None = None
+) -> tuple[str | None, str]:
+    """Lee la unidad que FRED declara para la serie. Devuelve (unidad, motivo).
 
-    Mejor esfuerzo: si FRED no responde o cambia el formato del encabezado, se
-    devuelve None y quien llama reporta la unidad como NO VERIFICADA.
+    `unidad` es None si no se pudo leer. `motivo` dice siempre por qué, y eso no
+    es un lujo: la versión anterior devolvía None para cualquier causa —red
+    cortada, 404, redirección a HTML, encabezado con otro formato— y el operador
+    veía "NO VERIFICADA" sin manera de saber cuál de todas era. En la primera
+    corrida real del pipeline las tres series salieron NO VERIFICADAS y no hubo
+    forma de distinguir el caso desde la salida. Ver A-S2-9.
+
+    Sigue siendo mejor esfuerzo: si no se puede leer, la corrida continúa y
+    quedan como red la banda de orden de magnitud y el gate del H.4.1.
     """
     url = URL_METADATOS.format(id=serie.id)
     cliente = sesion or requests
     try:
         respuesta = cliente.get(url, timeout=TIEMPO_LIMITE)
-        respuesta.raise_for_status()
-    except requests.RequestException:
-        return None
+    except requests.RequestException as error:
+        return None, f"{url} no respondió ({type(error).__name__}: {error})"
 
-    for linea in respuesta.text.splitlines()[:40]:
+    if respuesta.status_code != 200:
+        return None, f"{url} respondió HTTP {respuesta.status_code}"
+
+    lineas = respuesta.text.splitlines()
+    for linea in lineas[:LINEAS_ENCABEZADO_METADATOS]:
         if normalizar_texto(linea).startswith("units:"):
-            return linea.split(":", 1)[1].strip()
-    return None
+            return linea.split(":", 1)[1].strip(), f"leída de {url}"
+
+    tipo = respuesta.headers.get("Content-Type", "sin Content-Type")
+    primera = next((l.strip() for l in lineas if l.strip()), "(respuesta vacía)")
+    return None, (
+        f"{url} respondió HTTP 200 ({tipo}) pero no hay línea 'Units:' en las "
+        f"primeras {LINEAS_ENCABEZADO_METADATOS} líneas; la primera línea con "
+        f"contenido es {primera[:80]!r}"
+    )
 
 
-def verificar_unidades(serie: SerieFRED, declarada: str | None) -> VerificacionUnidad:
-    """Contrasta la unidad configurada contra la que declara FRED."""
+def verificar_unidades(
+    serie: SerieFRED, declarada: str | None, motivo: str = ""
+) -> VerificacionUnidad:
+    """Contrasta la unidad configurada contra la que declara FRED.
+
+    `motivo` es lo que devolvió `unidad_declarada`. Se arrastra hasta el detalle
+    para que el changelog quede con la causa concreta y no con un "no se pudo".
+    """
     if declarada is None:
+        causa = f"; causa: {motivo}" if motivo else ""
         return VerificacionUnidad(
             serie_id=serie.id,
             unidad_configurada=serie.unidad,
@@ -151,7 +182,7 @@ def verificar_unidades(serie: SerieFRED, declarada: str | None) -> VerificacionU
             detalle=(
                 "no se pudo leer los metadatos de FRED; se usa la unidad configurada "
                 f"({serie.unidad}) y quedan como control la banda de orden de magnitud "
-                "y el caso de validación"
+                f"y el caso de validación{causa}"
             ),
         )
 

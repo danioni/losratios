@@ -127,20 +127,36 @@ fila queda con S2.1 vacío y el hueco aparece en el changelog.
 
 ## Cómo se valida
 
-El H.4.1 de la semana del **16 de septiembre de 2026** reporta activos totales
-6747, TGA 877 y ON RRP 4 (miles de millones). Entonces:
+El H.4.1 de la semana terminada el **16 de septiembre de 2026**, publicado el 17
+de septiembre, reporta en su columna de **nivel de miércoles** activos totales
+6746548, TGA 991708 y ON RRP doméstico 5375, en millones de USD. En miles de
+millones:
 
 ```
-6747 − 877 − 4 = 5866
+6746.548 − 991.708 − 5.375 = 5749.465
 ```
 
-Antes de escribir nada, el script calcula esa fila y la compara con 5866. Si la
-diferencia supera **±5**, se detiene: no escribe la serie, ni el gráfico, ni el
-changelog. Reporta la diferencia total, el desvío de cada componente por
-separado y las tres semanas alrededor del ancla.
+Las tres cifras salen de la **misma columna** del release, y eso no es un detalle
+de redacción. El H.4.1 publica cada partida dos veces, como nivel del miércoles y
+como promedio de la semana. El ancla original de esta serie las mezclaba, el gate
+la rechazó en la primera corrida real y la corrección fue releer el release. Está
+contado en **A-S2-13**.
 
-Ante una falla, **no se ajusta la fórmula para que cuadre**. Lo que se revisa,
-en orden, es: las unidades que declara FRED, la convención de la serie de TGA
+Antes de escribir nada, el script calcula esa fila y exige dos cosas:
+
+1. que el **total** no se desvíe más de **±5** del esperado;
+2. que **cada componente** no se desvíe más de **±1** de su cifra del release
+   (**A-S2-14**). Un total que cuadra porque dos componentes se compensan no
+   reproduce el ancla, y ese es justamente el modo en que un ancla con columnas
+   mezcladas podría pasar desapercibida.
+
+Si cualquiera de las dos falla, se detiene: no escribe la serie, ni el gráfico,
+ni el changelog. Reporta la diferencia total, el desvío de cada componente con su
+propio OK o FALLA, y las semanas alrededor del ancla.
+
+Ante una falla, **no se ajusta la fórmula para que cuadre**. Lo que se revisa, en
+orden, es: que las tres cifras del ancla vengan de la misma columna del release
+(A-S2-13), las unidades que declara FRED, la convención de la serie de TGA
 (A-S2-4) y el perímetro del ON RRP (A-S2-1).
 
 La unidad de cada serie está atada a su identificador: `WALCL` y `WDTGAL` llegan
@@ -148,11 +164,15 @@ en millones, `RRPONTSYD` en miles de millones. Hay tests que fallan si la
 declaración de `WDTGAL` deja de decir `millones`, para que cambiar la serie sin
 cambiar la unidad no llegue a publicarse (A-S2-4).
 
-> **Estado actual de la validación: no corrida contra FRED en vivo.** El entorno
-> donde se escribió este repositorio tiene bloqueado el acceso a
-> `fred.stlouisfed.org`. La aritmética está probada contra datos de prueba
-> deterministas, pero nadie verificó todavía que las series reales produzcan
-> 5866 ese miércoles. Ver **A-S2-13**.
+> **Estado actual de la validación: corrida, ancla corregida, reverificación
+> pendiente.** El 2026-09-22 el pipeline se corrió por primera vez contra FRED en
+> vivo desde una máquina con acceso. Bajó las tres series, calculó 5749.465 con
+> datos reales y el gate rechazó el ancla de entonces, que mezclaba columnas del
+> release. El ancla ya está corregida contra el H.4.1 publicado, pero **el gate
+> todavía no cerró en una corrida real con el ancla nueva**: hasta que eso pase,
+> lo que el script publique no debería usarse para decidir nada. En esa misma
+> corrida las tres unidades salieron NO VERIFICADAS y falta saber por qué. Ver
+> **A-S2-13** y **A-S2-9**.
 
 ---
 
@@ -220,7 +240,7 @@ TQQQ) van como módulos hermanos de `liquidez_neta.py`, no dentro de él:
 
 ## Supuestos
 
-Trece decisiones sostienen estos números, y ninguna es obvia. Están todas en
+Catorce decisiones sostienen estos números, y ninguna es obvia. Están todas en
 **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas y con estado (dato / estimación /
 supuesto / no medido).
 
@@ -229,3 +249,8 @@ Las tres que más cambian el resultado:
 - **A-S2-1** — solo se resta el ON RRP doméstico; el repo pool extranjero queda fuera.
 - **A-S2-4** — el TGA se toma como nivel de miércoles (`WDTGAL`), la misma convención que `WALCL` y que el H.4.1.
 - **A-S2-3** — no hay umbral de expansión ni de contracción: **NO MEDIDO**.
+
+Y dos que conviene leer antes de confiar en un número publicado:
+
+- **A-S2-13** — el ancla del H.4.1 estuvo mal transcrita; la reverificación con el ancla corregida sigue pendiente.
+- **A-S2-14** — el gate verifica cada componente contra el release, no solo el total.

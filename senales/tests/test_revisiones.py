@@ -53,7 +53,7 @@ def test_el_ruido_por_debajo_del_epsilon_no_se_reporta():
 
 def test_una_fila_nueva_es_agregado_y_no_revision():
     previa = _tabla([("2026-09-09", 6757.0, 889.0, 9.2)])
-    nueva = _tabla([("2026-09-09", 6757.0, 889.0, 9.2), ("2026-09-16", 6747.0, 877.0, 4.0)])
+    nueva = _tabla([("2026-09-09", 6757.0, 889.0, 9.2), ("2026-09-16", 6746.548, 991.708, 5.375)])
     assert detectar_revisiones(previa, nueva, COLUMNAS_REVISABLES, EPSILON_REVISION) == []
     agregadas = filas_agregadas(previa, nueva)
     assert [f.date().isoformat() for f in agregadas] == ["2026-09-16"]
@@ -108,7 +108,9 @@ def test_de_punta_a_punta_una_revision_de_fred_aparece_en_el_changelog(
     monkeypatch.setattr(liquidez_neta, "ARCHIVO_CHANGELOG", series / "CHANGELOG.md")
     monkeypatch.setattr(liquidez_neta, "ARCHIVO_GRAFICO", tmp_path / "reportes" / "g.png")
     monkeypatch.setattr(
-        fuentes_fred, "unidad_declarada", lambda serie, sesion=None: serie.unidad_fred
+        fuentes_fred,
+        "unidad_declarada",
+        lambda serie, sesion=None: (serie.unidad_fred, "declarada por el doble de test"),
     )
 
     assert liquidez_neta.main(["--fecha-descarga", FECHA_CORRIDA]) == 0

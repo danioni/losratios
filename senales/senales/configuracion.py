@@ -47,7 +47,21 @@ class SerieFRED:
 
 @dataclass(frozen=True)
 class CasoValidacion:
-    """Ancla externa contra la que se contrasta el cálculo antes de publicar."""
+    """Ancla externa contra la que se contrasta el cálculo antes de publicar.
+
+    Las tres cifras tienen que salir de la MISMA columna del release. El H.4.1
+    publica cada partida dos veces: como nivel del miércoles y como promedio de
+    la semana. Un ancla que mezcla las dos columnas no describe ningún instante,
+    y la resta que sale de ahí no cuadra con nada. No es hipotético: el ancla
+    original de esta serie las mezclaba, y el gate la rechazó en la primera
+    corrida real. Ver la entrada del 2026-09-22 en data/series/CHANGELOG.md.
+
+    De ahí salen dos campos que no son decorativos. `columna` deja escrito de
+    qué columna vienen los números, para que el próximo que actualice el ancla
+    sepa qué tiene que buscar. Y `tolerancia_componente` obliga a que cada
+    término cierre por separado, no solo el total: un total que cuadra porque
+    dos componentes se compensan no es un ancla reproducida.
+    """
 
     fecha: date
     walcl: float
@@ -55,7 +69,11 @@ class CasoValidacion:
     rrp: float
     s2_1_esperado: float
     tolerancia: float
+    tolerancia_componente: float
+    columna: str
     fuente: str
+    fuente_url: str
+    fecha_publicacion: date
 
 
 SERIE_WALCL = SerieFRED(
@@ -131,14 +149,36 @@ MAX_DIAS_ARRASTRE_RRP = 7
 # revisó un dato histórico y no que es ruido de redondeo.
 EPSILON_REVISION = 0.0005
 
+# Ancla del H.4.1. Los tres números son niveles de miércoles del 16 de septiembre
+# de 2026, leídos de la misma columna del release y convertidos de millones a
+# miles de millones de USD.
+#
+# El ancla anterior mezclaba columnas: los activos totales venían del nivel de
+# miércoles, pero el TGA (877.028) y el ON RRP (3.999) venían del promedio
+# semanal. La primera corrida real, el 2026-09-22, la rechazó con una diferencia
+# de -116.535, casi toda concentrada en el TGA. La corrección viene de leer el
+# H.4.1 publicado, no de ajustar el cálculo para que cuadre. Ver A-S2-13.
 VALIDACION_H41 = CasoValidacion(
     fecha=date(2026, 9, 16),
-    walcl=6747.0,
-    tga=877.0,
-    rrp=4.0,
-    s2_1_esperado=5866.0,
+    walcl=6746.548,
+    tga=991.708,
+    rrp=5.375,
+    s2_1_esperado=5749.465,
     tolerancia=5.0,
-    fuente="H.4.1 de la semana del 16 de septiembre de 2026, en miles de millones de USD",
+    # A-S2-14: cada componente tiene que cerrar dentro de +/-1 contra el release.
+    tolerancia_componente=1.0,
+    columna="nivel de miércoles (Wednesday level)",
+    fuente=(
+        "H.4.1 de la semana terminada el 16 de septiembre de 2026, columna de "
+        "nivel de miércoles. Cifras del release, en millones de USD: activos "
+        "totales 6746548; TGA 991708; reverse repurchase agreements, línea "
+        "\"Others\" (ON RRP doméstico, A-S2-1) 5375."
+    ),
+    # Enlace móvil: /current/ apunta siempre al release más reciente, así que deja
+    # de mostrar esta semana en cuanto se publica la siguiente. El equivalente
+    # archivado y estable todavía no se verificó desde este repositorio (A-S2-13).
+    fuente_url="https://www.federalreserve.gov/releases/h41/current/",
+    fecha_publicacion=date(2026, 9, 17),
 )
 
 ARCHIVO_SERIE = DIR_SERIES / "liquidez_neta.csv"

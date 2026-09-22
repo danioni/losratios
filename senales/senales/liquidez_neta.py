@@ -68,8 +68,55 @@ class ResultadoValidacion:
         return self.calculado - self.caso.s2_1_esperado
 
     @property
-    def ok(self) -> bool:
+    def desvios(self) -> dict[str, float | None]:
+        """Desvío de cada componente contra su valor del release."""
+        return {
+            nombre: (None if calculado is None else calculado - esperado)
+            for nombre, (calculado, esperado) in self.componentes.items()
+        }
+
+    @property
+    def componentes_fuera(self) -> list[str]:
+        """Componentes que no reproducen el release dentro de su tolerancia.
+
+        Un componente sin dato cuenta como fuera. No se puede dar por buena una
+        resta a la que le falta un término.
+        """
+        return [
+            nombre
+            for nombre, desvio in self.desvios.items()
+            if desvio is None or abs(desvio) > self.caso.tolerancia_componente
+        ]
+
+    @property
+    def ok_total(self) -> bool:
+        """El total reproduce el esperado dentro de la tolerancia del ancla."""
         return self.diferencia is not None and abs(self.diferencia) <= self.caso.tolerancia
+
+    @property
+    def ok_componentes(self) -> bool:
+        """A-S2-14: los tres términos reproducen el release, uno por uno."""
+        return not self.componentes_fuera
+
+    @property
+    def ok(self) -> bool:
+        """El ancla se reproduce si cierra el total y cierra cada componente.
+
+        Las dos condiciones no son simétricas, y conviene tenerlo claro. El total
+        puede cerrar aunque los componentes estén mal, porque dos desvíos de
+        signo opuesto se compensan: eso es lo que atrapa `ok_componentes`. Al
+        revés no pasa, porque S2.1 es exactamente walcl - tga - rrp y el esperado
+        sale de esa misma resta sobre las cifras del release, así que el desvío
+        del total es la suma de los desvíos de los componentes. Si los tres
+        entran en +/-1, el total no puede desviarse más de 3, y la tolerancia del
+        ancla es +/-5.
+
+        Es decir: hoy `ok_total` no puede fallar sola, y queda como respaldo de
+        dos cosas que sí pueden cambiar. Una, que falte la fecha ancla. Dos, que
+        alguien afloje `tolerancia_componente` o toque la fórmula de S2.1 sin
+        darse cuenta de que el total dejó de estar acotado.
+        """
+        return self.ok_total and self.ok_componentes
 
     def resumen(self) -> str:
         if self.calculado is None:
@@ -77,20 +124,28 @@ class ResultadoValidacion:
                 f"FALLA - la fecha ancla {self.caso.fecha} no está en la serie calculada"
             )
         estado = "OK" if self.ok else "FALLA"
-        return (
+        linea = (
             f"{estado} - {self.caso.fecha}: calculado {formatear(self.calculado, 3)} vs "
             f"esperado {formatear(self.caso.s2_1_esperado, 3)}, "
             f"diferencia {formatear(self.diferencia, 3)}, "
             f"tolerancia +/-{formatear(self.caso.tolerancia, 3)}"
         )
+        if self.componentes_fuera:
+            linea += (
+                f"; fuera de +/-{formatear(self.caso.tolerancia_componente, 3)} por "
+                f"componente: {', '.join(self.componentes_fuera)}"
+            )
+        return linea
 
     def detalle_componentes(self) -> list[str]:
         lineas = []
         for nombre, (calculado, esperado) in self.componentes.items():
             delta = None if calculado is None else calculado - esperado
+            dentro = delta is not None and abs(delta) <= self.caso.tolerancia_componente
             lineas.append(
                 f"  {nombre:<6} calculado {formatear(calculado, 3):>12}  "
-                f"H.4.1 {formatear(esperado, 3):>12}  diferencia {formatear(delta, 3):>12}"
+                f"release {formatear(esperado, 3):>12}  "
+                f"diferencia {formatear(delta, 3):>12}  {'OK' if dentro else 'FALLA'}"
             )
         return lineas
 
@@ -234,7 +289,8 @@ def _cargar_serie_normalizada(
         f"{serie.id}: {'descargada' if descargada else 'reutilizada'} {ruta.name}"
     )
 
-    verificacion = fuentes_fred.verificar_unidades(serie, fuentes_fred.unidad_declarada(serie))
+    declarada, motivo = fuentes_fred.unidad_declarada(serie)
+    verificacion = fuentes_fred.verificar_unidades(serie, declarada, motivo)
     valores = fuentes_fred.leer_csv_crudo(ruta, serie)
     fuentes_fred.verificar_orden_de_magnitud(valores, serie)
     return valores, verificacion
@@ -287,6 +343,11 @@ def main(argv: list[str] | None = None) -> int:
 
     validacion = validar_caso_ancla(tabla, VALIDACION_H41)
     print("Validación")
+    print(
+        f"  ancla: H.4.1 publicado el {VALIDACION_H41.fecha_publicacion}, "
+        f"{VALIDACION_H41.columna}"
+    )
+    print(f"  fuente: {VALIDACION_H41.fuente_url}")
     print(f"  {validacion.resumen()}")
     for linea in validacion.detalle_componentes():
         print(linea)
@@ -299,12 +360,21 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         print(
-            "No ajustar la fórmula para que cuadre. Revisar, en este orden: unidades "
-            "declaradas por FRED, la convención de la serie de TGA (A-S2-4: WDTGAL es "
-            "nivel de miércoles, WTREGEN es promedio semanal) y el perímetro del ON RRP "
-            "(A-S2-1).",
+            "No ajustar la fórmula para que cuadre. Revisar, en este orden: que las tres "
+            "cifras del ancla salgan de la MISMA columna del release (el H.4.1 publica "
+            "nivel de miércoles y promedio semanal, y mezclarlos ya rompió este ancla una "
+            "vez; ver A-S2-13), las unidades declaradas por FRED, la convención de la "
+            "serie de TGA (A-S2-4: WDTGAL es nivel de miércoles, WTREGEN es promedio "
+            "semanal) y el perímetro del ON RRP (A-S2-1).",
             file=sys.stderr,
         )
+        if validacion.componentes_fuera and validacion.ok_total:
+            print(
+                "Atención: el total entra en la tolerancia pero hay componentes que no. "
+                "Los desvíos se están compensando entre sí, y un total que cuadra por "
+                "compensación no reproduce el ancla (A-S2-14).",
+                file=sys.stderr,
+            )
         contexto = tabla.loc[
             (tabla["fecha"] >= pd.Timestamp(VALIDACION_H41.fecha) - pd.Timedelta(weeks=3))
             & (tabla["fecha"] <= pd.Timestamp(VALIDACION_H41.fecha) + pd.Timedelta(weeks=3))

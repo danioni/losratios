@@ -38,7 +38,9 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     monkeypatch.setattr(liquidez_neta, "ARCHIVO_CHANGELOG", series / "CHANGELOG.md")
     monkeypatch.setattr(liquidez_neta, "ARCHIVO_GRAFICO", reportes / "liquidez_neta.png")
     monkeypatch.setattr(
-        fuentes_fred, "unidad_declarada", lambda serie, sesion=None: serie.unidad_fred
+        fuentes_fred,
+        "unidad_declarada",
+        lambda serie, sesion=None: (serie.unidad_fred, "declarada por el doble de test"),
     )
     return {"crudo": crudo, "series": series, "reportes": reportes}
 
@@ -115,7 +117,7 @@ def test_el_umbral_sin_definir_se_reporta_como_no_medido(entorno, capsys):
 
 def test_si_la_validacion_falla_no_se_escribe_ninguna_serie(entorno):
     ruta = entorno["crudo"] / f"{SERIE_WALCL.id}_{FECHA_CORRIDA}.csv"
-    texto = ruta.read_text(encoding="utf-8").replace("2026-09-16,6747000", "2026-09-16,6800000")
+    texto = ruta.read_text(encoding="utf-8").replace("2026-09-16,6746548", "2026-09-16,6800000")
     ruta.write_text(texto, encoding="utf-8")
 
     assert liquidez_neta.main(["--fecha-descarga", FECHA_CORRIDA]) == 2
