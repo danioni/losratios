@@ -1,6 +1,6 @@
 """S2.x - Liquidez neta de la Fed.
 
-S2.1  Liquidez neta = WALCL - WTREGEN - RRPONTSYD, en miles de millones de USD,
+S2.1  Liquidez neta = WALCL - WDTGAL - RRPONTSYD, en miles de millones de USD,
       una observación por miércoles.
 S2.2  Variación de S2.1 a 13 semanas, en porcentaje.
 
@@ -300,8 +300,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(
             "No ajustar la fórmula para que cuadre. Revisar, en este orden: unidades "
-            "declaradas por FRED, la convención de la serie de TGA (A-S2-4: WTREGEN es "
-            "promedio semanal, WDTGAL es nivel de miércoles) y el perímetro del ON RRP "
+            "declaradas por FRED, la convención de la serie de TGA (A-S2-4: WDTGAL es "
+            "nivel de miércoles, WTREGEN es promedio semanal) y el perímetro del ON RRP "
             "(A-S2-1).",
             file=sys.stderr,
         )
@@ -322,12 +322,14 @@ def main(argv: list[str] | None = None) -> int:
     huecos = detectar_huecos(tabla)
 
     escribir_csv_determinista(salida, ARCHIVO_SERIE, COLUMNAS_SERIE)
+    identificadores = f"{SERIE_WALCL.id}, {SERIE_TGA.id}, {SERIE_RRP.id}"
     grafico.dibujar(
         tabla,
         ARCHIVO_GRAFICO,
         VENTANA_VARIACION_SEMANAS,
         UMBRAL_EXPANSION_CONTRACCION,
-        fuente="FRED (WALCL, WTREGEN, RRPONTSYD), release H.4.1 de la Reserva Federal",
+        fuente=f"FRED ({identificadores}), release H.4.1 de la Reserva Federal",
+        formula=f"{SERIE_WALCL.id} \N{MINUS SIGN} {SERIE_TGA.id} \N{MINUS SIGN} {SERIE_RRP.id}",
     )
 
     umbral = (

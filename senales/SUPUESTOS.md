@@ -68,28 +68,43 @@ haber inventado.
 
 ---
 
-## A-S2-4 · WTREGEN es un promedio semanal, no el nivel del miércoles
+## A-S2-4 · El TGA se toma como nivel de miércoles (`WDTGAL`)
 
-**Estado: supuesto, con una discrepancia conocida sin resolver.**
+**Estado: supuesto.** Cambiado el 2026-09-22; antes era `WTREGEN`.
 
-La serie de TGA en uso es `WTREGEN`, cuyo título completo en FRED es
-*«...U.S. Treasury, General Account: **Week Average**»*. Es el promedio de la
-semana. `WALCL`, en cambio, es *Wednesday Level*: el nivel del miércoles.
+La serie de TGA en uso es **`WDTGAL`**, cuyo título completo en FRED es
+*Liabilities and Capital: Deposits with F.R. Banks, Other Than Reserve Balances:
+U.S. Treasury, General Account: **Wednesday Level***. Es semanal, referida al
+miércoles, y se publica en **millones de USD**.
 
-S2.1 resta entonces un promedio semanal a un nivel puntual. Son dos convenciones
-distintas mezcladas en una resta. La diferencia entre el promedio y el nivel del
-TGA puede ser de decenas de miles de millones en semanas de vencimientos
-impositivos o de subastas grandes — bastante más que la tolerancia de ±5 con la
-que se valida S2.1.
+**Motivo del cambio.** `WALCL` es *Wednesday Level*, y el ancla del H.4.1 contra
+la que se valida S2.1 también reporta niveles de miércoles. La serie anterior,
+`WTREGEN`, es el promedio de la semana. Restar un promedio semanal a un nivel
+puntual mezclaba dos convenciones dentro de una misma resta, y esa mezcla podía
+valer decenas de miles de millones en semanas de vencimientos impositivos o de
+subastas grandes — bastante más que la tolerancia de ±5 con la que se valida
+S2.1. Con `WDTGAL`, los tres términos de la fórmula describen el mismo instante.
 
-**Alternativa.** `WDTGAL`, el TGA como nivel de miércoles en millones de USD, que
-es la convención del H.4.1. Está declarada en `configuracion.py` como
-`SERIE_TGA_NIVEL_MIERCOLES`; para usarla, apuntar `SERIE_TGA` ahí. Como con
-A-S2-1, **ese identificador no pudo verificarse desde este entorno**.
+**La unidad va atada al identificador.** `WDTGAL` llega en millones y `WTREGEN`
+en miles de millones. Cambiar uno sin cambiar la otra desplaza S2.1 por un factor
+de 1000. Para que ese olvido no llegue a publicarse hay tests que fallan si la
+declaración de `WDTGAL` en `configuracion.py` deja de decir `millones`
+(`tests/test_unidades.py`).
 
-Se dejó `WTREGEN` porque es lo que pide el marco y porque el árbitro está
-puesto: si la mezcla de convenciones no entra en ±5, el gate de validación se
-detiene y lo dice. No se cambia la fórmula para que cuadre.
+**Alternativa.** `WTREGEN`, el TGA como promedio semanal en miles de millones de
+USD. Sigue declarada en `configuracion.py` como `SERIE_TGA_PROMEDIO_SEMANAL`;
+para volver a ella, apuntar `SERIE_TGA` ahí y registrar el cambio acá y en
+`data/series/CHANGELOG.md`.
+
+**Lo que este cambio no toca.** La fórmula de S2.1 y la tolerancia del gate
+siguen igual. Si `WDTGAL` tampoco reprodujera el ancla dentro de ±5, el gate se
+detiene y lo reporta; la respuesta sigue sin ser ajustar la fórmula.
+
+**Lo que falta verificar.** El identificador `WDTGAL`, su título y su unidad
+vienen de la instrucción que fijó este supuesto, no de una lectura propia de la
+página de FRED: el entorno donde se escribió este repositorio no llega a
+`fred.stlouisfed.org` (A-S2-13). La primera corrida con acceso lo confirma sola,
+porque la verificación de unidades y el gate cortan si algo no coincide.
 
 ---
 
@@ -157,8 +172,9 @@ Las unidades configuradas son:
 | Serie | Unidad declarada en la configuración | Factor a miles de millones |
 | --- | --- | --- |
 | `WALCL` | Millions of U.S. Dollars | ÷ 1000 |
-| `WTREGEN` | Billions of U.S. Dollars | × 1 |
+| `WDTGAL` | Millions of U.S. Dollars | ÷ 1000 |
 | `RRPONTSYD` | Billions of US Dollars | × 1 |
+| `WTREGEN` *(alternativa, A-S2-4)* | Billions of U.S. Dollars | × 1 |
 
 En cada corrida el script lee los metadatos publicados por FRED y los contrasta
 con esta tabla:
@@ -226,8 +242,9 @@ El entorno donde se escribió este repositorio tiene bloqueado el acceso a
 
 - **Sí** está probado, contra datos de prueba deterministas, que la aritmética
   reproduce el ancla del H.4.1 del 16 de septiembre de 2026
-  (`6747 − 877 − 4 = 5866`), que el gate corta cuando la diferencia supera ±5, y
-  que un error de unidad en el TGA no pasa desapercibido.
+  (`6747 − 877 − 4 = 5866`), que el gate corta cuando la diferencia supera ±5,
+  que un error de unidad en el TGA no pasa desapercibido, y que la unidad
+  declarada para `WDTGAL` no se puede cambiar sin que falle un test (A-S2-4).
 - **No** está probado que las series reales de FRED, con sus unidades y su
   calendario reales, produzcan ese número.
 

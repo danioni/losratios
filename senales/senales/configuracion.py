@@ -60,32 +60,42 @@ class CasoValidacion:
 
 SERIE_WALCL = SerieFRED(
     id="WALCL",
-    descripcion="Activos totales de la Fed (menos eliminaciones de consolidacion), nivel de miércoles",
+    descripcion="Activos totales de la Fed (menos eliminaciones de consolidación), nivel de miércoles",
     unidad="millones",
     unidad_fred="Millions of U.S. Dollars",
     frecuencia="semanal_miercoles",
     banda_plausible=(500.0, 20_000.0),
 )
 
-# A-S2-4: WTREGEN es un promedio semanal, no el nivel del miércoles que publica
-# el H.4.1. Se usa por convención (así lo pide el marco), y el gate de validación
-# es el que decide si la mezcla de convenciones cabe en la tolerancia de +/-5.
+# A-S2-4: serie de TGA predeterminada. Es el nivel de miércoles, la misma
+# convención que WALCL y que el ancla del H.4.1, para que S2.1 no mezcle un
+# nivel puntual con un promedio.
+#
+# La unidad de esta serie está acoplada al identificador: WDTGAL se publica en
+# millones de USD. Cambiar el identificador sin cambiar la unidad rompe la serie
+# por un factor de 1000, y hay un test que falla si esta declaración deja de
+# decir "millones" (tests/test_unidades.py).
+SERIE_TGA_NIVEL_MIERCOLES = SerieFRED(
+    id="WDTGAL",
+    descripcion=(
+        "Cuenta general del Tesoro (TGA), nivel de miércoles. En FRED: "
+        "Liabilities and Capital: Deposits with F.R. Banks, Other Than Reserve "
+        "Balances: U.S. Treasury, General Account: Wednesday Level"
+    ),
+    unidad="millones",
+    unidad_fred="Millions of U.S. Dollars",
+    frecuencia="semanal_miercoles",
+    banda_plausible=(0.0, 2_000.0),
+)
+
+# Alternativa documentada en SUPUESTOS.md (A-S2-4): el TGA como promedio de la
+# semana. No es la predeterminada porque promedia días que el H.4.1 no promedia.
+# Para usarla, apuntar SERIE_TGA a esta declaración y registrar el cambio.
 SERIE_TGA_PROMEDIO_SEMANAL = SerieFRED(
     id="WTREGEN",
     descripcion="Cuenta general del Tesoro (TGA), promedio semanal a miércoles",
     unidad="miles_de_millones",
     unidad_fred="Billions of U.S. Dollars",
-    frecuencia="semanal_miercoles",
-    banda_plausible=(0.0, 2_000.0),
-)
-
-# Alternativa documentada en SUPUESTOS.md (A-S2-4): el TGA como nivel de miércoles,
-# que es la convención del H.4.1. Para usarla, apuntar SERIE_TGA acá.
-SERIE_TGA_NIVEL_MIERCOLES = SerieFRED(
-    id="WDTGAL",
-    descripcion="Cuenta general del Tesoro (TGA), nivel de miércoles",
-    unidad="millones",
-    unidad_fred="Millions of U.S. Dollars",
     frecuencia="semanal_miercoles",
     banda_plausible=(0.0, 2_000.0),
 )
@@ -99,8 +109,9 @@ SERIE_RRP = SerieFRED(
     banda_plausible=(0.0, 3_000.0),
 )
 
-# Serie de TGA efectivamente en uso. Cambiarla es un cambio de supuesto (A-S2-4).
-SERIE_TGA = SERIE_TGA_PROMEDIO_SEMANAL
+# Serie de TGA efectivamente en uso. Cambiarla es un cambio de supuesto (A-S2-4)
+# y obliga a revisar la unidad declarada arriba junto con el identificador.
+SERIE_TGA = SERIE_TGA_NIVEL_MIERCOLES
 
 # Historia mínima que se publica.
 FECHA_INICIO = date(2020, 1, 1)

@@ -11,6 +11,7 @@ import pytest
 from senales import bitacora, fuentes_fred, liquidez_neta
 from senales.bitacora import EntradaChangelog, detectar_revisiones, filas_agregadas
 from senales.configuracion import COLUMNAS_REVISABLES, EPSILON_REVISION, SERIE_RRP, SERIE_TGA, SERIE_WALCL
+from tests.conftest import ruta_de_ejemplo
 
 FECHA_CORRIDA = "2026-09-22"
 
@@ -92,17 +93,13 @@ def test_la_revision_queda_escrita_en_el_changelog(tmp_path: Path):
 
 
 def test_de_punta_a_punta_una_revision_de_fred_aparece_en_el_changelog(
-    tmp_path: Path, dir_fixtures: Path, monkeypatch
+    tmp_path: Path, monkeypatch
 ):
     crudo = tmp_path / "raw"
     series = tmp_path / "series"
     crudo.mkdir(parents=True)
-    for serie, fixture in (
-        (SERIE_WALCL, "WALCL_ejemplo.csv"),
-        (SERIE_TGA, "WTREGEN_ejemplo.csv"),
-        (SERIE_RRP, "RRPONTSYD_ejemplo.csv"),
-    ):
-        shutil.copy(dir_fixtures / fixture, crudo / f"{serie.id}_{FECHA_CORRIDA}.csv")
+    for serie in (SERIE_WALCL, SERIE_TGA, SERIE_RRP):
+        shutil.copy(ruta_de_ejemplo(serie), crudo / f"{serie.id}_{FECHA_CORRIDA}.csv")
 
     monkeypatch.setattr(liquidez_neta, "DIR_CRUDO", crudo)
     monkeypatch.setattr(liquidez_neta, "DIR_SERIES", series)
@@ -123,8 +120,8 @@ def test_de_punta_a_punta_una_revision_de_fred_aparece_en_el_changelog(
         "2026-09-02,6768000", "2026-09-02,6769200"
     )
     (crudo / f"{SERIE_WALCL.id}_{otra}.csv").write_text(revisado, encoding="utf-8")
-    for serie, fixture in ((SERIE_TGA, "WTREGEN_ejemplo.csv"), (SERIE_RRP, "RRPONTSYD_ejemplo.csv")):
-        shutil.copy(dir_fixtures / fixture, crudo / f"{serie.id}_{otra}.csv")
+    for serie in (SERIE_TGA, SERIE_RRP):
+        shutil.copy(ruta_de_ejemplo(serie), crudo / f"{serie.id}_{otra}.csv")
 
     assert liquidez_neta.main(["--fecha-descarga", otra]) == 0
     texto = (series / "CHANGELOG.md").read_text(encoding="utf-8")

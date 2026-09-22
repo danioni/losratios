@@ -46,8 +46,14 @@ def dibujar(
     ventana_semanas: int,
     umbral: float | None,
     fuente: str,
+    formula: str,
 ) -> Path:
-    """Escribe el PNG de dos paneles y devuelve la ruta."""
+    """Escribe el PNG de dos paneles y devuelve la ruta.
+
+    La fórmula y la fuente llegan como texto desde quien llama, armadas con los
+    identificadores que están configurados. Escribirlas acá a mano haría que el
+    gráfico siguiera nombrando una serie vieja después de cambiarla (A-S2-4).
+    """
     datos = tabla.dropna(subset=["s2_1_liquidez_neta"])
     if datos.empty:
         raise ValueError("no hay datos de S2.1 para graficar")
@@ -67,7 +73,7 @@ def dibujar(
         arriba.plot(fechas, datos["s2_1_liquidez_neta"], color=TINTA, linewidth=1.3)
         arriba.set_ylabel("Miles de millones de USD")
         arriba.set_title(
-            "S2.1  Liquidez neta de la Fed  ·  WALCL − WTREGEN − RRPONTSYD",
+            f"S2.1  Liquidez neta de la Fed  ·  {formula}",
             loc="left",
             fontsize=11,
             pad=10,

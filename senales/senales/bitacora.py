@@ -7,6 +7,7 @@ no solo de las filas nuevas.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -15,7 +16,18 @@ import pandas as pd
 
 from senales.nucleo import formatear
 
-ENCABEZADO = "# Changelog de data/series\n\nUna entrada por corrida, de la más reciente a la más antigua.\n"
+ENCABEZADO = (
+    "# Changelog de data/series\n"
+    "\n"
+    "Una entrada por corrida, de la más reciente a la más antigua.\n"
+    "\n"
+    "Las secciones cuyo título no es una fecha (por ejemplo, los cambios de supuestos)\n"
+    "se escriben a mano, se conservan arriba y el script no las toca.\n"
+)
+
+# Un título de entrada de corrida es una fecha ISO; cualquier otro título es
+# una sección escrita a mano que hay que preservar.
+PATRON_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 @dataclass(frozen=True)
@@ -145,22 +157,35 @@ class EntradaChangelog:
         return "\n".join(lineas)
 
 
-def _separar_entradas(texto: str) -> dict[str, str]:
-    """Parte un changelog existente en bloques indexados por fecha de corrida."""
+def _separar_bloques(texto: str) -> tuple[list[str], dict[str, str]]:
+    """Parte un changelog existente en secciones fijas y entradas de corrida.
+
+    Devuelve las secciones escritas a mano en el orden en que estaban, y las
+    entradas de corrida indexadas por fecha.
+    """
+    fijas: list[str] = []
     entradas: dict[str, str] = {}
-    clave: str | None = None
+    titulo: str | None = None
     acumulado: list[str] = []
+
+    def guardar() -> None:
+        if titulo is None:
+            return
+        bloque = "\n".join(acumulado).rstrip() + "\n"
+        if PATRON_FECHA.match(titulo):
+            entradas[titulo] = bloque
+        else:
+            fijas.append(bloque)
+
     for linea in texto.splitlines():
         if linea.startswith("## "):
-            if clave is not None:
-                entradas[clave] = "\n".join(acumulado).rstrip() + "\n"
-            clave = linea[3:].strip()
+            guardar()
+            titulo = linea[3:].strip()
             acumulado = [linea]
-        elif clave is not None:
+        elif titulo is not None:
             acumulado.append(linea)
-    if clave is not None:
-        entradas[clave] = "\n".join(acumulado).rstrip() + "\n"
-    return entradas
+    guardar()
+    return fijas, entradas
 
 
 def actualizar_changelog(ruta: Path, entrada: EntradaChangelog) -> bool:
@@ -169,13 +194,17 @@ def actualizar_changelog(ruta: Path, entrada: EntradaChangelog) -> bool:
     Idempotente: correrlo dos veces el mismo día deja una sola entrada. Si el
     segundo intento trae datos distintos, la entrada del día se reemplaza en vez
     de duplicarse, y el archivo refleja siempre la última corrida de esa fecha.
+
+    Las secciones escritas a mano, como el registro de cambios de supuestos, se
+    conservan tal cual y quedan arriba de las entradas de corrida.
     """
     previo = ruta.read_text(encoding="utf-8") if ruta.exists() else ""
-    entradas = _separar_entradas(previo)
+    fijas, entradas = _separar_bloques(previo)
     entradas[entrada.fecha_corrida.isoformat()] = entrada.render()
 
     ordenadas = sorted(entradas.items(), key=lambda par: par[0], reverse=True)
-    nuevo = ENCABEZADO + "\n" + "\n".join(bloque.rstrip() + "\n" for _, bloque in ordenadas)
+    bloques = fijas + [bloque for _, bloque in ordenadas]
+    nuevo = ENCABEZADO + "\n" + "\n".join(bloque.rstrip() + "\n" for bloque in bloques)
 
     if nuevo == previo:
         return False

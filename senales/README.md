@@ -17,7 +17,7 @@ por el sistema financiero, en vez de estar estacionado en la cuenta del Tesoro o
 inmovilizado en el reverse repo.
 
 ```
-S2.1 = WALCL − WTREGEN − RRPONTSYD
+S2.1 = WALCL − WDTGAL − RRPONTSYD
 ```
 
 - **Unidad:** miles de millones de USD.
@@ -51,8 +51,13 @@ Las tres series salen de [FRED](https://fred.stlouisfed.org/), sin API key, por
 | Serie | Qué es | Frecuencia | Unidad declarada |
 | --- | --- | --- | --- |
 | [`WALCL`](https://fred.stlouisfed.org/series/WALCL) | Activos totales de la Fed, nivel de miércoles | Semanal (miércoles) | Millones de USD |
-| [`WTREGEN`](https://fred.stlouisfed.org/series/WTREGEN) | Cuenta general del Tesoro (TGA), promedio semanal | Semanal (miércoles) | Miles de millones de USD |
+| [`WDTGAL`](https://fred.stlouisfed.org/series/WDTGAL) | Cuenta general del Tesoro (TGA), nivel de miércoles | Semanal (miércoles) | Millones de USD |
 | [`RRPONTSYD`](https://fred.stlouisfed.org/series/RRPONTSYD) | Reverse repo overnight doméstico (ON RRP) | Diaria | Miles de millones de USD |
+
+Las tres son niveles referidos al mismo miércoles, la convención del H.4.1. La
+alternativa para el TGA, [`WTREGEN`](https://fred.stlouisfed.org/series/WTREGEN),
+es el promedio de la semana en miles de millones; queda documentada pero no es la
+predeterminada (A-S2-4).
 
 Todo se normaliza a miles de millones de USD. **Las unidades no se asumen:** en
 cada corrida el script lee los metadatos que publica FRED y los contrasta con su
@@ -95,9 +100,10 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Los tests no tocan la red. Cubren unidades y su normalización, la alineación al
-miércoles y el arrastre del ON RRP, el cálculo de S2.2, el caso de validación
-del H.4.1, la idempotencia de punta a punta y la detección de revisiones.
+Los tests no tocan la red. Cubren unidades y su normalización, el acople entre
+el identificador de cada serie y su unidad, la alineación al miércoles y el
+arrastre del ON RRP, el cálculo de S2.2, el caso de validación del H.4.1, la
+idempotencia de punta a punta y la detección de revisiones.
 
 ---
 
@@ -107,7 +113,7 @@ del H.4.1, la idempotencia de punta a punta y la detección de revisiones.
 | --- | --- |
 | `data/raw/<SERIE>_<fecha>.csv` | La descarga cruda, tal como la entregó FRED. Nunca se sobrescribe (A-S2-10). |
 | `data/series/liquidez_neta.csv` | La serie publicada: `fecha, walcl, tga, rrp, rrp_fecha_origen, s2_1_liquidez_neta, s2_2_var_13s_pct`. |
-| `data/series/CHANGELOG.md` | Una entrada por corrida: rango de datos, filas agregadas, revisiones históricas detectadas, huecos, verificación de unidades y resultado de la validación. |
+| `data/series/CHANGELOG.md` | Una entrada por corrida: rango de datos, filas agregadas, revisiones históricas detectadas, huecos, verificación de unidades y resultado de la validación. Las secciones cuyo título no es una fecha, como el registro de cambios de supuestos, se escriben a mano y el script las conserva (A-S2-11). |
 | `reportes/liquidez_neta.png` | Dos paneles: S2.1 en nivel arriba, S2.2 en barras alrededor de cero abajo. |
 
 FRED revisa datos hacia atrás. Cada corrida compara lo que acaba de calcular
@@ -137,6 +143,11 @@ Ante una falla, **no se ajusta la fórmula para que cuadre**. Lo que se revisa,
 en orden, es: las unidades que declara FRED, la convención de la serie de TGA
 (A-S2-4) y el perímetro del ON RRP (A-S2-1).
 
+La unidad de cada serie está atada a su identificador: `WALCL` y `WDTGAL` llegan
+en millones, `RRPONTSYD` en miles de millones. Hay tests que fallan si la
+declaración de `WDTGAL` deja de decir `millones`, para que cambiar la serie sin
+cambiar la unidad no llegue a publicarse (A-S2-4).
+
 > **Estado actual de la validación: no corrida contra FRED en vivo.** El entorno
 > donde se escribió este repositorio tiene bloqueado el acceso a
 > `fred.stlouisfed.org`. La aritmética está probada contra datos de prueba
@@ -160,8 +171,8 @@ una hipótesis que esta serie no contiene.
 
 **La fórmula es una convención entre varias.** Restar TGA y ON RRP a los activos
 totales es la versión más difundida, no la correcta. Hay variantes razonables
-que incluyen el repo pool extranjero (A-S2-1), que usan el TGA como nivel de
-miércoles en vez de promedio semanal (A-S2-4), o que además restan el circulante
+que incluyen el repo pool extranjero (A-S2-1), que usan el TGA como promedio
+semanal en vez de nivel de miércoles (A-S2-4), o que además restan el circulante
 o las cuentas de capital. Dan series distintas. Ninguna es la liquidez neta:
 cada una es *una* liquidez neta.
 
@@ -216,5 +227,5 @@ supuesto / no medido).
 Las tres que más cambian el resultado:
 
 - **A-S2-1** — solo se resta el ON RRP doméstico; el repo pool extranjero queda fuera.
-- **A-S2-4** — `WTREGEN` es un promedio semanal, no el nivel del miércoles que reporta el H.4.1.
+- **A-S2-4** — el TGA se toma como nivel de miércoles (`WDTGAL`), la misma convención que `WALCL` y que el H.4.1.
 - **A-S2-3** — no hay umbral de expansión ni de contracción: **NO MEDIDO**.

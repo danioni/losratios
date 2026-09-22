@@ -55,11 +55,23 @@ def test_el_gate_falla_y_reporta_la_diferencia(walcl, tga, rrp):
 
 
 def test_un_error_de_unidad_en_el_tga_no_pasa_desapercibido(walcl, tga, rrp):
-    # Si alguien tratara WTREGEN como si viniera en millones, el TGA quedaría
-    # mil veces más chico y el ancla no cerraria.
-    resultado = validar_caso_ancla(construir_serie(walcl, tga / 1000, rrp), VALIDACION_H41)
+    # WDTGAL llega en millones. Si alguien lo tratara como si ya viniera en miles
+    # de millones, el TGA quedaría mil veces más grande y el ancla no cerraría.
+    resultado = validar_caso_ancla(construir_serie(walcl, tga * 1000, rrp), VALIDACION_H41)
     assert not resultado.ok
-    assert resultado.diferencia == pytest.approx(877.0 - 0.877, abs=1e-6)
+    assert resultado.diferencia == pytest.approx(877.0 - 877_000.0, abs=1e-6)
+
+
+def test_la_alternativa_wtregen_tambien_reproduce_el_ancla_en_el_ejemplo(
+    walcl, tga_promedio_semanal, rrp
+):
+    # En los datos de ejemplo las dos series de TGA valen lo mismo en el ancla,
+    # así que el gate no distingue entre ellas acá. Con datos reales sí lo hace:
+    # ese es justamente el punto de A-S2-4, y el gate es quien lo decide.
+    resultado = validar_caso_ancla(
+        construir_serie(walcl, tga_promedio_semanal, rrp), VALIDACION_H41
+    )
+    assert resultado.ok
 
 
 def test_sin_la_fecha_ancla_el_gate_no_da_por_buena_la_serie(walcl, tga, rrp):
