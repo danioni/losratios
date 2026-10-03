@@ -166,15 +166,15 @@ function generateMonthlyData(): AssetDataPoint[] {
     const b = anchors[i + 1];
     for (let m = 0; m < 12; m++) {
       const t = m / 12;
-      const n1 = () => 1 + Math.sin(i * 7 + m * 13) * 0.03;
-      const n2 = () => 1 + Math.sin(i * 11 + m * 7) * 0.015;
+      // Interpolación pura entre anclas: lineal (lerp) y geométrica (glerp) para BTC.
+      // Sin ruido sintético: cualquier "variación" mensual sería inventada.
       result.push({
         date: `${a.date}-${String(m + 1).padStart(2, "0")}`,
-        gold: lerp(a.gold, b.gold, t) * n2(),
-        silver: lerp(a.silver, b.silver, t) * n2(),
-        sp500: lerp(a.sp500, b.sp500, t) * n2(),
-        nasdaq: lerp(a.nasdaq, b.nasdaq, t) * n2(),
-        btc: glerp(a.btc, b.btc, t) * n1(),
+        gold: lerp(a.gold, b.gold, t),
+        silver: lerp(a.silver, b.silver, t),
+        sp500: lerp(a.sp500, b.sp500, t),
+        nasdaq: lerp(a.nasdaq, b.nasdaq, t),
+        btc: glerp(a.btc, b.btc, t),
       });
     }
   }
