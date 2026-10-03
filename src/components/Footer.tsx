@@ -76,7 +76,7 @@ export default function Footer() {
             </div>
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Se&ntilde;ales</p>
-              <p>Las se&ntilde;ales de &ldquo;oportunidad de acumulaci&oacute;n&rdquo; son observaciones estad&iacute;sticas de mean reversion hist&oacute;rica, no predicciones. Un z-score extremo indica que el ratio est&aacute; lejos de su media hist&oacute;rica, no que vaya a revertir en un plazo determinado.</p>
+              <p>Las etiquetas (Neutral, Extendido/Comprimido, Extremo) usan cortes fijos: |z| &lt; 1, 1 &le; |z| &lt; 2 y |z| &ge; 2. Son descripciones estad&iacute;sticas de la distancia a la media hist&oacute;rica, no predicciones ni recomendaciones. Un z-score extremo indica que el ratio est&aacute; lejos de su media, no que vaya a revertir en un plazo determinado.</p>
             </div>
           </div>
         </details>

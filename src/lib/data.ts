@@ -325,34 +325,50 @@ function computeLogStats(values: number[]): { mean: number; stdDev: number; logM
   };
 }
 
-function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
-  const parts = pair.split(" / ");
-  const a = parts[0], b = parts[1];
-  if (zScore > 2) return { signal: "Fuertemente extendido", signalType: "overbought", context: `${a} muy caro vs ${b}` };
-  if (zScore > 1) return { signal: "Extendido", signalType: "overbought", context: `${a} caro relativo a ${b}` };
-  if (zScore < -2) return { signal: "Fuertemente comprimido", signalType: "oversold", context: `${a} muy barato vs ${b}` };
-  if (zScore < -1) return { signal: "Comprimido", signalType: "oversold", context: `${a} barato relativo a ${b}` };
-  return { signal: "Neutral", signalType: "neutral", context: "En equilibrio relativo" };
+// ============================================================
+// CORTES DE SEÑAL — únicos para etiqueta, narrativa y rotación
+//   |z| < 1        → Neutral
+//   1 ≤ |z| < 2    → Extendido (z > 0) / Comprimido (z < 0)
+//   |z| ≥ 2        → Extremo
+// ============================================================
+export const Z_EXTENDED = 1;
+export const Z_EXTREME = 2;
+
+export function formatZ(zScore: number): string {
+  return `${zScore >= 0 ? "+" : ""}${zScore.toFixed(1)}σ`;
 }
 
+function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
+  const absZ = Math.abs(zScore);
+  const context = generateNarrative(pair, zScore);
+  if (absZ >= Z_EXTREME) {
+    return { signal: "Extremo", signalType: zScore > 0 ? "overbought" : "oversold", context };
+  }
+  if (absZ >= Z_EXTENDED) {
+    return zScore > 0
+      ? { signal: "Extendido", signalType: "overbought", context }
+      : { signal: "Comprimido", signalType: "oversold", context };
+  }
+  return { signal: "Neutral", signalType: "neutral", context };
+}
+
+/**
+ * Texto descriptivo del estado del ratio. Sin verbos de acción ni "oportunidad":
+ * describe dónde está el ratio respecto de su historia, nada más.
+ */
 export function generateNarrative(pair: string, zScore: number): string {
   const parts = pair.split(" / ");
   const a = parts[0], b = parts[1];
-  const absZ = Math.abs(zScore).toFixed(1);
+  const absZ = Math.abs(zScore);
+  const z = formatZ(zScore);
 
-  if (Math.abs(zScore) < 0.5) {
-    return `${a} y ${b} en equilibrio relativo.`;
+  if (absZ < Z_EXTENDED) {
+    return `${a}/${b} cerca de su relación histórica`;
   }
-  if (zScore > 1.5) {
-    return `${a} está ${absZ}\u03C3 por encima de su relación histórica con ${b}. Presión histórica de reversión.`;
+  if (absZ < Z_EXTREME) {
+    return `${a} ${zScore > 0 ? "caro" : "barato"} vs ${b} respecto de su historia (${z})`;
   }
-  if (zScore > 0.5) {
-    return `${a} está ${absZ}\u03C3 caro vs ${b}. ${b} históricamente rezagado — oportunidad de acumulación gradual.`;
-  }
-  if (zScore < -1.5) {
-    return `${a} está ${absZ}\u03C3 por debajo de su relación histórica con ${b}. Zona de acumulación histórica.`;
-  }
-  return `${a} está ${absZ}\u03C3 barato vs ${b}. ${a} históricamente rezagado — oportunidad de acumulación gradual.`;
+  return `${a}/${b} en zona extrema de su historia (${z}). Históricamente los extremos tienden a revertir; el momento no es predecible.`;
 }
 
 // ============================================================
@@ -390,19 +406,17 @@ function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
   });
 }
 
+// Solo pares en zona extrema (|z| ≥ Z_EXTREME). El mensaje es la misma
+// plantilla descriptiva de generateNarrative: sin "oportunidad" ni acciones.
 function buildRotationSignals(sums: RatioSummary[]): RotationSignal[] {
   const signals: RotationSignal[] = [];
   for (const s of sums) {
-    const parts = s.pair.split(" / ");
-    if (s.zScore > 1.5) {
+    if (Math.abs(s.zScore) >= Z_EXTREME) {
       signals.push({
-        message: `${parts[0]} caro vs ${parts[1]} — ${parts[1]} históricamente rezagado`,
-        type: "rotate_from", pair: s.pair, zScore: s.zScore,
-      });
-    } else if (s.zScore < -1.5) {
-      signals.push({
-        message: `${parts[0]} barato vs ${parts[1]} — oportunidad de acumulación gradual`,
-        type: "rotate_to", pair: s.pair, zScore: s.zScore,
+        message: generateNarrative(s.pair, s.zScore),
+        type: s.zScore > 0 ? "rotate_from" : "rotate_to",
+        pair: s.pair,
+        zScore: s.zScore,
       });
     }
   }
