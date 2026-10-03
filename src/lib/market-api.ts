@@ -262,8 +262,9 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
   // Build simplified AssetDataPoint array
   const result: AssetDataPoint[] = dates.map((date, i) => {
     const m2Val = aligned[5][i] || 0;
-    // M2SL is in billions, convert to trillions. Multiply by ~3 as rough global proxy
-    const m2GlobalProxy = (m2Val / 1000) * 3;
+    // M2SL (FRED) viene en miles de millones de USD; se convierte a billones (10^12) de USD.
+    // Es M2 de EE.UU., no un "M2 global": no se aplica ningún multiplicador.
+    const m2Usd = m2Val / 1000;
 
     return {
       date,
@@ -272,7 +273,7 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
       sp500: aligned[0][i] || 0,
       nasdaq: aligned[1][i] || 0,
       btc: aligned[4][i] || 0,
-      m2Global: m2GlobalProxy || 0,
+      m2Usd: m2Usd > 0 ? m2Usd : undefined,
     };
   });
 

@@ -59,7 +59,7 @@ export default function Footer() {
               <ul className="space-y-0.5 pl-3">
                 <li>BTC: CoinGecko (historia + precio actual)</li>
                 <li>Oro (GC=F), Plata (SI=F), S&amp;P 500 (^GSPC), Nasdaq (^IXIC): Yahoo Finance</li>
-                <li>M2 Global (M2SL): FRED (Federal Reserve Economic Data)</li>
+                <li>M2 EE.UU. (M2SL): FRED (Federal Reserve Economic Data)</li>
               </ul>
             </div>
             <div>

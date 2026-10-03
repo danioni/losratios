@@ -15,6 +15,8 @@ type SortKey = "cagrHistorical" | "cagr5Y" | "vsM2" | "ticker";
 type SortDir = "asc" | "desc";
 
 const BTC_START_YEAR = 2010;
+// Supuesto: expansión monetaria ~7% anual. Es una vara de referencia,
+// no un dato medido de "M2 global" ni una tasa de inflación.
 const M2_BENCHMARK = 7;
 
 export default function PerformanceTable({ data }: PerformanceTableProps) {
@@ -147,17 +149,17 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
   const priceLabel = isUSD ? "Precio" : `Precio (${base})`;
 
   // Dynamic labels based on base currency
-  const vsLabel = base === "BTC" ? "vs BTC" : base === "XAU" ? "vs Oro" : "vs M2 (7%)";
+  const vsLabel = base === "BTC" ? "vs BTC" : base === "XAU" ? "vs Oro" : "vs 7% (supuesto)";
   const separatorText = base === "BTC"
     ? "No superan BTC — pierden contra el activo m\u00e1s escaso"
     : base === "XAU"
     ? "No superan Oro — pierden contra dinero duro"
-    : "No superan M2 (7% anual) — contexto, no universo ganador";
+    : "No superan el supuesto de ~7% anual — contexto, no universo ganador";
   const loserLabel = base === "BTC"
     ? "No supera BTC"
     : base === "XAU"
     ? "No supera Oro"
-    : "No supera denominador";
+    : "No supera el 7% supuesto";
 
   return (
     <div className="space-y-6 fade-in-up fade-in-up-3">
@@ -174,7 +176,7 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
             ? "Midiendo en BTC. Si tu activo no supera al activo m\u00e1s escaso, est\u00e1s perdiendo en los t\u00e9rminos m\u00e1s exigentes. Pocos sobreviven esta vara."
             : base === "XAU"
             ? "Midiendo en oro. Si tu activo no supera 5,000 a\u00f1os de dinero duro, est\u00e1s perdiendo en t\u00e9rminos reales."
-            : "M2 Global crece ~7% por a\u00f1o. Si tu activo no supera eso, no est\u00e1s ganando \u2014 est\u00e1s perdiendo en t\u00e9rminos reales. Solo los activos que superan esta l\u00ednea entran al an\u00e1lisis. La mayor\u00eda de los \u201cactivos seguros\u201d no le ganan a la impresora."}
+            : "Supuesto: expansi\u00f3n monetaria ~7% anual. Es una vara de referencia, no un dato medido de M2 global ni una tasa de inflaci\u00f3n. Los activos con CAGR por encima de esa vara entran al an\u00e1lisis; los que quedan por debajo se muestran como contexto."}
         </p>
       </div>
 

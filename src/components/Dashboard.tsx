@@ -483,7 +483,7 @@ export default function Dashboard() {
           sp500: liveLast.sp500 > 0 ? liveLast.sp500 : d.sp500,
           nasdaq: liveLast.nasdaq > 0 ? liveLast.nasdaq : d.nasdaq,
           btc: liveLast.btc > 0 ? liveLast.btc : d.btc,
-          m2Global: liveLast.m2Global > 0 ? liveLast.m2Global : d.m2Global,
+          m2Usd: liveLast.m2Usd && liveLast.m2Usd > 0 ? liveLast.m2Usd : d.m2Usd,
         };
       }
       return d;

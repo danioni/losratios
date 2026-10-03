@@ -192,7 +192,7 @@ export default function CurrencyDepreciation() {
                         className="text-[9px] tracking-wider uppercase"
                         style={{ color: "var(--text-muted)" }}
                       >
-                        Pierden poder adquisitivo &mdash; la mayor&iacute;a de las monedas del mundo
+                        Por debajo del supuesto de expansi&oacute;n monetaria (~7% anual) &mdash; la mayor&iacute;a de las monedas del mundo
                       </span>
                       <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
                     </div>
@@ -212,8 +212,9 @@ export default function CurrencyDepreciation() {
         >
           <strong style={{ color: "var(--text-secondary)" }}>vs USD/a&ntilde;o</strong>: cambio anual
           de poder adquisitivo contra el d&oacute;lar.{" "}
-          <strong style={{ color: "var(--text-secondary)" }}>Global/a&ntilde;o</strong>: p&eacute;rdida
-          total de poder adquisitivo (incluye expansi&oacute;n M2 global ~7%/a&ntilde;o).
+          <strong style={{ color: "var(--text-secondary)" }}>Global/a&ntilde;o</strong>: cambio
+          vs USD ajustado por un supuesto de expansi&oacute;n monetaria de ~7% anual (es un supuesto,
+          no un dato medido de M2 global ni una tasa de inflaci&oacute;n).
           Los resets monetarios en Am&eacute;rica Latina son frecuentes &mdash; &ldquo;Desde&rdquo;
           indica el a&ntilde;o m&aacute;s antiguo con datos confiables.
           EUR pre-1999: serie sint&eacute;tica derivada del Marco Alem&aacute;n (metodolog&iacute;a BCE, 1&nbsp;EUR&nbsp;=&nbsp;1.95583&nbsp;DEM).
