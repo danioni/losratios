@@ -159,6 +159,7 @@ function RatioChart({
   ratioDateRange: string;
   COLORS: typeof DEFAULT_COLORS;
 }) {
+  const { status: dataStatus } = useDataStatus();
   const { pairStats, bollingerChartData, isLogScale, zWindow } = useMemo(() => {
     const key = pairDef.key as keyof ClassRatioDataPoint;
     const values = filteredRatios.map((d) => d[key] as number);
@@ -375,6 +376,14 @@ function RatioChart({
           <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>BB ±1σ/±2σ</span>
         </div>
       </div>
+      {/* Interpolación declarada: todo el tramo anterior al último punto sale de
+          anclas anuales interpoladas (ver metodología). Solo el último punto puede
+          provenir de la API; si no hubo API, también es interpolado. */}
+      <p className="text-[9px] mt-3 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
+        {dataStatus.origin === "fallback"
+          ? `Serie completa hasta ${formatDateLabel(dataStatus.lastDate)} interpolada entre anclas anuales (datos de respaldo, sin punto de la API); z-score y medias móviles incluyen ese tramo.`
+          : `Tramo anterior a ${formatDateLabel(dataStatus.lastDate)} interpolado entre anclas anuales; solo el último punto (${formatDateLabel(dataStatus.lastDate)}) proviene de la API. z-score y medias móviles incluyen ese tramo.`}
+      </p>
       {/* Narrative */}
       <p className="text-[10px] sm:text-[11px] mt-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
         {narrative}
