@@ -218,9 +218,17 @@ se arrastra hasta el detalle de la verificación y de ahí al changelog. Hay tes
 que cubren esos casos sin tocar la red, incluido el parseo del encabezado con el
 formato que publica FRED.
 
-Lo que **no** está resuelto es cuál de los casos se dio, ni si existe una fuente
-de la unidad que funcione sin clave de API. Eso se sabe en la próxima corrida con
-acceso, leyendo el motivo. Alternativas a evaluar si `/data/<ID>.txt` no sirve: la
+**Causa identificada el 2026-10-03 (dato).** Las dos corridas de reverificación
+(A-S2-13) dieron el mismo motivo para las tres series:
+`https://fred.stlouisfed.org/data/<ID>.txt` responde HTTP 200 con
+`text/html; charset=UTF-8`, la primera línea es `<!DOCTYPE html>` y no hay línea
+`Units:` en las primeras 40. Es el tercer caso de los que distingue
+`unidad_declarada`: el endpoint responde, pero ya no entrega el archivo de texto
+con metadatos. Que FRED haya retirado ese formato es una lectura de esa
+respuesta, no algo confirmado con FRED (**supuesto**).
+
+Lo que **no** está resuelto es si existe una fuente de la unidad que funcione
+sin clave de API. Alternativas a evaluar si `/data/<ID>.txt` no sirve: la
 página de la serie, o la API de FRED (`api.stlouisfed.org/fred/series`), que
 exige clave y por lo tanto le agregaría una credencial a un pipeline que hoy no
 necesita ninguna. Mientras no haya evidencia de cuál funciona, esto queda como
@@ -276,10 +284,42 @@ arranque en 2015 mezcla dos mundos distintos en un mismo gráfico.
 
 ---
 
-## A-S2-13 · La validación contra FRED en vivo: corrida, ancla corregida, reverificación pendiente
+## A-S2-13 · La validación contra FRED en vivo: cerrada el 2026-10-03
 
-**Estado: no medido.** Pasa a **dato** cuando el gate cierre en una corrida real
-con el ancla corregido.
+**Estado: dato.** El gate cerró en dos corridas reales con el ancla corregida.
+Antes de esa fecha el estado era **no medido**; la historia completa sigue abajo.
+
+### La reverificación (2026-10-03)
+
+Dos corridas, en este orden, desde la máquina que tiene salida a
+`fred.stlouisfed.org`, con el código en `fcbebe9`:
+
+1. `python -m senales.liquidez_neta --fecha-descarga 2026-09-22`: reproduce la
+   corrida del 2026-09-22 desde sus tres descargas crudas, las mismas que
+   motivaron la corrección. Código de salida 0. Serie de 2020-01-01 a
+   2026-09-16, 351 filas.
+2. `python -m senales.liquidez_neta`: descarga nueva del 2026-10-03. Código de
+   salida 0. Serie de 2020-01-01 a 2026-09-30, 353 filas; 2 filas agregadas y 0
+   revisiones históricas respecto de la corrida anterior.
+
+En las dos, el gate del 16 de septiembre de 2026 dio:
+
+| | Calculado | Release | Diferencia | Tolerancia | Resultado |
+| --- | --- | --- | --- | --- | --- |
+| Total S2.1 | 5749.465 | 5749.465 | 0.000 | ±5 | OK |
+| WALCL | 6746.548 | 6746.548 | 0.000 | ±1 | OK |
+| TGA (`WDTGAL`) | 991.708 | 991.708 | 0.000 | ±1 | OK |
+| ON RRP | 5.375 | 5.375 | 0.000 | ±1 | OK |
+
+Que la primera corrida cierre importa por sí sola: son los mismos datos que el
+gate rechazó el 2026-09-22, y ahora cierran sin haber tocado la fórmula. Lo
+único que cambió fue el ancla, leída del release. Las descargas crudas de las
+dos fechas quedan versionadas en `data/raw/`, así que ambas corridas se pueden
+reconstruir (A-S2-10).
+
+Lo que este cierre **no** dice: que la serie anticipe algo (ver "Lo que esta
+serie no dice" en el README) ni que las unidades estén verificadas contra los
+metadatos de FRED (A-S2-9).
 
 ### Lo que la primera corrida real estableció
 
@@ -322,13 +362,9 @@ no el número hasta el ancla.
 
 ### Lo que falta
 
-1. **La corrida de reverificación.** Hasta que `python -m senales.liquidez_neta`
-   cierre el gate con el ancla corregido, este supuesto sigue en **no medido** y
-   lo que el script publique no debería usarse para decidir nada. Cuando cierre,
-   anotar acá la fecha de la corrida y el S2.1 obtenido, y pasar el estado a
-   **dato**.
-2. **La unidad que declara FRED.** En la corrida del 2026-09-22 las tres series
-   salieron NO VERIFICADAS en unidades, con los CSV bajando bien. Ver A-S2-9.
+1. ~~**La corrida de reverificación.**~~ Hecha el 2026-10-03; ver arriba.
+2. **La unidad que declara FRED.** Causa identificada el 2026-10-03; la solución
+   sigue abierta. Ver A-S2-9.
 3. **Un enlace estable al release.** `fuente_url` apunta a `/current/`, que deja
    de mostrar esta semana en cuanto se publica la siguiente. El equivalente
    archivado y fechado sería mejor ancla documental, pero no se verificó desde

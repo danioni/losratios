@@ -164,15 +164,16 @@ en millones, `RRPONTSYD` en miles de millones. Hay tests que fallan si la
 declaración de `WDTGAL` deja de decir `millones`, para que cambiar la serie sin
 cambiar la unidad no llegue a publicarse (A-S2-4).
 
-> **Estado actual de la validación: corrida, ancla corregida, reverificación
-> pendiente.** El 2026-09-22 el pipeline se corrió por primera vez contra FRED en
-> vivo desde una máquina con acceso. Bajó las tres series, calculó 5749.465 con
-> datos reales y el gate rechazó el ancla de entonces, que mezclaba columnas del
-> release. El ancla ya está corregida contra el H.4.1 publicado, pero **el gate
-> todavía no cerró en una corrida real con el ancla nueva**: hasta que eso pase,
-> lo que el script publique no debería usarse para decidir nada. En esa misma
-> corrida las tres unidades salieron NO VERIFICADAS y falta saber por qué. Ver
-> **A-S2-13** y **A-S2-9**.
+> **Estado actual de la validación: cerrada el 2026-10-03.** El gate cerró en
+> dos corridas reales con el ancla corregida: la reproducción de la corrida del
+> 2026-09-22 desde sus descargas crudas y una corrida nueva contra FRED en vivo.
+> En las dos, el total y los tres componentes del 16 de septiembre de 2026
+> coinciden con el H.4.1 con diferencia 0.000. Ver **A-S2-13**.
+>
+> Sigue abierto un punto: las unidades salen NO VERIFICADAS porque el endpoint de
+> metadatos de FRED (`/data/<ID>.txt`) devuelve una página HTML. Las unidades
+> quedan controladas por la banda de orden de magnitud y por el gate. Ver
+> **A-S2-9**.
 
 ---
 
@@ -252,5 +253,6 @@ Las tres que más cambian el resultado:
 
 Y dos que conviene leer antes de confiar en un número publicado:
 
-- **A-S2-13** — el ancla del H.4.1 estuvo mal transcrita; la reverificación con el ancla corregida sigue pendiente.
+- **A-S2-13** — el ancla del H.4.1 estuvo mal transcrita; la reverificación con el ancla corregida cerró el 2026-10-03.
+- **A-S2-9** — las unidades no se pueden verificar contra los metadatos de FRED; la causa está identificada y la solución, pendiente.
 - **A-S2-14** — el gate verifica cada componente contra el release, no solo el total.

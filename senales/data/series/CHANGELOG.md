@@ -11,6 +11,23 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-03 · A-S2-13 · El gate cerró en corridas reales con el ancla
+  corregida; el supuesto pasa de no medido a dato.** Dos corridas, ambas con
+  código de salida 0: la reproducción de la corrida del 2026-09-22 desde sus
+  descargas crudas (serie hasta 2026-09-16, 351 filas) y una descarga nueva del
+  2026-10-03 (serie hasta 2026-09-30, 353 filas, 0 revisiones históricas). En las
+  dos, para el 2026-09-16: S2.1 calculado 5749.465 contra 5749.465 esperado,
+  diferencia 0.000 sobre ±5, y WALCL, TGA y ON RRP con diferencia 0.000 sobre ±1
+  (A-S2-14). Los mismos datos que el gate rechazó el 2026-09-22 cierran ahora sin
+  haber tocado la fórmula. Primera publicación de `data/series/liquidez_neta.csv`
+  y `reportes/liquidez_neta.png`. Sigue sin umbral (A-S2-3) y sin interpretación.
+
+- **2026-10-03 · A-S2-9 · Causa de las unidades NO VERIFICADAS identificada.**
+  `https://fred.stlouisfed.org/data/<ID>.txt` responde HTTP 200 con una página
+  HTML, sin línea `Units:`, para las tres series. La unidad sigue sin verificarse
+  contra metadatos en cada corrida; los controles que quedan son la banda de orden
+  de magnitud y el gate. Elegir otra fuente de metadatos queda pendiente.
+
 - **2026-09-22 · A-S2-13 · El ancla del H.4.1 estaba mal transcrita: mezclaba
   columnas del release.** La primera corrida contra FRED en vivo la rechazó, con
   un calculado de 5749.465 contra un esperado de 5866.000: una diferencia de
@@ -63,17 +80,41 @@ cita.
   Junto con el cambio se agregaron tests que fallan si el identificador `WDTGAL`
   deja de estar declarado en millones.
 
+## 2026-10-03
+
+- Rango de datos: 2020-01-01 a 2026-09-30 (353 observaciones semanales)
+- Filas agregadas: 2 [2026-09-23, 2026-09-30]
+- Revisiones de datos históricos: ninguna
+- Huecos: 5
+  - 2020-01-01 | RRPONTSYD tomado de 2019-12-31 (el miércoles no tenía dato)
+  - 2020-11-11 | RRPONTSYD tomado de 2020-11-10 (el miércoles no tenía dato)
+  - 2024-06-19 | RRPONTSYD tomado de 2024-06-18 (el miércoles no tenía dato)
+  - 2024-12-25 | RRPONTSYD tomado de 2024-12-24 (el miércoles no tenía dato)
+  - 2025-01-01 | RRPONTSYD tomado de 2024-12-31 (el miércoles no tenía dato)
+- Verificación de unidades:
+  - WALCL: NO VERIFICADA (no se pudo leer los metadatos de FRED; se usa la unidad configurada (millones) y quedan como control la banda de orden de magnitud y el caso de validación; causa: https://fred.stlouisfed.org/data/WALCL.txt respondió HTTP 200 (text/html; charset=UTF-8) pero no hay línea 'Units:' en las primeras 40 líneas; la primera línea con contenido es '<!DOCTYPE html>')
+  - WDTGAL: NO VERIFICADA (no se pudo leer los metadatos de FRED; se usa la unidad configurada (millones) y quedan como control la banda de orden de magnitud y el caso de validación; causa: https://fred.stlouisfed.org/data/WDTGAL.txt respondió HTTP 200 (text/html; charset=UTF-8) pero no hay línea 'Units:' en las primeras 40 líneas; la primera línea con contenido es '<!DOCTYPE html>')
+  - RRPONTSYD: NO VERIFICADA (no se pudo leer los metadatos de FRED; se usa la unidad configurada (miles_de_millones) y quedan como control la banda de orden de magnitud y el caso de validación; causa: https://fred.stlouisfed.org/data/RRPONTSYD.txt respondió HTTP 200 (text/html; charset=UTF-8) pero no hay línea 'Units:' en las primeras 40 líneas; la primera línea con contenido es '<!DOCTYPE html>')
+- Validación: OK - 2026-09-16: calculado 5749.465 vs esperado 5749.465, diferencia 0.000, tolerancia +/-5.000
+- Umbral de expansión/contracción: NO MEDIDO (A-S2-3)
+- Nota: Serie de TGA en uso: WDTGAL (Cuenta general del Tesoro (TGA), nivel de miércoles. En FRED: Liabilities and Capital: Deposits with F.R. Banks, Other Than Reserve Balances: U.S. Treasury, General Account: Wednesday Level)
+
 ## 2026-09-22
 
-- Rango de datos: sin datos
-- Filas agregadas: 0
+- Rango de datos: 2020-01-01 a 2026-09-16 (351 observaciones semanales)
+- Filas agregadas: 351 [2026-08-19, 2026-08-26, 2026-09-02, 2026-09-09, 2026-09-16] (últimas 5 de 351)
 - Revisiones de datos históricos: ninguna
-- Huecos: ninguno
+- Huecos: 5
+  - 2020-01-01 | RRPONTSYD tomado de 2019-12-31 (el miércoles no tenía dato)
+  - 2020-11-11 | RRPONTSYD tomado de 2020-11-10 (el miércoles no tenía dato)
+  - 2024-06-19 | RRPONTSYD tomado de 2024-06-18 (el miércoles no tenía dato)
+  - 2024-12-25 | RRPONTSYD tomado de 2024-12-24 (el miércoles no tenía dato)
+  - 2025-01-01 | RRPONTSYD tomado de 2024-12-31 (el miércoles no tenía dato)
 - Verificación de unidades:
-  - no corrida: este repositorio se escribió en un entorno sin acceso a `fred.stlouisfed.org`
-- Validación: NO CORRIDA contra FRED en vivo (A-S2-13)
+  - WALCL: NO VERIFICADA (no se pudo leer los metadatos de FRED; se usa la unidad configurada (millones) y quedan como control la banda de orden de magnitud y el caso de validación; causa: https://fred.stlouisfed.org/data/WALCL.txt respondió HTTP 200 (text/html; charset=UTF-8) pero no hay línea 'Units:' en las primeras 40 líneas; la primera línea con contenido es '<!DOCTYPE html>')
+  - WDTGAL: NO VERIFICADA (no se pudo leer los metadatos de FRED; se usa la unidad configurada (millones) y quedan como control la banda de orden de magnitud y el caso de validación; causa: https://fred.stlouisfed.org/data/WDTGAL.txt respondió HTTP 200 (text/html; charset=UTF-8) pero no hay línea 'Units:' en las primeras 40 líneas; la primera línea con contenido es '<!DOCTYPE html>')
+  - RRPONTSYD: NO VERIFICADA (no se pudo leer los metadatos de FRED; se usa la unidad configurada (miles_de_millones) y quedan como control la banda de orden de magnitud y el caso de validación; causa: https://fred.stlouisfed.org/data/RRPONTSYD.txt respondió HTTP 200 (text/html; charset=UTF-8) pero no hay línea 'Units:' en las primeras 40 líneas; la primera línea con contenido es '<!DOCTYPE html>')
+- Validación: OK - 2026-09-16: calculado 5749.465 vs esperado 5749.465, diferencia 0.000, tolerancia +/-5.000
 - Umbral de expansión/contracción: NO MEDIDO (A-S2-3)
-- Nota: entrada inicial escrita a mano. Todavía no hubo ninguna corrida real del
-  script, así que no hay serie publicada en `data/series/liquidez_neta.csv` ni
-  gráfico en `reportes/`. La primera corrida con acceso a FRED reemplaza esta
-  entrada por la que genera el script.
+- Nota: primera publicación de la serie: no hay corrida anterior con que comparar
+- Nota: Serie de TGA en uso: WDTGAL (Cuenta general del Tesoro (TGA), nivel de miércoles. En FRED: Liabilities and Capital: Deposits with F.R. Banks, Other Than Reserve Balances: U.S. Treasury, General Account: Wednesday Level)
