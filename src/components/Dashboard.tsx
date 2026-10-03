@@ -28,6 +28,8 @@ import {
   computeEmpiricalPercentile,
   Z_EXTENDED,
   formatDateLabel,
+  findTrailingGap,
+  type AssetDataPoint,
   type ClassRatioDataPoint,
 } from "@/lib/data";
 import MetricCard from "./MetricCard";
@@ -160,11 +162,18 @@ function RatioChart({
   COLORS: typeof DEFAULT_COLORS;
 }) {
   const { status: dataStatus } = useDataStatus();
-  const { pairStats, bollingerChartData, isLogScale, zWindow } = useMemo(() => {
+  const { pairStats, bollingerChartData, isLogScale, zWindow, gap } = useMemo(() => {
     const key = pairDef.key as keyof ClassRatioDataPoint;
-    const values = filteredRatios.map((d) => d[key] as number);
-    const dates = filteredRatios.map((d) => d.date);
-    const current = values[values.length - 1];
+    const allValues = filteredRatios.map((d) => d[key] as number);
+    const allDates = filteredRatios.map((d) => d.date);
+    const current = allValues[allValues.length - 1];
+
+    // Hueco al final (último punto en vivo separado del último mes de referencia):
+    // ese punto no entra en la historia mensual. Se compara contra la ventana
+    // anterior, pero queda fuera de media, σ, medias móviles y bandas.
+    const gap = findTrailingGap(allDates);
+    const values = gap ? allValues.slice(0, -1) : allValues;
+    const dates = gap ? allDates.slice(0, -1) : allDates;
 
     const windowSize = Math.min(SMA_LONG, values.length);
     const windowValues = values.slice(-windowSize);
@@ -196,8 +205,9 @@ function RatioChart({
       zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
     }
 
-    const { sma50, sma200, isLogScale } = computeRatioSMAs(filteredRatios, key);
+    const { sma50, sma200, isLogScale } = computeRatioSMAs(filteredRatios, key); // ya excluye el punto en vivo si hay hueco
     const bb = computeBollingerBands(values, dates, Math.min(20, values.length), isLogScale);
+    const lastIdx = filteredRatios.length - 1;
 
     // For log-scale ratios, transform all values to log space for charting
     // This makes the chart visually correct (no flat-then-spike)
@@ -207,9 +217,14 @@ function RatioChart({
       return v;
     };
 
-    const chartData = filteredRatios.map((d, i) => ({
-      date: d.date,
-      [pairDef.key]: toChart(d[key] as number),
+    const chartData = filteredRatios.map((d, i) => {
+      const isLivePoint = gap !== null && i === lastIdx;
+      return {
+        date: d.date,
+        // Con hueco, la línea del ratio se corta en el último mes de referencia
+        // y el punto en vivo se dibuja aparte (dataKey "live"), sin unir.
+        [pairDef.key]: isLivePoint ? null : toChart(d[key] as number),
+        live: isLivePoint ? toChart(d[key] as number) : null,
       sma50: toChart(sma50[i]),
       sma200: toChart(sma200[i]),
       bbUpper2: toChart(bb[i]?.upper2 ?? null),
@@ -217,7 +232,8 @@ function RatioChart({
       bbUpper1: toChart(bb[i]?.upper1 ?? null),
       bbLower1: toChart(bb[i]?.lower1 ?? null),
       bbSma: toChart(bb[i]?.sma ?? null),
-    }));
+      };
+    });
 
     const firstUsedIdx = useLog && current > 0 ? Math.max(0, windowValues.findIndex(v => v > 0)) : 0;
 
@@ -232,6 +248,7 @@ function RatioChart({
         endDate: windowDates[windowDates.length - 1] ?? "",
         useLog: useLog && current > 0,
       },
+      gap,
     };
   }, [filteredRatios, pairDef.key]);
 
@@ -316,6 +333,12 @@ function RatioChart({
       <p className="text-[9px] mb-4 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
         z-score y percentil calculados sobre las últimas {zWindow.n} observaciones mensuales del rango mostrado ({formatDateLabel(zWindow.startDate)} → {formatDateLabel(zWindow.endDate)}), con media {zWindow.useLog ? "geométrica" : "aritmética"} y desviación estándar de esa ventana.
       </p>
+      {/* Hueco explícito entre el último mes de referencia y el punto en vivo */}
+      {gap && (
+        <p className="text-[9px] mb-4 leading-relaxed" style={{ color: "var(--accent-amber)" }}>
+          Último punto ({formatDateLabel(gap.last)}) con precios en vivo; sin datos entre {formatDateLabel(gap.missingFrom)} y {formatDateLabel(gap.missingTo)} ({gap.missingMonths} {gap.missingMonths === 1 ? "mes" : "meses"}). Ese punto queda fuera de las medias móviles, las bandas y la ventana del z-score: el z-score y el percentil comparan su valor contra la ventana anterior.
+        </p>
+      )}
 
       {/* Ratio chart with Bollinger bands */}
       <div className="h-[280px] sm:h-[360px]">
@@ -355,6 +378,10 @@ function RatioChart({
             <Line type="monotone" dataKey="sma200" name={`SMA ${SMA_LONG}`} stroke={COLORS.muted} strokeWidth={1.5} dot={false} connectNulls />
             {/* Main ratio line on top */}
             <Line type="monotone" dataKey={pairDef.key} name={pairDef.pair} stroke={pairColor} strokeWidth={2} dot={false} connectNulls />
+            {/* Último punto en vivo, separado por un hueco: solo el punto, sin línea que lo una */}
+            {gap && (
+              <Line type="monotone" dataKey="live" name={`${pairDef.pair} (en vivo, ${formatDateLabel(gap.last)})`} stroke="none" strokeWidth={0} dot={{ r: 4, fill: pairColor, strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls={false} isAnimationActive={false} />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -420,26 +447,23 @@ export default function Dashboard() {
 
     // Take the last live data point (most recent real prices)
     const liveLast = liveData.assetData[liveData.assetData.length - 1];
-    // El último punto lleva la fecha real de esos precios (dataStatus.lastDate),
-    // para que el rango mostrado y el badge "Datos al" coincidan con la serie.
-    const lastDate = dataStatus.lastDate;
+    const fallbackLast = fallbackAssetData[fallbackAssetData.length - 1];
+    const livePoint: AssetDataPoint = {
+      date: dataStatus.lastDate,
+      gold: liveLast.gold > 0 ? liveLast.gold : fallbackLast.gold,
+      silver: liveLast.silver > 0 ? liveLast.silver : fallbackLast.silver,
+      sp500: liveLast.sp500 > 0 ? liveLast.sp500 : fallbackLast.sp500,
+      nasdaq: liveLast.nasdaq > 0 ? liveLast.nasdaq : fallbackLast.nasdaq,
+      btc: liveLast.btc > 0 ? liveLast.btc : fallbackLast.btc,
+      m2Usd: liveLast.m2Usd && liveLast.m2Usd > 0 ? liveLast.m2Usd : fallbackLast.m2Usd,
+    };
 
-    // Clone fallback and update the last point with live prices
-    const updated = fallbackAssetData.map((d, i) => {
-      if (i === fallbackAssetData.length - 1) {
-        return {
-          ...d,
-          date: lastDate,
-          gold: liveLast.gold > 0 ? liveLast.gold : d.gold,
-          silver: liveLast.silver > 0 ? liveLast.silver : d.silver,
-          sp500: liveLast.sp500 > 0 ? liveLast.sp500 : d.sp500,
-          nasdaq: liveLast.nasdaq > 0 ? liveLast.nasdaq : d.nasdaq,
-          btc: liveLast.btc > 0 ? liveLast.btc : d.btc,
-          m2Usd: liveLast.m2Usd && liveLast.m2Usd > 0 ? liveLast.m2Usd : d.m2Usd,
-        };
-      }
-      return d;
-    });
+    // Si la fecha en vivo es posterior al último valor de referencia, el punto en
+    // vivo se AÑADE como punto aparte: no se rellenan los meses intermedios y el
+    // hueco se declara (findTrailingGap). Si es el mismo mes, reemplaza al último.
+    const updated = dataStatus.lastDate > fallbackLast.date
+      ? [...fallbackAssetData, livePoint]
+      : fallbackAssetData.map((d, i) => (i === fallbackAssetData.length - 1 ? livePoint : d));
 
     // Recompute summaries with the updated last point
     const recomputed = computeAllFromRawAssets(updated);

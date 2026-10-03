@@ -5,7 +5,15 @@
 // - cada ancla se reproduce exactamente en su mes (sin ruido sintético)
 // - los meses intermedios son interpolación pura (punto medio verificable)
 // ============================================================
-import { assetData, ANCHORS } from "../src/lib/data.ts";
+import {
+  assetData,
+  ANCHORS,
+  findTrailingGap,
+  monthsBetween,
+  computeAllFromRawAssets,
+  computeRatioSMAs,
+  type AssetDataPoint,
+} from "../src/lib/data.ts";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = ""): void {
@@ -62,6 +70,34 @@ if (mid) {
 }
 const noNaN = assetData.every((d) => [d.gold, d.silver, d.sp500, d.nasdaq, d.btc].every((v) => Number.isFinite(v)));
 check("sin NaN/Infinity en la serie", noNaN);
+
+console.log("\n── Hueco al final (punto en vivo separado del último mes de referencia) ──");
+check("monthsBetween 2026-01 → 2026-10 = 9", monthsBetween("2026-01", "2026-10") === 9);
+check("sin hueco cuando el último mes es el siguiente", findTrailingGap(["2025-12", "2026-01"]) === null);
+const g = findTrailingGap(["2026-01", "2026-10"]);
+check("hueco 2026-01 → 2026-10: faltan Feb..Sep (8 meses)", !!g && g.missingFrom === "2026-02" && g.missingTo === "2026-09" && g.missingMonths === 8, JSON.stringify(g));
+const g2 = findTrailingGap(["2025-11", "2026-02"]);
+check("hueco con cambio de año: faltan 2025-12..2026-01", !!g2 && g2.missingFrom === "2025-12" && g2.missingTo === "2026-01" && g2.missingMonths === 2, JSON.stringify(g2));
+
+// Serie de respaldo + punto en vivo (oro ×2) con hueco: ventana y medias sin ese punto
+const last = assetData[assetData.length - 1];
+const livePoint: AssetDataPoint = { ...last, date: "2026-10", gold: last.gold * 2 };
+const base = computeAllFromRawAssets(assetData);
+const withLive = computeAllFromRawAssets([...assetData, livePoint]);
+const baseGoldSp = base.summaries.find((s) => s.pair === "Oro / S&P 500")!;
+const liveGoldSp = withLive.summaries.find((s) => s.pair === "Oro / S&P 500")!;
+check("con hueco: media y σ de la ventana no cambian al añadir el punto en vivo",
+  Math.abs(baseGoldSp.mean - liveGoldSp.mean) < 1e-12 && Math.abs(baseGoldSp.stdDev - liveGoldSp.stdDev) < 1e-12,
+  `media ${baseGoldSp.mean.toFixed(6)} vs ${liveGoldSp.mean.toFixed(6)}`);
+check("con hueco: el valor actual sí es el del punto en vivo", Math.abs(liveGoldSp.current - (livePoint.gold / livePoint.sp500)) < 1e-12);
+const smas = computeRatioSMAs(withLive.ratios, "goldSp500");
+check("con hueco: SMA 50/200 del punto en vivo = null", smas.sma50[smas.sma50.length - 1] === null && smas.sma200[smas.sma200.length - 1] === null);
+check("con hueco: SMA del último mes de referencia sigue siendo un número", typeof smas.sma200[smas.sma200.length - 2] === "number");
+// Sin hueco (mismo mes siguiente): el punto sí entra en la ventana
+const nextPoint: AssetDataPoint = { ...last, date: "2026-02", gold: last.gold * 2 };
+const withNext = computeAllFromRawAssets([...assetData, nextPoint]);
+const nextGoldSp = withNext.summaries.find((s) => s.pair === "Oro / S&P 500")!;
+check("sin hueco: la media de la ventana sí cambia al añadir el mes siguiente", Math.abs(baseGoldSp.mean - nextGoldSp.mean) > 1e-9);
 
 console.log(failures === 0 ? "\nTodo OK" : `\n${failures} verificación(es) fallida(s)`);
 process.exit(failures === 0 ? 0 : 1);

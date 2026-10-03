@@ -403,13 +403,58 @@ export function generateNarrative(pair: string, zScore: number): string {
 // ============================================================
 // BUILD SUMMARIES & ROTATION SIGNALS
 // ============================================================
+// ============================================================
+// HUECO AL FINAL DE LA SERIE
+// El último punto puede ser un precio en vivo con fecha real (p. ej. 2026-10)
+// mientras el anterior es el último valor de referencia (2026-01). No se
+// rellenan los meses intermedios: el hueco se declara y ese punto queda fuera
+// de las medias móviles, las bandas y la ventana del z-score.
+// ============================================================
+export interface TrailingGap {
+  /** Último mes de la serie mensual continua */
+  prev: string;
+  /** Fecha del último punto (separado del anterior por más de un mes) */
+  last: string;
+  /** Primer y último mes sin datos */
+  missingFrom: string;
+  missingTo: string;
+  missingMonths: number;
+}
+
+/** Meses entre dos fechas YYYY-MM (positivo si `to` es posterior). */
+export function monthsBetween(from: string, to: string): number {
+  const [fy, fm] = from.split("-").map(Number);
+  const [ty, tm] = to.split("-").map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
+function addMonths(date: string, n: number): string {
+  const [y, m] = date.split("-").map(Number);
+  const idx = y * 12 + (m - 1) + n;
+  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
+}
+
+/** Devuelve el hueco si el último punto no es el mes siguiente al penúltimo; si no, null. */
+export function findTrailingGap(dates: string[]): TrailingGap | null {
+  if (dates.length < 2) return null;
+  const prev = dates[dates.length - 2];
+  const last = dates[dates.length - 1];
+  const gap = monthsBetween(prev, last);
+  if (gap <= 1) return null;
+  return { prev, last, missingFrom: addMonths(prev, 1), missingTo: addMonths(last, -1), missingMonths: gap - 1 };
+}
+
 function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
+  const gap = findTrailingGap(ratios.map((d) => d.date));
   return PAIR_DEFS.map(({ pair, key }) => {
     const values = ratios.map((d) => d[key] as number);
     const current = values[values.length - 1];
 
-    const windowSize = Math.min(SMA_LONG, values.length);
-    const windowValues = values.slice(-windowSize);
+    // Con hueco al final, el punto en vivo no forma parte de la historia mensual:
+    // se compara contra la ventana anterior, pero no entra en su media ni en su σ.
+    const history = gap ? values.slice(0, -1) : values;
+    const windowSize = Math.min(SMA_LONG, history.length);
+    const windowValues = history.slice(-windowSize);
 
     // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
     const useLog = needsLogScale(windowValues);
@@ -632,13 +677,18 @@ export function computeRatioSMAs(
   data: ClassRatioDataPoint[],
   key: keyof ClassRatioDataPoint,
 ): { sma50: (number | null)[]; sma200: (number | null)[]; isLogScale: boolean } {
-  const values = data.map((d) => d[key] as number);
-  const useLog = needsLogScale(values);
-  return {
-    sma50: computeSMA(values, Math.min(SMA_SHORT, values.length), useLog),
-    sma200: computeSMA(values, Math.min(SMA_LONG, values.length), useLog),
-    isLogScale: useLog,
-  };
+  const allValues = data.map((d) => d[key] as number);
+  const useLog = needsLogScale(allValues);
+  // Con hueco al final, el punto en vivo no entra en las medias móviles (queda null).
+  const gap = findTrailingGap(data.map((d) => d.date));
+  const values = gap ? allValues.slice(0, -1) : allValues;
+  const sma50 = computeSMA(values, Math.min(SMA_SHORT, values.length), useLog);
+  const sma200 = computeSMA(values, Math.min(SMA_LONG, values.length), useLog);
+  if (gap) {
+    sma50.push(null);
+    sma200.push(null);
+  }
+  return { sma50, sma200, isLogScale: useLog };
 }
 
 export { SMA_LONG, SMA_SHORT };
