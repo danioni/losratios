@@ -544,12 +544,23 @@ export const assetPerformance = buildPerformanceData();
 // ============================================================
 // COMPUTED MARKET DATA — used by API route
 // ============================================================
+/** Procedencia de los datos devueltos por /api/market-data. */
+export interface MarketDataMeta {
+  /** Fecha (YYYY-MM) del último punto de la serie devuelta por la API */
+  lastDate: string;
+  /** BTC: CoinGecko en vivo, o anclajes estáticos interpolados (rate limit) */
+  btcSource: "coingecko" | "static-fallback";
+  /** Si el BTC del último punto se sobrescribió con el precio spot de CoinGecko */
+  btcSpotOverride: boolean;
+}
+
 export interface ComputedMarketData {
   assetData: AssetDataPoint[];
   ratios: ClassRatioDataPoint[];
   summaries: RatioSummary[];
   rotationSignals: RotationSignal[];
   assetPerformance: AssetPerformance[];
+  meta?: MarketDataMeta;
 }
 
 /**
@@ -585,6 +596,17 @@ export function getFilteredData(
     assets: sliced,
     ratios: computeRatios(sliced),
   };
+}
+
+const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+/** "2026-01" → "Ene 2026". Devuelve la entrada tal cual si no tiene formato YYYY-MM. */
+export function formatDateLabel(dateStr: string): string {
+  if (!dateStr || dateStr.length < 7) return dateStr;
+  const [year, month] = dateStr.split("-");
+  const m = parseInt(month, 10);
+  if (!MONTH_NAMES[m - 1]) return dateStr;
+  return `${MONTH_NAMES[m - 1]} ${year}`;
 }
 
 export function formatRatio(value: number): string {

@@ -3,7 +3,7 @@
 // Server-only: used by /api/market-data route
 // ============================================================
 
-import type { AssetDataPoint } from "./data";
+import type { AssetDataPoint, MarketDataMeta } from "./data";
 
 // ── Yahoo Finance ──────────────────────────────────────────
 
@@ -212,7 +212,7 @@ function alignToMonthlyGrid(
   return { dates, aligned };
 }
 
-export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
+export async function fetchAllMarketData(): Promise<{ assets: AssetDataPoint[]; meta: MarketDataMeta }> {
   // Fetch everything in parallel — only what we need for the 5 ratios
   const [
     sp500Data,
@@ -240,12 +240,11 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
   }
 
   // Bug #2: Use static BTC fallback when CoinGecko is rate-limited
-  const btcData = btcHist.dates.length >= 24
-    ? btcHist
-    : buildBtcFallback();
+  const btcLive = btcHist.dates.length >= 24;
+  const btcData = btcLive ? btcHist : buildBtcFallback();
 
   console.log(
-    `BTC source: ${btcHist.dates.length >= 24 ? "CoinGecko live" : "static fallback"} — ${btcData.dates.length} months`,
+    `BTC source: ${btcLive ? "CoinGecko live" : "static fallback"} — ${btcData.dates.length} months`,
   );
 
   const allSeries = [
@@ -287,9 +286,17 @@ export async function fetchAllMarketData(): Promise<AssetDataPoint[]> {
 
   // Override the last data point with live BTC price if available
   const btcCurrent = btcMarkets.find((c) => c.id === "bitcoin");
-  if (filtered.length > 0 && btcCurrent) {
+  const btcSpotOverride = filtered.length > 0 && !!btcCurrent;
+  if (btcSpotOverride && btcCurrent) {
     filtered[filtered.length - 1].btc = btcCurrent.current_price;
   }
 
-  return filtered;
+  return {
+    assets: filtered,
+    meta: {
+      lastDate: filtered[filtered.length - 1].date,
+      btcSource: btcLive ? "coingecko" : "static-fallback",
+      btcSpotOverride,
+    },
+  };
 }

@@ -6,9 +6,9 @@ export const revalidate = 3600; // ISR: re-fetch every hour
 
 export async function GET() {
   try {
-    const rawAssets = await fetchAllMarketData();
-    const computed = computeAllFromRawAssets(rawAssets);
-    return NextResponse.json(computed);
+    const { assets, meta } = await fetchAllMarketData();
+    const computed = computeAllFromRawAssets(assets);
+    return NextResponse.json({ ...computed, meta });
   } catch (error) {
     console.error("Market data fetch failed:", error);
     return NextResponse.json(

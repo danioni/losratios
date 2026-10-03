@@ -27,8 +27,8 @@ import {
   generateNarrative,
   computeEmpiricalPercentile,
   Z_EXTENDED,
+  formatDateLabel,
   type ClassRatioDataPoint,
-  type ComputedMarketData,
 } from "@/lib/data";
 import MetricCard from "./MetricCard";
 import ChartSection from "./ChartSection";
@@ -36,17 +36,9 @@ import PerformanceTable from "./PerformanceTable";
 import CurrencySelector from "./CurrencySelector";
 import CurrencyDepreciation from "./CurrencyDepreciation";
 import { useCurrencyBase } from "./CurrencyContext";
+import { useDataStatus, longDataLabel } from "./DataStatusContext";
 
 type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
-
-const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
-function formatDateLabel(dateStr: string): string {
-  if (!dateStr || dateStr.length < 7) return dateStr;
-  const [year, month] = dateStr.split("-");
-  const m = parseInt(month, 10);
-  return `${MONTH_NAMES[m - 1]} ${year}`;
-}
 
 function formatDateRange(startDate: string, endDate: string): string {
   return `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}`;
@@ -247,11 +239,11 @@ function RatioChart({
     const startStr = `${pairDef.startYear}-01`;
     const firstIdx = filteredRatios.findIndex(d => d.date >= startStr);
     const startDate = firstIdx >= 0 ? filteredRatios[firstIdx].date : filteredRatios[0]?.date || "";
-    const now = new Date();
-    const endDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     // Filter chart data to pair's actual date range
     const chartFiltered = bollingerChartData.filter(d => d.date >= startStr);
     const dates = chartFiltered.map(d => d.date);
+    // Fin del rango = fecha del último punto realmente graficado (sale de los datos, no del reloj)
+    const endDate = dates.length > 0 ? dates[dates.length - 1] : startDate;
     const ticks = dates.length <= 24
       ? dates.filter((_, i) => i % 3 === 0)
       : dates.filter((_, i) => i % 12 === 0);
@@ -391,82 +383,14 @@ function RatioChart({
   );
 }
 
-const CACHE_KEY = "losratios_market_data_v4"; // v4: always use 55yr fallback, live updates last point only
-const CACHE_TTL_HOURS = 24;
-const MIN_USEFUL_DATAPOINTS = 24; // minimum months for live data to be useful on its own
-
-function formatTimestamp(ts: number): string {
-  const d = new Date(ts);
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-}
 
 export default function Dashboard() {
   const [range, setRange] = useState<TimeRange>("MAX");
-  const [liveData, setLiveData] = useState<ComputedMarketData | null>(null);
-  const [dataSource, setDataSource] = useState<"loading" | "live" | "cache" | "error">("loading");
-  const [dataTimestamp, setDataTimestamp] = useState<number | null>(null);
   const COLORS = useThemeColors();
   const { base, isUSD, levelMessage, level } = useCurrencyBase();
-
-  // Fetch live market data on mount with localStorage cache (24h TTL)
-  useEffect(() => {
-    let cancelled = false;
-
-    // Check localStorage cache first
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        const ageHours = (Date.now() - timestamp) / (1000 * 60 * 60);
-        if (ageHours < CACHE_TTL_HOURS && data?.assetData?.length > 0) {
-          setLiveData(data);
-          setDataSource("cache");
-          setDataTimestamp(timestamp);
-        }
-      }
-    } catch { /* ignore corrupt cache */ }
-
-    // Always try to fetch fresh data
-    fetch("/api/market-data")
-      .then((res) => {
-        if (!res.ok) throw new Error(`API ${res.status}`);
-        const ct = res.headers.get("content-type") ?? "";
-        if (!ct.includes("application/json")) throw new Error("Not JSON");
-        return res.json();
-      })
-      .then((data: ComputedMarketData) => {
-        if (!cancelled && data?.assetData?.length > 0 && !(data as any).error) {
-          // Sanity check: reject data where critical fields are mostly zero or missing
-          const last = data.assetData[data.assetData.length - 1];
-          const hasReasonableData = last && last.btc > 1000 && last.gold > 500 && last.sp500 > 1000;
-          if (!hasReasonableData) {
-            console.warn("Live API data looks incomplete, falling back to static data");
-            if (!cancelled) setDataSource("error");
-            return;
-          }
-          const now = Date.now();
-          setLiveData(data);
-          setDataSource("live");
-          setDataTimestamp(now);
-          // Save to cache
-          try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: now }));
-          } catch { /* localStorage full */ }
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          // If we already loaded from cache, keep that
-          setDataSource((prev) => prev === "cache" ? "cache" : "error");
-        }
-      });
-    return () => { cancelled = true; };
-  }, []);
+  // La consulta a /api/market-data y el caché viven en DataStatusProvider,
+  // para que Header y Dashboard compartan la misma frescura real.
+  const { liveData, dataSource, status: dataStatus } = useDataStatus();
 
   // Never show loading state — fallback data is always available immediately
   const isLoading = false;
@@ -487,12 +411,16 @@ export default function Dashboard() {
 
     // Take the last live data point (most recent real prices)
     const liveLast = liveData.assetData[liveData.assetData.length - 1];
+    // El último punto lleva la fecha real de esos precios (dataStatus.lastDate),
+    // para que el rango mostrado y el badge "Datos al" coincidan con la serie.
+    const lastDate = dataStatus.lastDate;
 
     // Clone fallback and update the last point with live prices
     const updated = fallbackAssetData.map((d, i) => {
       if (i === fallbackAssetData.length - 1) {
         return {
           ...d,
+          date: lastDate,
           gold: liveLast.gold > 0 ? liveLast.gold : d.gold,
           silver: liveLast.silver > 0 ? liveLast.silver : d.silver,
           sp500: liveLast.sp500 > 0 ? liveLast.sp500 : d.sp500,
@@ -511,11 +439,9 @@ export default function Dashboard() {
       summaries: recomputed.summaries,
       currentAssetPerformance: recomputed.assetPerformance,
     };
-  }, [liveData]);
+  }, [liveData, dataStatus.lastDate]);
 
-  const timestampLabel = dataTimestamp
-    ? `Datos al: ${formatTimestamp(dataTimestamp)}`
-    : dataSource === "live" ? "Datos en vivo" : dataSource === "cache" ? "Datos del caché" : "";
+  const timestampLabel = longDataLabel(dataStatus);
 
   const { filteredRatios, xTicks, ratioDateRange } = useMemo(() => {
     const { ratios: r } = getFilteredData(range, sourceAssets);
@@ -611,7 +537,7 @@ export default function Dashboard() {
           {ratioDateRange}
         </span>
         <span className="text-[10px] tabular-nums tracking-wider ml-auto flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
-          {dataSource === "live" && <span className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: "var(--accent-green)" }} />}
+          <span className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "pulse-dot" : ""}`} style={{ background: dataStatus.origin === "fallback" ? "var(--accent-amber)" : "var(--accent-green)" }} />
           {timestampLabel}
         </span>
       </div>
@@ -770,10 +696,10 @@ export default function Dashboard() {
         </div>
         <div className="space-y-1 pt-2">
           <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-            {dataSource === "live" ? "Datos en vivo · Actualización cada hora" : dataSource === "cache" ? `Datos del caché · ${timestampLabel}` : "Datos de referencia"}
+            {timestampLabel}{dataSource === "live" ? " · la API se reconsulta cada hora" : ""}
           </p>
           <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-            CoinGecko · FRED · Yahoo Finance · v4
+            CoinGecko · FRED · Yahoo Finance · v5
           </p>
         </div>
       </div>
