@@ -557,7 +557,7 @@ export default function Dashboard() {
             No se pudieron cargar los datos en tiempo real.
           </p>
           <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-            Mostrando datos de referencia. Intentá recargar la página.
+            Mostrando datos de referencia. Intenta recargar la página.
           </p>
         </div>
       )}
@@ -608,7 +608,7 @@ export default function Dashboard() {
             Dentro de los ganadores: ¿hard money o capital productivo?
           </h3>
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Oro/S&P 500 y BTC/S&P 500 juntos cuentan una historia: cuánto está apostando el mercado a la narrativa de escasez pura (oro y Bitcoin) vs la narrativa de crecimiento productivo (acciones). No es &ldquo;comprá BTC&rdquo; o &ldquo;comprá acciones&rdquo;. Es cuánto de cada uno, y cuándo cambia el peso.
+            Oro/S&P 500 y BTC/S&P 500 juntos cuentan una historia: cuánto está apostando el mercado a la narrativa de escasez pura (oro y Bitcoin) vs la narrativa de crecimiento productivo (acciones). No es &ldquo;compra BTC&rdquo; o &ldquo;compra acciones&rdquo;. Es cuánto de cada uno, y cuándo cambia el peso.
           </p>
         </div>
         <RatioChart pairDef={PAIR_DEFS[1]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
@@ -673,7 +673,7 @@ export default function Dashboard() {
             Los precios en fiat son ruido. Los ratios son señal.
           </p>
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Ya tenés el marco completo:
+            Ya tienes el marco completo:
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-4 text-[10px] sm:text-[11px] tracking-wider">

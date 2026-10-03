@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     url: "https://losratios.com",
     siteName: "Los Ratios",
     type: "website",
-    locale: "es_AR",
+    locale: "es_CL",
   },
   twitter: {
     card: "summary_large_image",
