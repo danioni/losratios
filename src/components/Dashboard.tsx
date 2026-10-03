@@ -25,6 +25,8 @@ import {
   SMA_LONG,
   SMA_SHORT,
   generateNarrative,
+  computeEmpiricalPercentile,
+  Z_EXTENDED,
   type ClassRatioDataPoint,
   type ComputedMarketData,
 } from "@/lib/data";
@@ -165,7 +167,7 @@ function RatioChart({
   ratioDateRange: string;
   COLORS: typeof DEFAULT_COLORS;
 }) {
-  const { pairStats, bollingerChartData, isLogScale } = useMemo(() => {
+  const { pairStats, bollingerChartData, isLogScale, zWindow } = useMemo(() => {
     const key = pairDef.key as keyof ClassRatioDataPoint;
     const values = filteredRatios.map((d) => d[key] as number);
     const dates = filteredRatios.map((d) => d.date);
@@ -173,15 +175,20 @@ function RatioChart({
 
     const windowSize = Math.min(SMA_LONG, values.length);
     const windowValues = values.slice(-windowSize);
+    const windowDates = dates.slice(-windowSize);
 
     // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
     const useLog = needsLogScale(windowValues);
 
     let mean: number;
     let zScore: number;
+    // Observaciones efectivamente usadas para media/σ. El percentil empírico
+    // se calcula sobre exactamente este mismo conjunto.
+    let zValues: number[];
 
     if (useLog && current > 0) {
       const positives = windowValues.filter(v => v > 0);
+      zValues = positives;
       const logVals = positives.map(v => Math.log(v));
       const logMean = logVals.reduce((s, v) => s + v, 0) / logVals.length;
       const logVariance = logVals.reduce((s, v) => s + (v - logMean) ** 2, 0) / logVals.length;
@@ -189,6 +196,7 @@ function RatioChart({
       zScore = logStdDev > 0 ? (Math.log(current) - logMean) / logStdDev : 0;
       mean = Math.exp(logMean);  // geometric mean
     } else {
+      zValues = windowValues;
       mean = windowValues.reduce((s, v) => s + v, 0) / windowValues.length;
       const variance = windowValues.reduce((s, v) => s + (v - mean) ** 2, 0) / windowValues.length;
       const stdDev = Math.sqrt(variance);
@@ -218,15 +226,24 @@ function RatioChart({
       bbSma: toChart(bb[i]?.sma ?? null),
     }));
 
+    const firstUsedIdx = useLog && current > 0 ? Math.max(0, windowValues.findIndex(v => v > 0)) : 0;
+
     return {
       pairStats: { mean, current, zScore },
       bollingerChartData: chartData,
       isLogScale: isLogScale,
+      zWindow: {
+        values: zValues,
+        n: zValues.length,
+        startDate: windowDates[firstUsedIdx] ?? "",
+        endDate: windowDates[windowDates.length - 1] ?? "",
+        useLog: useLog && current > 0,
+      },
     };
   }, [filteredRatios, pairDef.key]);
 
   // Compute per-pair date range AND filter chart data (BTC pairs start at 2010, not 1971)
-  const { pairDateRange: actualDateRange, pairStartLabel, visibleChartData, visibleXTicks } = useMemo(() => {
+  const { pairDateRange: actualDateRange, visibleChartData, visibleXTicks } = useMemo(() => {
     const startStr = `${pairDef.startYear}-01`;
     const firstIdx = filteredRatios.findIndex(d => d.date >= startStr);
     const startDate = firstIdx >= 0 ? filteredRatios[firstIdx].date : filteredRatios[0]?.date || "";
@@ -240,7 +257,6 @@ function RatioChart({
       : dates.filter((_, i) => i % 12 === 0);
     return {
       pairDateRange: startDate ? formatDateRange(startDate, endDate) : ratioDateRange,
-      pairStartLabel: formatDateLabel(startDate),
       visibleChartData: chartFiltered,
       visibleXTicks: ticks,
     };
@@ -253,19 +269,18 @@ function RatioChart({
   const pairColor = getColorValue(pairDef.color);
   const narrative = generateNarrative(pairDef.pair, pairStats.zScore);
 
-  // Human-readable z-score explanation
-  // Proper normal CDF approximation (Abramowitz & Stegun)
-  const absZ = Math.abs(pairStats.zScore);
-  const t = 1 / (1 + 0.2316419 * Math.min(absZ, 6));
-  const d = 0.3989423 * Math.exp(-0.5 * Math.min(absZ, 6) * Math.min(absZ, 6));
-  const cdfTail = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-  const percentile = Math.max(1, Math.min(99, Math.round((1 - cdfTail) * 100)));
+  // Explicación en lenguaje llano con percentil EMPÍRICO: fracción de las
+  // observaciones de la misma ventana del z-score que quedan por debajo (o por
+  // encima) del valor actual. No se asume normalidad. Cortes = Z_EXTENDED.
   const [pairA, pairB] = pairDef.pair.split(" / ");
-  const zExplanation = pairStats.zScore > 0.5
-    ? `${pairA} está más caro vs ${pairB} de lo que ha estado el ~${percentile}% del tiempo`
-    : pairStats.zScore < -0.5
-    ? `${pairA} está más barato vs ${pairB} de lo que ha estado el ~${percentile}% del tiempo`
-    : `${pairA} y ${pairB} en equilibrio relativo`;
+  const pct = computeEmpiricalPercentile(zWindow.values, pairStats.current);
+  const pctBelow = Math.round(pct.below * 100);
+  const pctAbove = Math.round(pct.above * 100);
+  const zExplanation = pairStats.zScore >= Z_EXTENDED
+    ? `${pairA} está más caro vs ${pairB} que en el ${pctBelow}% de los últimos ${zWindow.n} meses`
+    : pairStats.zScore <= -Z_EXTENDED
+    ? `${pairA} está más barato vs ${pairB} que en el ${pctAbove}% de los últimos ${zWindow.n} meses`
+    : `${pairA}/${pairB} cerca de su relación histórica · percentil empírico ${pctBelow} en los últimos ${zWindow.n} meses`;
 
   return (
     <ChartSection
@@ -287,9 +302,9 @@ function RatioChart({
             <div
               className="absolute top-0 bottom-0 w-1 rounded-full"
               style={{
-                background: pairStats.zScore > 1 ? "var(--accent-red)" : pairStats.zScore < -1 ? "var(--accent-green)" : "var(--accent-cyan)",
+                background: pairStats.zScore >= Z_EXTENDED ? "var(--accent-red)" : pairStats.zScore <= -Z_EXTENDED ? "var(--accent-green)" : "var(--accent-cyan)",
                 left: `${Math.min(Math.max((pairStats.zScore + 3) / 6 * 100, 2), 98)}%`,
-                boxShadow: `0 0 6px ${pairStats.zScore > 1 ? "var(--accent-red)" : pairStats.zScore < -1 ? "var(--accent-green)" : "var(--accent-cyan)"}`,
+                boxShadow: `0 0 6px ${pairStats.zScore >= Z_EXTENDED ? "var(--accent-red)" : pairStats.zScore <= -Z_EXTENDED ? "var(--accent-green)" : "var(--accent-cyan)"}`,
               }}
             />
           </div>
@@ -300,13 +315,13 @@ function RatioChart({
       </div>
 
       {/* Z-score explanation in plain language */}
-      <p className="text-[10px] sm:text-[11px] mb-4 leading-relaxed" style={{ color: pairStats.zScore > 1 ? "var(--accent-red)" : pairStats.zScore < -1 ? "var(--accent-green)" : "var(--text-muted)" }}>
+      <p className="text-[10px] sm:text-[11px] mb-4 leading-relaxed" style={{ color: pairStats.zScore >= Z_EXTENDED ? "var(--accent-red)" : pairStats.zScore <= -Z_EXTENDED ? "var(--accent-green)" : "var(--text-muted)" }}>
         {pairStats.zScore >= 0 ? "+" : ""}{pairStats.zScore.toFixed(1)}σ = {zExplanation}
       </p>
 
       {/* Z-score methodology note */}
       <p className="text-[9px] mb-4 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
-        z-score calculado sobre la distribución completa del ratio desde {pairStartLabel}. Media y desviación estándar históricas full-sample.
+        z-score y percentil calculados sobre las últimas {zWindow.n} observaciones mensuales del rango mostrado ({formatDateLabel(zWindow.startDate)} → {formatDateLabel(zWindow.endDate)}), con media {zWindow.useLog ? "geométrica" : "aritmética"} y desviación estándar de esa ventana.
       </p>
 
       {/* Ratio chart with Bollinger bands */}

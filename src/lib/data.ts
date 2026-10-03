@@ -325,6 +325,27 @@ function computeLogStats(values: number[]): { mean: number; stdDev: number; logM
   };
 }
 
+/**
+ * Percentil empírico: fracción de observaciones de `values` estrictamente por
+ * debajo del valor actual (y, por separado, estrictamente por encima).
+ * No supone normalidad. Debe recibir exactamente la misma ventana que se usó
+ * para el z-score (en escala log: solo los valores positivos de la ventana).
+ */
+export function computeEmpiricalPercentile(
+  values: number[],
+  current: number,
+): { below: number; above: number; n: number } {
+  const n = values.length;
+  if (n === 0 || !isFinite(current)) return { below: 0, above: 0, n: 0 };
+  let below = 0;
+  let above = 0;
+  for (const v of values) {
+    if (v < current) below++;
+    else if (v > current) above++;
+  }
+  return { below: below / n, above: above / n, n };
+}
+
 // ============================================================
 // CORTES DE SEÑAL — únicos para etiqueta, narrativa y rotación
 //   |z| < 1        → Neutral

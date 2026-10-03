@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify": "node --no-warnings scripts/verify-percentile.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^1.6.1",
