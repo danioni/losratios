@@ -403,13 +403,14 @@ function RatioChart({
           <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>BB ±1σ/±2σ</span>
         </div>
       </div>
-      {/* Interpolación declarada: todo el tramo anterior al último punto sale de
-          anclas anuales interpoladas (ver metodología). Solo el último punto puede
-          provenir de la API; si no hubo API, también es interpolado. */}
+      {/* Interpolación declarada: la serie mensual es interpolación entre valores de
+          referencia (anuales; bianuales antes de 1995). Solo el último punto puede
+          provenir de precios en vivo; sin API, también es un valor de referencia. */}
       <p className="text-[9px] mt-3 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
+        Serie mensual construida por interpolación entre valores de referencia (anuales o bianuales antes de 1995), sin datos mensuales reales; z-score y medias móviles se calculan sobre esa interpolación.{" "}
         {dataStatus.origin === "fallback"
-          ? `Serie completa hasta ${formatDateLabel(dataStatus.lastDate)} interpolada entre anclas anuales (datos de respaldo, sin punto de la API); z-score y medias móviles incluyen ese tramo.`
-          : `Tramo anterior a ${formatDateLabel(dataStatus.lastDate)} interpolado entre anclas anuales; solo el último punto (${formatDateLabel(dataStatus.lastDate)}) proviene de la API. z-score y medias móviles incluyen ese tramo.`}
+          ? `En esta vista no hay precios en vivo: el último punto (${formatDateLabel(dataStatus.lastDate)}) también es un valor de referencia.`
+          : "Solo el último punto proviene de precios en vivo."}
       </p>
       {/* Narrative */}
       <p className="text-[10px] sm:text-[11px] mt-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
