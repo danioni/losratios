@@ -149,6 +149,9 @@ const anchors: AssetDataPoint[] = [
   { date: "2026", gold: 5162, silver: 87, sp500: 6901, nasdaq: 22878, btc: 67650 },
 ];
 
+/** Anclas de referencia (solo lectura), expuestas para scripts/verify-series.ts */
+export const ANCHORS: readonly AssetDataPoint[] = anchors;
+
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
@@ -164,12 +167,17 @@ function generateMonthlyData(): AssetDataPoint[] {
   for (let i = 0; i < anchors.length - 1; i++) {
     const a = anchors[i];
     const b = anchors[i + 1];
-    for (let m = 0; m < 12; m++) {
-      const t = m / 12;
+    const yearA = parseInt(a.date, 10);
+    const yearB = parseInt(b.date, 10);
+    // 12 meses por cada año entre anclas (antes de 1995 las anclas son bianuales),
+    // con t proporcional, para que no falte ningún mes de la serie.
+    const totalMonths = 12 * (yearB - yearA);
+    for (let m = 0; m < totalMonths; m++) {
+      const t = m / totalMonths;
       // Interpolación pura entre anclas: lineal (lerp) y geométrica (glerp) para BTC.
       // Sin ruido sintético: cualquier "variación" mensual sería inventada.
       result.push({
-        date: `${a.date}-${String(m + 1).padStart(2, "0")}`,
+        date: `${yearA + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, "0")}`,
         gold: lerp(a.gold, b.gold, t),
         silver: lerp(a.silver, b.silver, t),
         sp500: lerp(a.sp500, b.sp500, t),
