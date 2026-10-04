@@ -120,6 +120,9 @@ directa, las leyó. Estado por host tras las dos:
 | stooq.com | Desafío JavaScript en las dos pasadas. |
 | pubs.usgs.gov, www.usgs.gov | Capítulos de oro y plata de los *Mineral Commodity Summaries* y política de derechos, leídos. |
 | www.imf.org | curl recibe HTTP 403 ("Access Denied"). La página y los términos se leyeron con navegador; la planilla y la documentación, con `python-requests`. |
+| archive.org | *Minerals Yearbook 1985*, volumen 1: el texto y la imagen de la página 466, leídos (4.7). |
+| search.library.wisc.edu | Es donde el USGS aloja los *Minerals Yearbook* viejos. La página de la tabla responde "Browser not allowed" a curl y al navegador, y ofrece un paso de verificación. No se pasó ese control: la misma publicación se leyó en archive.org. |
+| www.nber.org | Working Paper 24016, sobre el London Gold Pool: PDF leído (A-R0-17). |
 | data.nasdaq.com | Leída en la primera pasada (no sirve, sección 7). No se volvió a probar. |
 
 **Nota sobre FRED.** En la segunda pasada, los primeros cuatro pedidos se
@@ -428,7 +431,7 @@ los dos metales.
   marca. De todos modos acá no se copia el documento: se transcriben ocho
   cifras, con su cita.
 
-### 4.7 FMI, Primary Commodity Prices — leída, alternativa
+### 4.7 FMI, Primary Commodity Prices — leída, (b), control mensual
 
 - Página: `https://www.imf.org/en/research/commodity-prices`. Archivo enlazado
   como "Excel Database: September 2026":
@@ -444,17 +447,31 @@ los dos metales.
   USD/troy ounce"*.
 - Precisión: sin redondear (2024M12: 2640.6055 el oro y 30.3707 la plata).
 - Clave / registro: no.
-- **Licencia: reutilización libre con atribución.** La página "Copyright and
-  Usage" (`https://www.imf.org/en/about/copyright-and-terms`, vigente desde el
+- **Licencia: (b), reutilización libre con atribución; uso comercial con
+  permiso.** La página "Copyright and Usage"
+  (`https://www.imf.org/en/about/copyright-and-terms`, vigente desde el
   2024-10-11) tiene términos especiales para los datos estadísticos, y nombra a
-  *Primary Commodity Prices* entre ellos: se pueden descargar, copiar, publicar
-  y distribuir, con atribución al FMI y diciendo si se transformaron. Dos
-  límites: pide escribir para *"any potential commercial reuse"*, y prohíbe la
-  descarga masiva por medios automatizados sin permiso.
+  *Primary Commodity Prices* entre ellos. Cláusulas, literales:
+  - *"You may download, extract, copy, create derivative works, publish,
+    distribute, and use Data obtained from IMF Sites, subject to the following
+    conditions"*.
+  - Atribución: *"it must appear accurately with attribution to the IMF as the
+    source, e.g. 'Source: International Monetary Fund, Database Name, <<link to
+    the dataset>>.'"*
+  - Uso comercial: *"For any potential commercial reuse of IMF Data, please
+    email copyright@imf.org to request permission."*
+  - Descarga: *"The IMF prohibits the bulk download of information by automated
+    technology without explicit permission"*. Está en los términos generales,
+    que siguen valiendo para los datos.
 - **Por qué no es el gate.** Comparte el origen con el Pink Sheet —el fixing de
   Londres—, así que contrasta cómo procesa el dato el Banco Mundial más que el
-  precio. Y por sus términos no puede entrar a un pipeline sin transcribirla a
-  mano. Queda como referencia.
+  precio.
+- **Qué es: el control mensual** (A-R0-20). Cada corrida compara el oro y la
+  plata publicados contra `PGOLD` y `PSILVER`, sobre los 560 meses en común.
+  Por la cláusula de descarga, el pipeline no baja el archivo: usa una copia
+  bajada una vez, el 2026-10-04, versionada en
+  `data/raw/fmi_pcps_2026-10-04.xlsx` (sha256
+  `e0bc0cbbd08208e9868fb16e21992ff4b86a7676a2b5f64d32a02bdb8bdcc464`).
 
 Comparación de las tres fuentes sobre los años del gate. Es una lectura de un
 día, no un contraste del pipeline. La columna del Banco Mundial es la serie
@@ -479,10 +496,48 @@ pareja: 0.08 % de mediana hasta 2020, 0.23 % entre 2021 y 2024, y 0.63 % desde
 junio de 2025, con un máximo de 3.76 % en diciembre de 2025 (Banco Mundial
 62.3, FMI 64.73).
 
-Hay un mes del oro que no cierra: **marzo de 1985**, con 313.5 en el Pink Sheet
-y 303.94 en el FMI, a 3.1 %. Es el único del oro a más de 1.2 % en los 540
-meses que van de 1980 a 2024. No se estableció cuál de los dos está bien. No
-toca el gate, que cubre 2021 a 2024.
+**El control mensual.** Con el umbral de A-R0-20 —la tolerancia del gate, ±0.5 %
+el oro y ±1 % la plata— quedan en disputa diez meses del oro y diez de la
+plata, de 560 comparados por metal. La lista, con los dos valores de cada mes,
+está en A-R0-20 y en el changelog de cada corrida. El que más se aparta en el
+oro es **marzo de 1985**: 313.5 en el Pink Sheet y 303.94 en el FMI, a 3.1 %.
+
+**Marzo de 1985: el tercer valor.** Lectura puntual, del 2026-10-04.
+
+- Fuente: U.S. Bureau of Mines, *Minerals Yearbook 1985*, volumen I, *Metals
+  and Minerals*, capítulo "Gold", de J. M. Lucas, tabla 13, "U.S. gold prices"
+  (*Dollars per troy ounce*), página 466. Nota 1 de la tabla, literal:
+  *"Engelhard Industries daily quotation."*
+- Dónde se leyó: `https://archive.org/details/pub_usgov-minerals-yearbook_1985_1`,
+  la copia digitalizada del Internet Archive. Se leyó el texto y se comprobó
+  contra la imagen de la página.
+- La fila, literal: *March: Low 287.65 (Mar. 1); High 330.80 (Mar. 27); Average
+  304.34*. Los doce promedios mensuales de la tabla promedian 317.66, que es el
+  promedio anual que la misma tabla trae.
+- Es una cotización **independiente** de las otras dos: la de un comerciante de
+  Estados Unidos, no el fixing de Londres. Es la misma cotización contra la que
+  cierra el gate anual (4.6).
+- Licencia: es una publicación del gobierno federal de Estados Unidos. Acá no se
+  copia: se transcriben cifras, con su cita.
+
+| Mes | Pink Sheet | FMI | Engelhard | Pink Sheet contra Engelhard | FMI contra Engelhard |
+| --- | --- | --- | --- | --- | --- |
+| 1985-03 | 313.5 | 303.94 | 304.34 | 3.01 % | −0.13 % |
+| 1985-11 | 321.5 | 325.24 | 325.64 | −1.27 % | −0.12 % |
+
+En los doce meses de 1985 el FMI queda entre −0.32 % y −0.01 % de Engelhard,
+siempre un poco por debajo: es el mismo sesgo de A-R0-18. El Pink Sheet queda
+entre −0.31 % y 0.46 % en diez meses, y se aparta en los dos de la tabla.
+
+**Qué zanja.** En marzo de 1985 —y, con la misma tabla, en noviembre— **el valor
+que cierra contra una cotización independiente es el del FMI.** El del Pink
+Sheet queda a 3 % de las otras dos fuentes, que entre sí están a 0.13 %. La
+lectura es que el valor del Pink Sheet de ese mes está mal.
+
+**Qué no cambia.** El valor publicado. La serie sigue siendo el Pink Sheet tal
+como viene: marzo de 1985 se publica como 313.5, marcado como valor en disputa
+y fuera de las métricas. Lo que corresponde es reportarlo al Banco Mundial
+(10.3). Los otros dieciocho meses en disputa no tienen tercera lectura.
 
 ---
 
@@ -817,7 +872,7 @@ aparece en `src/`.
 ## 9. Decisiones
 
 **Aprobadas el 2026-10-04, con condiciones.** Los supuestos que las sostienen
-están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-19; acá va la decisión y la
+están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-20; acá va la decisión y la
 evidencia.
 
 ### 9.1 Regla de publicación
@@ -946,8 +1001,8 @@ mensuales, y Shiller también.
 
 | Par | Primer mes posible | Lo que limita | Se publica |
 | --- | --- | --- | --- |
-| Oro / Plata | 1960-01 | El oro de 1968-02 y de 1968-03 viene al dólar, con 1.4 % de error por redondeo: el par es apto para métricas desde 1968-04 (A-R0-17, A-R0-19). | Sí |
-| BTC / Oro | 2010-08 (primer mes completo de Coin Metrics) | Antes de 2013 las fuentes de BTC no coinciden (A-R0-10). | Sí, desde 2013-01 |
+| Oro / Plata | 1960-01 | El oro de 1968-02 y de 1968-03 viene al dólar, con 1.4 % de error por redondeo: el par es apto para métricas desde 1968-04 (A-R0-17, A-R0-19), menos 20 meses con un valor en disputa (A-R0-20). | Sí |
+| BTC / Oro | 2010-08 (primer mes completo de Coin Metrics) | Antes de 2013 las fuentes de BTC no coinciden (A-R0-10). Cuatro meses llevan el oro en disputa (A-R0-20). | Sí, desde 2013-01 |
 | Oro / S&P 500 | 1960-01 | El oro casi no se mueve hasta 1967-12: va de 34.95 a 35.27. | NO MEDIDO |
 | BTC / S&P 500 | 2010-08 | Como BTC / Oro. | NO MEDIDO |
 | Nasdaq / S&P 500 | 1971-03 | Primer mes completo del Nasdaq. | NO MEDIDO |
@@ -973,6 +1028,7 @@ su caso de validación**.
 | Oro | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.120 % | ±0.5 % por año |
 | Plata | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.601 % | ±1 % por año |
 | Oro y plata, el empalme | Redondear la edición de enero de 2025 contra la edición vigente, mes a mes (5.5) | 780 meses de 780 en cada metal; 11 y 1 exactamente a medio paso | Medio paso de redondeo |
+| Oro y plata, mes a mes | Pink Sheet contra el FMI, sobre todos los meses en común (4.7) | 560 meses por metal; 10 y 10 en disputa | ±0.5 % y ±1 %. No detiene la corrida: marca el mes |
 
 **Las fuentes (c) se usan solo para contrastar.** El archivo no se guarda ni se
 publica (A-R0-12). En el changelog queda, por corrida, cuántos meses se
@@ -981,7 +1037,9 @@ diferencia. **Del S&P 500 y del Nasdaq no queda ningún nivel del índice.**
 
 Si el contraste de BTC o de un índice no cierra, la corrida se detiene. También
 si no cierra el control del empalme (A-R0-19). Si no cierra el gate de un
-metal, la corrida sigue y el metal y sus pares se publican como NO MEDIDO.
+metal, la corrida sigue y el metal y sus pares se publican como NO MEDIDO. El
+control contra el FMI nunca la detiene: el mes que pasa del umbral se publica
+sin cambios, como valor en disputa, y queda fuera de las métricas (A-R0-20).
 
 **El gate de oro y plata** (A-R0-16). No hay una segunda fuente mensual abierta
 para los metales, así que el gate es anual: el promedio de los doce meses del
@@ -1029,6 +1087,7 @@ trimestre de 2026 tienen que caer entre el mínimo y el máximo del trimestre
 | Con licencia que permite redistribuir: Pink Sheet (CC BY 4.0) y Coin Metrics (CC BY-NC 4.0) | En el repositorio, `data/raw/`, con su atribución y licencia en `data/raw/ATRIBUCION.md`. | El archivo, y su URL, fecha y SHA-256. |
 | La edición del Pink Sheet del 3 de enero de 2025 (CC BY 4.0) | En el repositorio, `data/raw/pink_sheet_edicion_2025-01-03.xlsx`: una sola copia, con nombre fijo. No se vuelve a descargar. | El archivo, y su URL, fecha y SHA-256. El hash esperado está además en `configuracion.py`. |
 | Sin esa licencia: Shiller (s/d) y FRED `NASDAQCOM` ((b) con reserva) | **Fuera del repositorio**, en `data/privado/`, ignorado por git. | URL, fecha y SHA-256 de cada descarga, y el código de transformación. |
+| La copia del FMI (términos del FMI: redistribuir con atribución) | En el repositorio, `data/raw/fmi_pcps_2026-10-04.xlsx`: una sola copia, bajada a mano. El pipeline nunca la baja. | El archivo, y su URL, fecha y SHA-256. El hash esperado está además en `configuracion.py`. |
 | De contraste, (c): FRED `SP500`, api.nasdaq.com, Bitstamp | En ningún lado. | Lo que dice 9.6: meses, mediana, y fecha y diferencia del peor mes. |
 | De contraste, transcrita a mano: USGS | En `configuracion.py`, ocho cifras con su cita. | Las cifras, y la diferencia de cada año. |
 
@@ -1106,8 +1165,22 @@ convención.
      terceros.
   5. Si publican los mismos precios sin redondear, y si la URL del archivo
      mensual es estable entre publicaciones.
+- **Qué reportar.** El oro de marzo de 1985: el Pink Sheet trae 313.5, el FMI
+  303.94 y la cotización de Engelhard 304.34 (4.7). Y el de noviembre de 1985:
+  321.5, contra 325.24 y 325.64. No se reportó todavía.
 - **Qué destraba.** La plata deja de ser estimación (A-R0-8) y el quiebre del
   oro queda descrito con hora (A-R0-7).
+
+### 10.4 FMI
+
+- **A quién.** `copyright@imf.org`, la dirección que dan sus términos.
+- **Qué pedir.**
+  1. Permiso para bajar `external-data.xlsx` una vez por corrida, con un
+     programa. Hoy el pipeline usa una copia bajada a mano, porque los términos
+     prohíben la descarga masiva automatizada sin permiso.
+  2. Permiso de uso comercial, si el sitio llega a tener un vínculo comercial.
+- **Qué destraba.** Que el control mensual (A-R0-20) alcance siempre al último
+  mes que el FMI publique, y que deje de depender de una condición.
 
 ---
 
@@ -1136,12 +1209,13 @@ Están en `SUPUESTOS.md`. Índice:
 | A-R0-17 | Las métricas solo usan meses con error de redondeo del ratio de hasta 0.5 % | dato el error; supuesto el umbral |
 | A-R0-18 | En los ocho contrastes anuales el Banco Mundial queda por debajo de Engelhard | dato |
 | A-R0-19 | El oro y la plata se empalman: edición de enero de 2025 hasta 2024-12, vigente después | supuesto el empalme; dato lo que lo sostiene |
+| A-R0-20 | Control mensual del oro y la plata contra el FMI; el mes que pasa del umbral queda como valor en disputa | supuesto el umbral y la regla; dato lo que encuentra |
 
 ---
 
 ## 12. Lo que sigue abierto
 
-1. **Los tres permisos de la sección 10.**
+1. **Los permisos de la sección 10.** Son cuatro pedidos y un reporte.
 2. **El gate de oro y plata cubre 2021 a 2024.** El 2025 entra cuando el USGS
    lo publique sin estimar, en la edición siguiente. Hasta entonces el tramo
    "spot" del oro (desde junio de 2025) no tiene un año validado.
@@ -1157,12 +1231,18 @@ Están en `SUPUESTOS.md`. Índice:
    A-R0-19). No recibe revisiones. Si el Banco Mundial corrige un mes anterior
    a 2025, el control del empalme detiene la corrida y hay que decidir de
    nuevo de dónde sale ese tramo. Y desde 2025-01 la serie sigue redondeada.
-8. **El oro de marzo de 1985.** El Pink Sheet (313.5) y el FMI (303.94) quedan
-   a 3.1 % (4.7). No se estableció cuál está bien, y ninguna fuente abierta
-   leída lo decide.
-9. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
+8. **Los veinte meses en disputa** (A-R0-20). Marzo y noviembre de 1985 tienen
+   una tercera lectura, que le da la razón al FMI (4.7), y siguen publicados
+   con el valor del Pink Sheet hasta que el Banco Mundial los corrija. Los
+   otros dieciocho no tienen tercera lectura. Cinco son diciembres, y no se
+   sabe por qué.
+9. **La copia del FMI llega hasta 2026-08.** Los meses posteriores se publican
+   como "sin comparar" hasta que alguien baje otra edición a mano. Y el FMI
+   empieza en 1980: de 1968-04 a 1979-12 el tramo apto de Oro/Plata no tiene
+   control mensual.
+10. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
    y no tiene decisión.
-10. **No leído:** los ZIP históricos de Kraken, los términos de datos de
+11. **No leído:** los ZIP históricos de Kraken, los términos de datos de
    Kraken, los términos del Bundesbank, la exportación de S&P DJI, y la
    documentación técnica del FMI (se leyó la descripción de cada serie en la
    planilla).

@@ -273,13 +273,14 @@ fuente · `2` un contraste, o el control del empalme, no cerró.
 
 | Archivo | Qué contiene |
 | --- | --- |
-| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). Los dos metales llevan su error máximo por redondeo (A-R0-17) y de qué edición del Pink Sheet sale cada mes (A-R0-19). |
-| `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, error_redondeo_pct, apto_metricas, estado`. |
-| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes, y desde qué mes es apto para métricas. Acá es donde un par sin permiso dice NO MEDIDO. |
+| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). Los dos metales llevan su error máximo por redondeo (A-R0-17), de qué edición del Pink Sheet sale cada mes (A-R0-19) y qué resultó su control contra el FMI: "dentro del umbral", "sin comparar" o "valor en disputa", con los dos valores (A-R0-20). |
+| `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, error_redondeo_pct, valor_en_disputa, apto_metricas, estado`. |
+| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes, desde qué mes es apto para métricas y cuántos meses tiene en disputa. Acá es donde un par sin permiso dice NO MEDIDO. |
 | `data/series/series.csv` | Las cinco series: fuente, licencia, **atribución**, estado y con qué se valida cada una. Sin valores. |
 | `data/series/descargas_ratios.csv` | El manifiesto: de cada descarga, la URL, la fecha, los bytes y el SHA-256. |
 | `data/raw/pink_sheet_<fecha>.xlsx`, `data/raw/coin_metrics_btc_<fecha>.json` | Los crudos cuya licencia permite redistribuirlos (CC BY y CC BY-NC). |
 | `data/raw/pink_sheet_edicion_2025-01-03.xlsx` | La edición del Pink Sheet del 3 de enero de 2025, la última sin redondear. Una sola copia, con nombre fijo: no se vuelve a descargar (A-R0-19). |
+| `data/raw/fmi_pcps_2026-10-04.xlsx` | La base mensual de precios de materias primas del FMI, contra la que se comparan el oro y la plata. Una sola copia, bajada a mano: el pipeline nunca la baja (A-R0-20). |
 | `data/raw/ATRIBUCION.md` | Atribución y licencia de esos crudos. |
 | `data/privado/` | **Fuera del repositorio.** Los crudos de Shiller y de FRED `NASDAQCOM`, y `ratios_internos.csv`, con todo lo que se calcula, se publique o no. |
 
@@ -331,6 +332,17 @@ corrida se detiene y no escribe ninguna serie. La edición de 2025 está
 versionada en `data/raw/` y se identifica por su SHA-256; el pipeline no depende
 de que su URL siga respondiendo.
 
+**El control mensual contra el FMI** (A-R0-20). En cada corrida, el oro y la
+plata se comparan mes a mes con las series del FMI, sobre todos los meses que
+tienen en común: hoy 560, de 1980-01 a 2026-08. El mes que se aparta más que la
+tolerancia del gate (0.5 % el oro, 1 % la plata) queda como **valor en
+disputa**: se publica sin cambios, con los dos números a la vista, y no entra a
+ninguna métrica. **Este control no detiene la corrida** ni decide cuál fuente
+tiene razón. Hoy marca diez meses del oro y diez de la plata; todos van
+listados en el changelog. Los términos del FMI prohíben la descarga masiva
+automatizada, así que su archivo no se baja: viaja con el repositorio, y si
+falta, la corrida se detiene.
+
 Hay dos controles más sobre los metales. Los promedios del segundo trimestre de
 2026 tienen que caer entre el mínimo y el máximo que LBMA publicó para ese
 trimestre. Y la corrida se detiene si el Banco Mundial cambia la descripción
@@ -348,11 +360,18 @@ dos tramos sean comparables es un supuesto (A-R0-7).
 de la plata tiene un error máximo por el redondeo con que la fuente lo publica,
 y el de cada ratio va fila por fila. Un percentil o una tendencia solo pueden
 usar los meses marcados como aptos, que son los del tramo final sin
-interrupción con error de hasta 0.5 %: **Oro/Plata desde 1968-04** (702 de 801
-meses) y **BTC/Oro desde 2013-01** (todos). Lo que corta en 1968 son dos meses,
-febrero y marzo, que la fuente publica al dólar, con 1.4 % de error. Los meses
-anteriores se publican con su error a la vista y no son evidencia de nada
-(A-R0-17).
+interrupción con error de hasta 0.5 %, menos los que tienen un valor en disputa:
+**Oro/Plata desde 1968-04** (682 de 801 meses) y **BTC/Oro desde 2013-01** (161
+de 165). Lo que corta en 1968 son dos meses, febrero y marzo, que la fuente
+publica al dólar, con 1.4 % de error. Los meses anteriores se publican con su
+error a la vista y no son evidencia de nada (A-R0-17).
+
+**Veinte meses tienen un valor en disputa.** Son los meses en que el Pink Sheet
+y el FMI no coinciden. Se publican con el valor del Pink Sheet, sin corregir.
+En dos, marzo y noviembre de 1985, una tercera fuente le da la razón al FMI; en
+los demás no se sabe cuál tiene razón. Y el control no llega a toda la historia:
+antes de 1980 y después de agosto de 2026 los meses dicen "sin comparar"
+(A-R0-20).
 
 **El oro y la plata tienen dos tramos de precisión.** Hasta 2024-12 vienen sin
 redondear; desde 2025-01, el oro al dólar y la plata a un decimal. El tramo
@@ -410,7 +429,7 @@ TQQQ) van como módulos hermanos de `liquidez_neta.py`, no dentro de él:
 
 ## Supuestos
 
-Treinta y tres decisiones sostienen estos números —catorce de S2 y diecinueve de
+Treinta y cuatro decisiones sostienen estos números —catorce de S2 y veinte de
 la fase R— y ninguna es obvia. Están todas en **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas
 y con estado (dato / estimación / supuesto / no medido).
 
@@ -433,3 +452,4 @@ Y de la fase R, las que conviene leer antes que las demás:
 - **A-R0-16** — el gate de oro y plata es anual, contra el USGS, y valida 2021 a 2024.
 - **A-R0-17** — las métricas sobre un ratio solo usan los meses con error de redondeo de hasta 0.5 %.
 - **A-R0-19** — el oro y la plata se empalman: edición sin redondear del Pink Sheet hasta 2024-12, edición vigente después.
+- **A-R0-20** — el oro y la plata se comparan cada mes con el FMI; el mes que pasa del umbral se publica como valor en disputa y queda fuera de las métricas.

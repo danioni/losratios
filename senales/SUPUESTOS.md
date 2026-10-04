@@ -757,6 +757,7 @@ Dice dos cosas ciertas: que el par existe, y que falta algo para mostrarlo.
 | --- | --- | --- |
 | Pink Sheet, edición vigente | CC BY 4.0 | `data/raw/`, versionado, uno por descarga |
 | Pink Sheet, edición del 3 de enero de 2025 | CC BY 4.0 | `data/raw/`, versionado, una sola copia con nombre fijo (A-R0-19) |
+| FMI, Primary Commodity Prices | Términos del FMI: redistribuir con atribución; uso comercial con permiso | `data/raw/`, versionado, una sola copia bajada a mano (A-R0-20) |
 | Coin Metrics | CC BY-NC 4.0 | `data/raw/`, versionado |
 | Shiller | Sin licencia declarada | `data/privado/`, ignorado por git |
 | FRED `NASDAQCOM` | Permiso previo del dueño | `data/privado/`, ignorado por git |
@@ -783,7 +784,7 @@ eso, y acá se acepta perderlo.
 
 Y hay un costo de tamaño para los que entran: el crudo de Coin Metrics pesa medio
 megabyte y trae la historia completa en cada descarga. La edición congelada del
-Pink Sheet pesa 765 KB, una sola vez.
+Pink Sheet pesa 765 KB y la copia del FMI, 619 KB, una sola vez cada una.
 
 ---
 
@@ -838,11 +839,11 @@ tienen su propio contraste.
 - **El FMI, Primary Commodity Prices.** Existe, es mensual y sin redondear, y
   declara su convención: el oro es el fixing de las 3 PM de Londres y la plata,
   el precio de LBMA. Sus términos permiten reutilizar los datos con atribución.
-  No es el gate por dos razones. Comparte el origen con el Pink Sheet, el fixing
-  de Londres, así que contrasta cómo procesa el dato el Banco Mundial más que el
-  precio. Y sus términos prohíben la descarga masiva automatizada sin permiso,
-  de modo que tampoco podría entrar al pipeline sin transcribirla a mano. La
-  comparación está en `FUENTES.md`, como referencia.
+  No es el gate porque comparte el origen con el Pink Sheet, el fixing de
+  Londres: contrasta cómo procesa el dato el Banco Mundial más que el precio.
+  Para eso sí sirve, y es el control mensual de A-R0-20. Como sus términos
+  prohíben la descarga masiva automatizada sin permiso, entra al pipeline como
+  una copia bajada a mano, no como una descarga.
 - **El ancla mensual de LBMA.** Era la decisión original y no se pudo cumplir:
   LBMA no publica promedios mensuales fuera de su portal con licencia.
 - **Las bandas trimestrales de LBMA.** Siguen como control adicional: un
@@ -926,12 +927,18 @@ con su error a la vista**, y quedan fuera de percentiles, tendencias y
 evidencia. En `ratios.csv` es la columna `apto_metricas`; en `pares.csv`, la
 columna `apto_desde`.
 
+**Un valor en disputa tampoco entra.** Un mes en que el Pink Sheet y el FMI se
+apartan más que el umbral de A-R0-20 queda fuera de las métricas, aunque su
+error por redondeo sea chico. No corta el tramo: es una exclusión puntual y
+declarada, mes por mes, no un hueco de precisión. Los meses de antes y de
+después siguen siendo aptos, y `apto_desde` no cambia.
+
 Al 2026-10-04:
 
-| Par | Apto desde | Meses aptos | Error máximo en el tramo apto | Error máximo |
-| --- | --- | --- | --- | --- |
-| Oro / Plata | **1968-04** | 702 de 801 | 0.31 % (1970-05) | 1.39 % (1968-02) |
-| BTC / Oro | **2013-01** | 165 de 165 | 0.02 % (2025-01) | 0.02 % (2025-01) |
+| Par | Apto desde | Meses del tramo | En disputa (A-R0-20) | Meses aptos | Error máximo en el tramo | Error máximo |
+| --- | --- | --- | --- | --- | --- | --- |
+| Oro / Plata | **1968-04** | 702 | 20 | 682 de 801 | 0.31 % (1970-05) | 1.39 % (1968-02) |
+| BTC / Oro | **2013-01** | 165 | 4 | 161 de 165 | 0.02 % (2025-01) | 0.02 % (2025-01) |
 
 **Lo que corta en 1968 son dos meses.** La edición sin redondear publica el oro
 de febrero y de marzo de 1968 como 36 y 37, sin decimales: al dólar, con 1.4 %
@@ -1089,3 +1096,142 @@ descripción que la vigente.
 **Alternativa.** Usar solo la edición vigente, redondeada, para toda la historia.
 Es como se publicó primero. Con ella Oro/Plata es apto para métricas desde
 2009-02 en lugar de 1968-04.
+
+---
+
+## A-R0-20 · El oro y la plata se comparan cada mes con el FMI; el mes que pasa del umbral queda como valor en disputa
+
+**Estado: supuesto el umbral y la regla; dato lo que el control encuentra.**
+
+**De dónde sale.** Al rehacer la comparación con el FMI con la serie empalmada
+apareció un mes del oro que no cierra: marzo de 1985, con 313.5 en el Pink Sheet
+y 303.94 en el FMI. El gate anual (A-R0-16) no lo ve: cubre 2021 a 2024. Hacía
+falta un control que mirara toda la historia.
+
+**Qué compara.** En cada corrida, el oro y la plata que se publican contra las
+series `PGOLD` y `PSILVER` del FMI, mes a mes, sobre todos los meses que tienen
+en común. Hoy son 560 por metal, de 1980-01 a 2026-08. La diferencia se mide
+sobre el valor del FMI.
+
+**Qué le pasa a un mes que pasa del umbral.** Queda como **valor en disputa**:
+
+- Se publica **sin cambios**, con el valor del Pink Sheet. Si está mal, se
+  reporta; no se corrige en silencio.
+- `precios_mensuales.csv` lo dice junto al valor, con los dos números y la
+  diferencia. Los demás meses dicen "dentro del umbral" o "sin comparar".
+- **No entra a ninguna métrica**, ni él ni los ratios que lo llevan. `ratios.csv`
+  dice qué lado del par está en disputa.
+- **No corta el tramo apto** (A-R0-17). Es una exclusión puntual y declarada.
+- Queda listado en el changelog de la corrida, con los dos valores.
+
+**No detiene la corrida.** No es un gate: no cierra ni deja de cerrar. Y no
+decide cuál de las dos fuentes tiene razón.
+
+### El umbral: ±0.5 % el oro, ±1 % la plata
+
+Es la tolerancia del gate anual (A-R0-16). No es un número nuevo, y esa es la
+razón de usarlo: **cuando se fijó el umbral, la comparación ya estaba hecha.**
+Se conocía el caso de marzo de 1985 y se conocía la distribución de las
+diferencias. Elegir un número en ese momento habría sido elegirlo mirando el
+resultado. La tolerancia del gate estaba escrita desde antes, con su
+justificación, y es la medida que este proyecto ya usa para decir que dos
+cotizaciones de un metal describen el mismo precio.
+
+Lo que daría otro umbral, para que se vea cuánto pesa la elección:
+
+| Umbral | Meses del oro en disputa | Meses de la plata en disputa |
+| --- | --- | --- |
+| 0.25 % | 32 | 143 |
+| 0.5 % | **10** | 59 |
+| 1 % | 2 | **10** |
+| 2 % | 1 | 1 |
+
+En negrita, lo que rige. No se ajusta para que un mes entre o salga.
+
+### Lo que encontró el 2026-10-04
+
+Diferencia mediana de 0.017 % en el oro y de 0.096 % en la plata. Veinte meses
+en disputa, diez por metal:
+
+| Oro | Pink Sheet | FMI | Diferencia | Plata | Pink Sheet | FMI | Diferencia |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1985-03 | 313.5 | 303.94 | 3.145 % | 1980-01 | 38.8756 | 39.2843 | −1.040 % |
+| 1985-11 | 321.5 | 325.24 | −1.150 % | 1985-07 | 5.9997 | 6.0836 | −1.379 % |
+| 1986-01 | 347.48 | 345.38 | 0.608 % | 1985-08 | 6.1511 | 6.2498 | −1.580 % |
+| 1997-09 | 322.82 | 324.4762 | −0.510 % | 1987-04 | 7.3495 | 7.4727 | −1.649 % |
+| 2000-05 | 275.19 | 276.7409 | −0.560 % | 2004-04 | 7.1486 | 7.055 | 1.327 % |
+| 2011-12 | 1639.97 | 1652.3056 | −0.747 % | 2011-04 | 42.6952 | 41.9656 | 1.739 % |
+| 2015-12 | 1075.74 | 1068.2526 | 0.701 % | 2011-05 | 37.3359 | 36.75 | 1.594 % |
+| 2016-12 | 1157.36 | 1151.4028 | 0.517 % | 2020-07 | 20.647 | 20.405 | 1.186 % |
+| 2025-05 | 3309 | 3288.0095 | 0.638 % | 2024-12 | 30.764 | 30.3707 | 1.295 % |
+| 2026-01 | 4753 | 4719.7059 | 0.705 % | 2025-12 | 62.3 | 64.7325 | −3.758 % |
+
+Ningún mes coincide entre los dos metales. Oro/Plata pierde los veinte y queda
+con 682 meses aptos de 801; BTC/Oro pierde los cuatro del oro desde 2013 y queda
+con 161 de 165.
+
+Cinco de los veinte son diciembres: 2011, 2015 y 2016 en el oro, 2024 y 2025 en
+la plata. No se estableció por qué.
+
+### Marzo de 1985
+
+Tiene una tercera lectura. El *Minerals Yearbook 1985* del Bureau of Mines trae
+el promedio mensual de la cotización de Engelhard, que es independiente del
+fixing de Londres: **304.34** para marzo. El FMI queda a −0.13 % de ese valor y
+el Pink Sheet, a +3.0 %.
+
+La misma tabla trae los otros once meses del año. El FMI queda siempre entre
+−0.32 % y −0.01 % de Engelhard. El Pink Sheet queda dentro de ±0.5 % en diez y
+se aparta en dos, que son justo los dos del oro de 1985 que el control marca:
+marzo y noviembre (321.5, contra 325.64 de Engelhard y 325.24 del FMI).
+
+La lectura es que en esos dos meses el valor correcto es el del FMI y que el del
+Pink Sheet está mal. **El valor publicado no se cambia:** marzo sigue siendo
+313.5 y noviembre 321.5, marcados como valor en disputa, y lo que corresponde
+es reportarlos al Banco Mundial (`FUENTES.md`, secciones 4.7 y 10.3). Los otros
+dieciocho no tienen tercera lectura: de esos no se sabe cuál fuente tiene razón.
+
+### Lo que el control no hace
+
+- **No valida el nivel.** El Pink Sheet y el FMI declaran el mismo origen, el
+  mercado de Londres. Coincidir con el FMI no prueba que el precio sea el
+  correcto: prueba que el Banco Mundial no se apartó de él al procesarlo. El
+  nivel lo valida el gate, contra una cotización independiente.
+- **No cubre toda la historia.** El FMI empieza en 1980 y su copia llega hasta
+  agosto de 2026. Los 240 meses anteriores a 1980 y los posteriores a la copia
+  quedan como **"sin comparar"**: ni en disputa ni confirmados. Del tramo apto
+  de Oro/Plata, los 141 meses de 1968-04 a 1979-12 no tienen control.
+- **No corrige.** Un mes en disputa conserva su valor.
+
+### La copia del FMI
+
+Los términos del FMI para sus datos estadísticos permiten redistribuirlos:
+*"You may download, extract, copy, create derivative works, publish, distribute,
+and use Data obtained from IMF Sites"*, con atribución. Y prohíben bajarlos en
+masa con un programa: *"The IMF prohibits the bulk download of information by
+automated technology without explicit permission"*.
+
+Un archivo por corrida no es evidentemente una descarga masiva. Pero decidir eso
+es interpretar la cláusula, y la regla de este proyecto es no depender de una
+interpretación. Por eso:
+
+- El archivo se bajó **una vez**, el 2026-10-04, y está versionado en
+  `data/raw/fmi_pcps_2026-10-04.xlsx`, con su atribución en `ATRIBUCION.md`.
+- El pipeline lo identifica por su SHA-256 y **nunca sale a buscarlo**. Si la
+  copia falta o cambió, la corrida se detiene con un error de fuente y dice de
+  dónde bajarla a mano. No sigue sin el control: el control decide qué meses
+  entran a las métricas.
+- **Actualizarla es un acto manual:** bajar la edición nueva, y cambiar en
+  `configuracion.py` el nombre, la fecha y el hash. Hasta entonces, los meses
+  nuevos se publican como "sin comparar".
+- La descripción de cada serie se verifica contra la que se leyó. Si el FMI la
+  cambia, la corrida se detiene.
+
+**Condición.** Los mismos términos piden permiso para el uso comercial: *"For
+any potential commercial reuse of IMF Data, please email copyright@imf.org to
+request permission."* Como A-R0-2, A-R0-3 y A-R0-4, esto vale **mientras el
+sitio no tenga vínculo comercial**.
+
+**Alternativa.** Pedirle permiso al FMI para bajar el archivo en cada corrida
+(`FUENTES.md`, sección 10.4). Con eso el control alcanzaría siempre al último
+mes que el FMI publique.

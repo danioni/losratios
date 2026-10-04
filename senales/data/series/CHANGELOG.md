@@ -11,6 +11,31 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-04 · A-R0-20 · Supuesto nuevo: el oro y la plata se comparan cada mes
+  con el FMI, y el mes que pasa del umbral queda como valor en disputa.** El
+  umbral es la tolerancia del gate anual, 0.5 % el oro y 1 % la plata. Un valor
+  en disputa se publica sin cambios, con los dos números a la vista, y no entra
+  a ninguna métrica. El control no detiene la corrida. Hoy marca diez meses del
+  oro y diez de la plata, de 560 comparados por metal. **Ningún valor publicado
+  cambia**: `precios_mensuales.csv` gana `oro_contraste_fmi` y
+  `plata_contraste_fmi`; `ratios.csv`, `valor_en_disputa`; `pares.csv`,
+  `meses_en_disputa`. En marzo de 1985, una tercera lectura (Engelhard, 304.34)
+  le da la razón al FMI (303.94) y no al Pink Sheet (313.5), que sigue siendo
+  el valor publicado.
+
+- **2026-10-04 · A-R0-17 · Un mes con un valor en disputa no es apto para
+  métricas, y no corta el tramo.** Oro/Plata sigue apto desde 1968-04, con 682
+  meses en lugar de 702; BTC/Oro, desde 2013-01, con 161 en lugar de 165.
+
+- **2026-10-04 · A-R0-16 · El FMI deja de ser solo una referencia: es el control
+  mensual de A-R0-20.** Sigue sin ser el gate, porque comparte el origen con el
+  Pink Sheet.
+
+- **2026-10-04 · A-R0-15 · Se versiona un cuarto crudo: la copia del FMI.** Sus
+  términos permiten redistribuir los datos con atribución y prohíben la descarga
+  masiva automatizada: 619 KB, una sola copia, bajada a mano. Su atribución
+  queda en `data/raw/ATRIBUCION.md`.
+
 - **2026-10-04 · A-R0-19 · Supuesto nuevo: el oro y la plata se empalman.** Edición
   del Pink Sheet del 3 de enero de 2025, sin redondear, para 1960-01 a 2024-12;
   edición vigente desde 2025-01. **Los valores publicados de 1960-01 a 2024-12
