@@ -262,7 +262,9 @@ en la frecuencia común. Eso se decide en la sección 9.
   un último trade.
 - Unidad y moneda: USD.
 - Inicio real: **2010-07-18** (catálogo: `min_time` 2010-07-18, `community:
-  true`). Primeros valores: 2010-07-23 = 0.0606.
+  true`; primera fila devuelta: 2010-07-18 = 0.08584).
+- Volumen: un solo pedido con `page_size=10000` devolvió la historia completa,
+  5.922 filas del 2010-07-18 al 2026-10-03, sin paginación.
 - Clave / registro: no.
 - Términos: la licencia de los datos community está en docs.coinmetrics.io,
   **PENDIENTE DE LECTURA**. Hasta leerla no se puede afirmar si permite
@@ -289,7 +291,7 @@ en la frecuencia común. Eso se decide en la sección 9.
 
 | Fecha | Bitstamp (cierre vela UTC) | Coin Metrics (fix 00:00 UTC) | blockchain.info (promedio) | CoinGecko (00:00 UTC) |
 | --- | --- | --- | --- | --- |
-| 2026-09-30 | 83562.58 | 83579.67 | 83629.12 | 83640.10 |
+| 2026-09-30 | 83562.58 | 83579.67 | 83629.12 | 83640.10 (Coinbase spot con fecha: 83638.415) |
 | 2020-03-20 | 6210.14 | 6174.15 | 6195.2 | sin acceso (ver 7) |
 
 Las cuatro describen instantes o agregados distintos del mismo día. Para el
@@ -303,7 +305,8 @@ convención; se propone en la sección 9.
 | Candidata | Estado | Lo verificado |
 | --- | --- | --- |
 | FRED `CBBTCUSD` (Coinbase) | PENDIENTE DE LECTURA | HTTP 200 con 83.836 bytes a las 10:43 UTC; contenido no guardado. Pendiente: convención (hora de cierre), inicio, notas. |
-| Coinbase Exchange, velas `BTC-USD` | PENDIENTE DE LECTURA | Host api.exchange.coinbase.com bloqueado. `api.coinbase.com/v2/prices/BTC-USD/spot` responde, pero solo el precio actual. |
+| Coinbase Exchange, velas `BTC-USD` | PENDIENTE DE LECTURA | Host api.exchange.coinbase.com bloqueado. |
+| Coinbase, `api.coinbase.com/v2/prices/BTC-USD/spot?date=<fecha>` | **no sirve para historia** | Responde para fechas recientes (2026-09-30 = 83638.415) y devuelve `rate not found` para 2020-03-20, 2015-01-02 y 2014-12-01. Sirve como contraste puntual reciente, no como serie. |
 | Kraken, OHLC `XBTUSD` | PENDIENTE DE LECTURA | Host bloqueado. |
 | CoinGecko | **no sirve para historia** | Ver sección 7. |
 
