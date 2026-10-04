@@ -412,3 +412,329 @@ cabe en ±5: hoy la verificación por componente **domina** a la del total. La d
 total queda como respaldo de dos cosas que sí pueden cambiar: que falte la fecha
 ancla, y que alguien afloje la tolerancia por componente o toque la fórmula de
 S2.1 sin notar que el total dejó de estar acotado.
+
+---
+
+## Fase R · Ratios: los supuestos A-R0-\*
+
+Se fijaron el 2026-10-04, al cerrar el paso 0 de la fase R y **antes de
+escribir código**. La evidencia de cada cifra —qué se leyó, de dónde y cuándo—
+está en `FUENTES.md`; acá va la decisión y lo que la haría cambiar.
+
+Tres de estos supuestos son **condicionales**: A-R0-2, A-R0-3 y A-R0-4 valen
+**mientras el sitio no tenga vínculo comercial**. El día que lo tenga, dejan de
+valer los tres a la vez y hay que volver a `FUENTES.md` antes de publicar nada.
+
+---
+
+## A-R0-1 · Las cinco series son promedios mensuales de cierres diarios, y solo de meses completos
+
+**Estado: supuesto.** Fijado por instrucción del 2026-10-04.
+
+S&P 500, Nasdaq Composite, oro, plata y BTC se llevan a una sola convención: el
+promedio de los cierres diarios de cada mes calendario. Así los dos lados de un
+ratio describen el mismo mes. Mezclar un promedio con un cierre de fin de mes es
+el error de A-S2-13 con otro nombre.
+
+No era la única convención posible. El sitio usa hoy el cierre de fin de mes
+para índices y metales, y el borrador de `FUENTES.md` proponía el cierre semanal
+del viernes. Decidió la licencia: las únicas fuentes abiertas de oro y plata son
+promedios mensuales.
+
+**Solo entran meses completos.** Un mes cuenta como completo cuando terminó
+antes de la fecha que la propia fuente da para su última actualización, o antes
+de la fecha de descarga si la fuente no da ninguna. El mes en curso no se
+publica, y el último mes de un par es el último mes completo en sus dos fuentes.
+
+---
+
+## A-R0-2 · El S&P 500 sale de Shiller, que no declara licencia
+
+**Estado: supuesto, condicional.** Válido mientras el sitio no tenga vínculo
+comercial.
+
+La serie es la columna `P` de `ie_data.xls`, de Robert Shiller. Ya viene como
+promedio mensual de cierres diarios, y eso está verificado: en 620 meses
+comunes, el promedio de los cierres diarios del índice la reproduce con una
+diferencia mediana de 0.0003 % y máxima de 0.30 %.
+
+Ni la página ni el archivo tienen términos de uso: solo un descargo de
+responsabilidad. No hay cláusula que permita republicar ni que lo prohíba. El
+índice subyacente es de S&P Dow Jones Indices, que sí exige permiso escrito para
+reproducirlo. Por eso esta serie **se calcula y no se publica** (A-R0-14) hasta
+tener ese permiso.
+
+**Alternativa.** FRED `SP500`: cierres diarios, pero solo 10 años de historia y
+con la cláusula de S&P a la vista. Queda como fuente de contraste (A-R0-12).
+
+---
+
+## A-R0-3 · El Nasdaq Composite sale de FRED, bajo la lectura de uso educativo no comercial
+
+**Estado: supuesto, condicional.** Válido mientras el sitio no tenga vínculo
+comercial.
+
+La serie es `NASDAQCOM`: cierres diarios desde el 5 de febrero de 1971, que el
+pipeline promedia por mes. El primer mes completo es marzo de 1971.
+
+FRED la etiqueta "Copyrighted: Pre-Approval Required", y sus términos dicen dos
+cosas. La sección III dice que, sin permiso escrito del dueño, estas series solo
+se pueden usar para uso educativo no comercial o personal. El FAQ y los términos
+de la API dicen que para todo uso que no sea el personal hay que contactar al
+dueño. Este supuesto se apoya en la primera frase. La segunda es la razón por la
+que la serie **se calcula y no se publica** (A-R0-14) hasta tener el permiso de
+Nasdaq.
+
+---
+
+## A-R0-4 · BTC sale de Coin Metrics community, bajo CC BY-NC 4.0
+
+**Estado: supuesto, condicional.** Válido mientras el sitio no tenga vínculo
+comercial.
+
+La serie es la métrica `PriceUSD` de la API community: un fixing diario a las
+00:00 UTC, desde el 18 de julio de 2010, sin días faltantes. La documentación
+pone los datos community bajo Creative Commons y enlaza a la licencia
+BY-NC 4.0: se puede publicar con atribución mientras el uso sea no comercial.
+
+Es la única de las tres condicionales que **se publica** (A-R0-14), porque su
+licencia permite publicar sin interpretarla. La condición no es una formalidad:
+un enlace a un servicio de asesoría convierte el uso en comercial y deja a los
+pares con BTC sin fuente.
+
+---
+
+## A-R0-5 · El mes de BTC promedia todos los días calendario
+
+**Estado: supuesto.**
+
+BTC opera todos los días; los índices, solo los hábiles de Nueva York. El mes de
+BTC promedia sus 28 a 31 fixings, en UTC. El mes del S&P 500 promedia 19 a 23
+cierres. No es exactamente el mismo conjunto de días a los dos lados del ratio.
+
+Se midió cuánto pesa. Sobre `PriceUSD`, de 2011-01 a 2026-09, el promedio de
+todos los días y el de lunes a viernes difieren en una mediana de 0.30 %, con
+percentil 95 de 1.43 % y máximo de 3.30 % (abril de 2011).
+
+**Alternativa.** Promediar solo de lunes a viernes. Se parece más al calendario
+de los índices, pero tira a la basura dos de cada siete observaciones de un
+mercado que sí operó, y sigue sin coincidir con los feriados de Nueva York ni
+con los de Londres.
+
+---
+
+## A-R0-6 · Los cierres diarios no son simultáneos
+
+**Estado: supuesto.**
+
+Dentro de un mismo día, cada serie cierra a otra hora: los índices a las 16:00
+de Nueva York; el oro a las 15:00 de Londres hasta mayo de 2025 y sin hora
+declarada después (A-R0-7); la plata en un fixing de Londres cuya hora no se
+pudo establecer (A-R0-8); BTC a las 00:00 UTC. Entre el primero y el último hay
+varias horas.
+
+Con promedios mensuales ese desfase pesa mucho menos que con cierres, porque el
+ruido de unas horas se promedia entre veinte o treinta días. No desaparece, y no
+se midió.
+
+---
+
+## A-R0-7 · El oro del Pink Sheet cambia de definición en junio de 2025
+
+**Estado: dato el cambio; supuesto la continuidad.**
+
+La descripción que publica el Banco Mundial dice que el oro es un promedio de
+precios diarios en los dos tramos, pero que el precio diario cambia: hasta mayo
+de 2025 es el fixing de la tarde de Londres, y desde junio de 2025 es "spot",
+sin hora declarada.
+
+La serie se publica como una sola, **con el quiebre declarado junto a ella**. Que
+los dos tramos sean comparables es un supuesto: no se pudo medir el salto, porque
+los precios diarios de la subasta de Londres son de IBA y exigen licencia.
+
+---
+
+## A-R0-8 · La plata del Pink Sheet es un promedio mensual por inferencia
+
+**Estado: estimación.** El sitio lo muestra junto a la serie.
+
+La descripción de la plata no dice que sea un promedio de precios diarios, como
+sí lo dice la del oro. Y habla de un fixing de la tarde de Londres, cuando la
+subasta de plata de LBMA es a las 12:00.
+
+Que la serie es un promedio mensual se infiere de un contraste: en 23 meses
+(2024-11 a 2026-09) queda a una mediana de 0.18 % del promedio mensual de los
+cierres del futuro de plata, y a 3.79 % del cierre de fin de mes. El contraste
+es fuerte pero indirecto —un futuro no es el spot— y por eso el estado es
+estimación y no dato.
+
+Pasa a **dato** cuando el Banco Mundial confirme la convención por escrito
+(`FUENTES.md`, sección 10.3).
+
+---
+
+## A-R0-9 · El Pink Sheet viene redondeado
+
+**Estado: dato.**
+
+El archivo trae el oro redondeado al dólar entero y la plata a un decimal, en
+las 801 filas. El redondeo pesa ±0.5 USD en el oro y ±0.05 USD en la plata.
+
+Hoy es despreciable: 0.01 % con el oro a 4319 y 0.08 % con la plata a 64.6. Hacia
+atrás no lo es. Con la plata a 0.9 USD, en 1960, el redondeo pesa 5.6 %; con la
+plata por debajo de 5 USD pesa más de 1 %, y eso pasa en 304 de los 801 meses, el
+último en julio de 2003. El ratio Oro/Plata hereda ese error entero.
+
+No se corrige ni se suaviza. Se declara junto al par.
+
+---
+
+## A-R0-10 · Los pares con BTC se publican desde enero de 2013
+
+**Estado: supuesto.**
+
+Coin Metrics tiene precio desde julio de 2010, y Bitstamp desde agosto de 2011.
+Hay datos antes de 2013; lo que no hay es acuerdo entre las dos fuentes. El
+promedio mensual difiere entre 4 % y 9 % en los cuatro últimos meses de 2011, y
+hasta 2.3 % en 2012. Desde enero de 2013 nunca difiere más de 1.31 %, en 165
+meses.
+
+Publicar desde 2013-01 es elegir el primer mes a partir del cual una segunda
+fuente independiente respalda el número. La fecha es una convención: con una
+tolerancia más laxa empezaría antes.
+
+---
+
+## A-R0-11 · La última fila de Shiller no es un mes completo, y el S&P 500 llega con rezago
+
+**Estado: dato la fila y el rezago; supuesto la regla.**
+
+El archivo descargado el 2026-10-04 se modificó por última vez el 2 de
+septiembre de 2026. Su última fila, septiembre de 2026, vale 7631.47, y el propio
+archivo dice que es el cierre del 1 de septiembre. El promedio de los 21 cierres
+de ese mes es 7669.41.
+
+Por A-R0-1, esa fila se excluye: septiembre no había terminado cuando el archivo
+se actualizó. La regla no depende de leer la nota del archivo, que es texto
+libre y puede cambiar de redacción.
+
+**El rezago.** La fuente no publica un calendario de actualización. Al 2026-10-04
+el último mes completo del S&P 500 es agosto de 2026, un mes por detrás del oro,
+la plata y BTC. Los tres pares con S&P 500 llegan hasta donde llegue Shiller.
+
+---
+
+## A-R0-12 · Las fuentes de clase (c) solo sirven para contrastar
+
+**Estado: supuesto.**
+
+Una fuente con licencia paga, permiso previo o uso personal no alimenta ninguna
+serie. Se usa para contrastar la serie que sí se publica o se calcula, y de cada
+contraste se registra **la fecha, el valor y la diferencia. El archivo no se
+guarda ni se publica.**
+
+Los contrastes y sus tolerancias, por mes:
+
+| Serie | Contra qué | Tolerancia | Lo observado al fijarla |
+| --- | --- | --- | --- |
+| S&P 500 | Promedio de los cierres diarios de FRED `SP500` | ±0.5 % | Máxima de 0.30 % en 620 meses |
+| Nasdaq Composite | Promedio de los cierres de la API de nasdaq.com | ±0.1 % | Máxima de 0.027 % en 119 meses |
+| BTC | Promedio de los cierres diarios de Bitstamp | ±2 % | Máxima de 1.31 % en 165 meses, desde 2013-01 |
+| Oro, plata | Un promedio mensual de LBMA, transcrito a mano | ±0.5 % y ±1 % | Sin ancla: A-R0-16 |
+
+Las tolerancias son convenciones. Están puestas por encima de lo observado y por
+debajo de lo que produce un error de convención: un cierre de fin de mes se
+aparta del promedio de su mes una mediana de 1.36 % en el S&P 500, 1.81 % en el
+Nasdaq y 6.25 % en BTC. Un mes suelto puede caer dentro de la tolerancia por
+casualidad (pasa en el 19 %, el 3 % y el 19 % de los meses), y por eso el
+contraste se hace sobre todos los meses comunes y no sobre uno.
+
+Si un contraste no cierra, la corrida se detiene. **No se ajusta la tolerancia
+para que cuadre**: se revisa la fuente, la convención y el mes, en ese orden.
+
+---
+
+## A-R0-13 · Los ratios con índices son de precio, no de retorno total
+
+**Estado: dato.**
+
+El S&P 500 de Shiller y el Nasdaq Composite de FRED son índices de precio: no
+incluyen dividendos. Un ratio contra oro o contra BTC, que no pagan nada, deja
+afuera una parte del retorno de las acciones, y esa parte se acumula con los
+años. El par lo dice junto a su título.
+
+Shiller trae además una columna de retorno total. No se usa.
+
+---
+
+## A-R0-14 · Solo se publica lo que la licencia permite publicar sin interpretarla
+
+**Estado: supuesto.**
+
+Se publican las series con licencia CC BY, de dominio público, o CC BY-NC dado
+el uso no comercial del sitio. Hoy son tres: oro y plata (CC BY 4.0) y BTC
+(CC BY-NC 4.0).
+
+El S&P 500 y el Nasdaq Composite **se calculan en el pipeline y no se publican**.
+Los pares que los llevan —Oro/S&P 500, BTC/S&P 500 y Nasdaq/S&P 500— se publican
+con el texto **"NO MEDIDO: pendiente de permiso del dueño del índice"**, hasta
+tener el permiso escrito de S&P Dow Jones Indices y de Nasdaq.
+
+La alternativa era publicarlos apoyándose en A-R0-2 y A-R0-3. Esos supuestos
+alcanzan para calcular, no para publicar: uno descansa en una fuente que no dice
+nada sobre su licencia, y el otro en la más favorable de dos frases que no
+coinciden.
+
+Publicar "NO MEDIDO" donde hay un número calculado es incómodo y es a propósito.
+Dice dos cosas ciertas: que el par existe, y que no hay permiso para mostrarlo.
+
+---
+
+## A-R0-15 · Los crudos de fuentes no abiertas quedan fuera del repositorio
+
+**Estado: supuesto.** Excepción a A-S2-10 para las fuentes de la fase R que no
+son de clase (a).
+
+El crudo del Pink Sheet se versiona en `data/raw/`, como los de S2. Los crudos de
+Shiller, de FRED `NASDAQCOM` y de Coin Metrics van a un directorio ignorado por
+git: el repositorio no los redistribuye.
+
+Para que la corrida siga siendo reproducible sin el archivo, por cada descarga se
+publica la **URL, la fecha y el SHA-256**, y el código de transformación está en
+el repositorio. Quien baje el mismo archivo puede comprobar el hash y rehacer la
+serie.
+
+El costo es real: si la fuente revisa o retira el archivo, la corrida vieja ya no
+se puede reconstruir desde el repositorio, solo verificar que el archivo cambió.
+A-S2-10 existe para evitar eso, y acá se acepta perderlo.
+
+Coin Metrics es CC BY-NC y su crudo se podría versionar con atribución. Queda
+afuera igual: la regla separa fuentes abiertas de no abiertas, y una licencia no
+comercial no es abierta.
+
+---
+
+## A-R0-16 · El gate de oro y plata no tiene ancla todavía
+
+**Estado: no medido.**
+
+La decisión es validar el Pink Sheet como se valida S2.1 contra el H.4.1: un
+valor de referencia de LBMA para un mes, transcrito a mano, con su cita, y una
+tolerancia (±0.5 % el oro, ±1 % la plata; A-R0-12).
+
+Ese valor no está transcrito, y no se pone uno para llenar el campo. LBMA no
+publica promedios mensuales en lo que se pudo leer sin iniciar sesión: la tabla
+de precios exige cuenta y licencia de IBA, la página pública muestra solo un
+gráfico, y el informe trimestral da precios de días sueltos y los extremos del
+trimestre.
+
+Lo que sí se pudo verificar con cifras públicas de LBMA es más débil que un
+gate: los tres promedios mensuales del Pink Sheet del segundo trimestre de 2026
+caen dentro del mínimo y el máximo que el informe de LBMA da para ese trimestre,
+en el oro y en la plata. Un promedio fuera de los extremos sería un error
+seguro. Uno adentro no prueba que el promedio esté bien.
+
+Mientras este supuesto siga en **no medido**, el oro y la plata se publican sin
+gate de nivel, y eso se dice junto a la serie. Pasa a **dato** cuando alguien con
+acceso a los precios diarios de LBMA transcriba el promedio de un mes, con la
+cita, y el contraste cierre dentro de la tolerancia que ya está escrita.
