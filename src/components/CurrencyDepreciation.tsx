@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { getCurrencyDepreciationData, type CurrencyDepreciationRow } from "@/lib/currency";
 import { METRICAS_VERIFICADAS, NOTA_VALORES_REFERENCIA } from "@/lib/data";
+
+// Texto que reemplaza a la tabla mientras METRICAS_VERIFICADAS sea false.
+export const NO_MEDIDO_DEPRECIACION =
+  "NO MEDIDO: depreciación cambiaria por moneda. Se publicará con tipos de cambio observados, en ventanas comunes para todas las monedas.";
 import { useCurrencyBase } from "./CurrencyContext";
 
 type SortKey = "annualGlobalLoss" | "annualDepVsUSD" | "code";
@@ -112,6 +116,32 @@ export default function CurrencyDepreciation() {
   };
 
   let globalIdx = 0;
+
+  // Tabla no defendible mientras no haya tipos de cambio observados en ventanas
+  // comunes: mezcla años de inicio distintos por moneda, promedia 55 años
+  // dominados por episodios de los 70-80, la columna "Global" aplica un 7 %
+  // supuesto y mide depreciación cambiaria, no poder adquisitivo. El cálculo
+  // (getCurrencyDepreciationData) se conserva y se reactiva con el flag.
+  if (!METRICAS_VERIFICADAS) {
+    return (
+      <div className="space-y-6 fade-in-up fade-in-up-4">
+        <div className="max-w-2xl">
+          <h3
+            className="font-serif text-lg sm:text-xl tracking-wide mb-3"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Poder adquisitivo global
+          </h3>
+        </div>
+        <div
+          className="card-glass card-accent-left rounded-xl p-4 sm:p-5 text-[11px] sm:text-xs leading-relaxed font-medium"
+          style={{ color: "var(--accent-amber)" }}
+        >
+          {NO_MEDIDO_DEPRECIACION}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 fade-in-up fade-in-up-4">
