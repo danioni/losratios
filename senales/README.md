@@ -4,7 +4,8 @@ Marco de señales para rebalancear un portafolio entre TQQQ, BTC y
 stablecoins/USD. Este repositorio construye y actualiza las series que el marco
 consume; no toma decisiones de portafolio ni las sugiere.
 
-Hoy hay una capa implementada: **S2.x, contexto de liquidez**.
+Hoy hay dos capas implementadas: **S2.x, contexto de liquidez**, y **la fase R,
+precios mensuales y ratios**, que está [más abajo](#fase-r--precios-mensuales-y-ratios).
 
 ---
 
@@ -206,6 +207,149 @@ Nada se interpola.
 
 ---
 
+## Fase R · Precios mensuales y ratios
+
+Cinco series —oro, plata, BTC, S&P 500 y Nasdaq Composite— llevadas a una sola
+convención, y los cinco pares del sitio: Oro/Plata, BTC/Oro, Oro/S&P 500,
+BTC/S&P 500 y Nasdaq/S&P 500.
+
+De dónde sale cada serie, qué dice su licencia y qué se descartó está en
+**[FUENTES.md](FUENTES.md)**. Las decisiones están en `SUPUESTOS.md`, de A-R0-1 a
+A-R0-16.
+
+### La convención
+
+**Promedio mensual de cierres diarios, y solo de meses completos** (A-R0-1). Los
+dos lados de un ratio describen el mismo mes. Un promedio dividido por un cierre
+de fin de mes es el error de A-S2-13 con otro nombre.
+
+| Serie | Fuente | Qué cierre diario | Quién promedia |
+| --- | --- | --- | --- |
+| Oro | Banco Mundial, Pink Sheet | Fixing de la tarde de Londres hasta 2025-05; "spot" desde 2025-06 (A-R0-7) | El Banco Mundial |
+| Plata | Banco Mundial, Pink Sheet | No se pudo establecer: la serie es una **estimación** (A-R0-8) | El Banco Mundial |
+| BTC | Coin Metrics community, `PriceUSD` | Fixing de las 00:00 UTC, todos los días calendario (A-R0-5) | Este script |
+| S&P 500 | Shiller, `ie_data.xls` | Cierre de las 16:00 de Nueva York | Shiller |
+| Nasdaq Composite | FRED `NASDAQCOM` | Cierre de las 16:00 de Nueva York | Este script |
+
+Un mes entra cuando está completo. En una fuente diaria, cuando la serie ya tiene
+una observación posterior a su último día. En una que ya viene mensual, cuando el
+mes terminó antes de la fecha en que la fuente dice haberse actualizado; si no
+declara esa fecha, la última fila se descarta.
+
+### Qué se publica y qué no
+
+Una serie se publica si pasa dos filtros (A-R0-14).
+
+**La licencia tiene que permitir publicar sin interpretarla.** La pasan el oro y
+la plata (CC BY 4.0) y BTC (CC BY-NC 4.0, mientras el sitio no tenga vínculo
+comercial).
+
+**Y su validación externa tiene que haber cerrado.** Ninguna serie se publica
+sin un caso de validación contra una segunda fuente. Si el gate de un metal no
+cierra, el metal y los pares que lo llevan se publican como **"NO MEDIDO: sin
+validación externa"** y la corrida sigue.
+
+El S&P 500 y el Nasdaq Composite **se calculan y no se publican**. Sus tres pares
+aparecen en `pares.csv` con el estado **"NO MEDIDO: pendiente de permiso del
+dueño del índice"**, hasta tener el permiso escrito de S&P Dow Jones Indices y de
+Nasdaq (`FUENTES.md`, sección 10). El par existe y tiene historia; lo que falta
+es el permiso, no el cálculo.
+
+### Cómo correr
+
+```bash
+pip install -r requirements.txt
+python -m senales.ratios
+```
+
+Requiere salida a `worldbank.org`, `shillerdata.com`, `fred.stlouisfed.org`,
+`coinmetrics.io`, `nasdaq.com` y `bitstamp.net`. Es idempotente: la segunda
+corrida del día reutiliza las descargas y deja las series idénticas byte a byte.
+
+Códigos de salida, los mismos que S2: `0` todo bien · `1` problema con una
+fuente · `2` un contraste no cerró.
+
+### Salidas
+
+| Archivo | Qué contiene |
+| --- | --- |
+| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). |
+| `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, estado`. |
+| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes. Acá es donde un par sin permiso dice NO MEDIDO. |
+| `data/series/series.csv` | Las cinco series: fuente, licencia, **atribución**, estado y con qué se valida cada una. Sin valores. |
+| `data/series/descargas_ratios.csv` | El manifiesto: de cada descarga, la URL, la fecha, los bytes y el SHA-256. |
+| `data/raw/pink_sheet_<fecha>.xlsx`, `data/raw/coin_metrics_btc_<fecha>.json` | Los crudos cuya licencia permite redistribuirlos (CC BY y CC BY-NC). |
+| `data/raw/ATRIBUCION.md` | Atribución y licencia de esos crudos. |
+| `data/privado/` | **Fuera del repositorio.** Los crudos de Shiller y de FRED `NASDAQCOM`, y `ratios_internos.csv`, con todo lo que se calcula, se publique o no. |
+
+**Un crudo viaja con el repositorio solo si su licencia permite redistribuirlo**
+(A-R0-15). De los otros viaja el manifiesto y el código: quien baje el mismo
+archivo puede comprobar el hash y rehacer la serie. Si el crudo que hay en disco
+no coincide con el hash publicado, la corrida se detiene.
+
+### Cómo se valida
+
+Cada serie se contrasta contra una segunda fuente. BTC y los índices, mes a mes,
+contra una fuente llevada a la misma convención: **cada mes tiene que cerrar**,
+no el promedio de los meses. El oro y la plata, año a año: **cada año tiene que
+cerrar**.
+
+| Serie | Contra qué | Tolerancia |
+| --- | --- | --- |
+| S&P 500 | Promedio de los cierres diarios de FRED `SP500` | ±0.5 % |
+| Nasdaq Composite | Promedio de los cierres de la API de nasdaq.com, últimos 10 años | ±0.1 % |
+| BTC | Promedio de los cierres diarios de Bitstamp, desde 2013-01 | ±2 % |
+| Oro | Promedio de los doce meses contra el precio anual del USGS, 2021 a 2024 | ±0.5 % |
+| Plata | Promedio de los doce meses contra el precio anual del USGS, 2021 a 2024 | ±1 % |
+
+Las fuentes de contraste mensual tienen licencia cerrada: **se leen, se comparan
+y no se guardan**. De cada contraste queda en el changelog la cantidad de meses,
+la diferencia mediana y, del mes que más se aparta, la fecha y la diferencia.
+**Del S&P 500 y del Nasdaq no queda ningún nivel del índice** (A-R0-12).
+
+Si el contraste de BTC o de un índice no cierra, la corrida se detiene y no
+escribe ninguna serie. **No se ajusta la tolerancia para que cuadre.** Se revisa,
+en este orden: la fuente, la convención y el mes.
+
+**El gate de oro y plata** (A-R0-16) es anual porque no hay una segunda fuente
+mensual abierta. El USGS publica, en sus *Mineral Commodity Summaries*, el
+precio promedio de cada año; es de dominio público y sale de otra cotización,
+la de Engelhard, no del fixing de Londres. Las ocho cifras, 2021 a 2024, están
+transcritas a mano en `configuracion.py` con su cita, como el ancla del H.4.1.
+Las tolerancias se fijaron antes de calcular el gate y su justificación está en
+A-R0-16. Cerró el 2026-10-04: cuatro años de cuatro en los dos metales, con una
+diferencia máxima de 0.116 % en el oro y de 0.559 % en la plata.
+
+Hay dos controles más sobre los metales. Los promedios del segundo trimestre de
+2026 tienen que caer entre el mínimo y el máximo que LBMA publicó para ese
+trimestre. Y la corrida se detiene si el Banco Mundial cambia la descripción
+del oro o de la plata: ya cambió una vez, en junio de 2025.
+
+### Lo que estas series no dicen
+
+**Un ratio de precio no es un ratio de retorno.** Los índices no incluyen
+dividendos (A-R0-13).
+
+**El oro no es una sola serie.** Cambia de definición en junio de 2025, y que los
+dos tramos sean comparables es un supuesto (A-R0-7).
+
+**El Pink Sheet viene redondeado**, el oro al dólar y la plata a un decimal. Con
+la plata por debajo de 5 USD, el ratio Oro/Plata carga más de 1 % de error de
+redondeo; pasa en 304 de los 801 meses, el último en julio de 2003 (A-R0-9).
+
+**El gate de oro y plata valida cuatro años, no toda la historia.** Dice que
+entre 2021 y 2024 el nivel anual del Pink Sheet es el de una cotización
+independiente. No dice nada de 1960, ni de los meses posteriores al quiebre del
+oro de junio de 2025 (A-R0-16).
+
+**El S&P 500 llega tarde.** Shiller no publica un calendario; hoy va un mes por
+detrás de las otras series, y sus pares llegan hasta donde llegue él (A-R0-11).
+
+**Las licencias de tres fuentes son condicionales.** Valen mientras el sitio no
+tenga vínculo comercial (A-R0-2, A-R0-3, A-R0-4).
+
+---
+
 ## Estructura
 
 ```
@@ -216,10 +360,13 @@ senales/
 │   ├── nucleo.py           Utilidades compartidas entre señales
 │   ├── bitacora.py         Changelog y detección de revisiones
 │   ├── grafico.py          El PNG de dos paneles
-│   └── liquidez_neta.py    S2.x — punto de entrada
+│   ├── liquidez_neta.py    S2.x — punto de entrada
+│   ├── fuentes_precios.py  Fase R — descarga, manifiesto y lectura de cada fuente
+│   └── ratios.py           Fase R — punto de entrada
 ├── tests/
-├── data/raw/               Descargas crudas, versionadas por fecha
-├── data/series/            Series publicadas y su changelog
+├── data/raw/               Descargas crudas que se pueden redistribuir, versionadas por fecha
+├── data/series/            Series publicadas, manifiesto de descargas y changelog
+├── data/privado/           Crudos no abiertos y series que no se publican (ignorado por git)
 └── reportes/               Gráficos
 ```
 
@@ -241,11 +388,11 @@ TQQQ) van como módulos hermanos de `liquidez_neta.py`, no dentro de él:
 
 ## Supuestos
 
-Catorce decisiones sostienen estos números, y ninguna es obvia. Están todas en
-**[SUPUESTOS.md](SUPUESTOS.md)**, numeradas y con estado (dato / estimación /
-supuesto / no medido).
+Treinta decisiones sostienen estos números —catorce de S2 y dieciséis de la fase
+R— y ninguna es obvia. Están todas en **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas
+y con estado (dato / estimación / supuesto / no medido).
 
-Las tres que más cambian el resultado:
+Las tres de S2 que más cambian el resultado:
 
 - **A-S2-1** — solo se resta el ON RRP doméstico; el repo pool extranjero queda fuera.
 - **A-S2-4** — el TGA se toma como nivel de miércoles (`WDTGAL`), la misma convención que `WALCL` y que el H.4.1.
@@ -256,3 +403,9 @@ Y dos que conviene leer antes de confiar en un número publicado:
 - **A-S2-13** — el ancla del H.4.1 estuvo mal transcrita; la reverificación con el ancla corregida cerró el 2026-10-03.
 - **A-S2-9** — las unidades no se pueden verificar contra los metadatos de FRED; la causa está identificada y la solución, pendiente.
 - **A-S2-14** — el gate verifica cada componente contra el release, no solo el total.
+
+Y de la fase R, las tres que conviene leer antes que las demás:
+
+- **A-R0-14** — solo se publica lo que la licencia permite y una segunda fuente valida; los pares con índices quedan como NO MEDIDO.
+- **A-R0-1** — toda serie es un promedio mensual de cierres diarios, y solo de meses completos.
+- **A-R0-16** — el gate de oro y plata es anual, contra el USGS, y valida 2021 a 2024.

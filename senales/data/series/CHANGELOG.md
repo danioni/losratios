@@ -11,6 +11,62 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-04 · A-R0-16 · El gate de oro y plata pasa de un ancla mensual de
+  LBMA, que no se pudo transcribir, a un gate anual contra el USGS; de no medido a
+  dato.** El promedio de los doce meses del Pink Sheet contra el precio promedio
+  anual de los *Mineral Commodity Summaries* de febrero de 2026, para 2021 a 2024.
+  Las tolerancias (±0.5 % el oro, ±1 % la plata) quedaron justificadas por escrito
+  antes de calcularlo. Cerró en cuatro años de cuatro: diferencia máxima de
+  0.116 % en el oro y de 0.559 % en la plata, las ocho con el mismo signo.
+
+- **2026-10-04 · A-R0-15 · El crudo de Coin Metrics pasa a versionarse.** La regla
+  deja de ser "solo las fuentes abiertas" y pasa a ser "las que tienen una
+  licencia que permite redistribuir": CC BY y CC BY-NC. La atribución y la
+  licencia quedan en `data/raw/ATRIBUCION.md`. Los crudos de Shiller y de FRED
+  `NASDAQCOM` siguen fuera del repositorio.
+
+- **2026-10-04 · A-R0-14 · Para publicar hace falta, además de la licencia, que la
+  validación externa haya cerrado.** Una serie cuyo gate no cierra se calcula y se
+  publica como "NO MEDIDO: sin validación externa", igual que sus pares. Antes el
+  oro y la plata se publicaban sin gate de nivel.
+
+- **2026-10-04 · A-R0-12 · Del S&P 500 y del Nasdaq no queda escrito ningún nivel
+  del índice.** De cada contraste se registra la cantidad de meses, la diferencia
+  mediana y, del peor mes, la fecha y la diferencia; los dos valores de ese mes
+  solo para BTC. Se aclara además que la diferencia se mide sobre el valor de
+  contraste y que el contraste del Nasdaq usa los últimos diez años.
+
+- **2026-10-04 · A-R0-11 · La fecha contra la que se recorta Shiller es la cabecera
+  `Last-Modified` de la descarga, guardada en el manifiesto.** Si no se conoce, la
+  última fila se descarta siempre.
+
+- **2026-10-04 · A-R0-8 · Segunda evidencia de que la plata del Pink Sheet es un
+  promedio mensual: coincide con la serie de LBMA del FMI.** Mediana de 0.35 % en
+  560 meses. Sigue siendo estimación: el Banco Mundial no lo escribe. Desde junio
+  de 2025 la diferencia mediana sube de 0.21 % a 0.63 %, sin cambio declarado.
+
+- **2026-10-04 · A-R0-1 · La regla de mes completo se separa por tipo de fuente.**
+  En una fuente diaria, un mes entra cuando la serie ya tiene una observación
+  posterior a su último día; en BTC, además, tiene que traer todos sus días; en
+  una fuente mensual, cuando terminó antes de la fecha en que la fuente dice
+  haberse actualizado. Antes decía, para todas, "antes de la fecha de
+  actualización o de descarga", y eso habría dejado entrar la última fila de
+  Shiller, que es el cierre de un solo día.
+
+- **2026-10-04 · A-R0-1 a A-R0-16 · Primera publicación de los precios mensuales
+  y los ratios (fase R).** Se publican oro y plata (1960-01 a 2026-09, 801 meses)
+  y BTC (2013-01 a 2026-09, 165 meses), como promedio mensual de cierres
+  diarios y solo de meses completos (A-R0-1), y dos pares: Oro/Plata, con
+  estado de estimación (A-R0-8), y BTC/Oro. El S&P 500 y el Nasdaq Composite se
+  calculan y no se publican; sus tres pares figuran como "NO MEDIDO: pendiente
+  de permiso del dueño del índice" (A-R0-14). Los tres contrastes mensuales
+  cerraron: S&P 500 contra FRED, máxima de 0.232 % sobre ±0.5 %; Nasdaq contra la
+  API de nasdaq.com, 0.027 % sobre ±0.1 %; BTC contra Bitstamp, 1.332 % sobre ±2 %
+  (A-R0-12). El gate anual de oro y plata contra el USGS cerró (A-R0-16). El oro
+  cambia de definición en junio de 2025 (A-R0-7). Los crudos que no se pueden
+  redistribuir quedan fuera del repositorio, con su URL, fecha y SHA-256 en
+  `descargas_ratios.csv` (A-R0-15).
+
 - **2026-10-03 · A-S2-13 · El gate cerró en corridas reales con el ancla
   corregida; el supuesto pasa de no medido a dato.** Dos corridas, ambas con
   código de salida 0: la reproducción de la corrida del 2026-09-22 desde sus

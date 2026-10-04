@@ -3,7 +3,7 @@
 > **APROBADO CON CONDICIONES (2026-10-04).** Todo lo que figura acá se leyó de
 > la fuente el 2026-10-04, en dos pasadas: la primera desde un entorno con
 > proxy (10:43–11:00 UTC) y la segunda desde una máquina con salida directa
-> (13:39–14:40 UTC). Cada cifra dice de cuál pasada sale cuando importa. Nada
+> (13:39–15:30 UTC). Cada cifra dice de cuál pasada sale cuando importa. Nada
 > de este archivo viene de memoria. Lo que no se pudo leer está dicho como tal
 > y no tiene cifras.
 >
@@ -12,7 +12,8 @@
 
 Este documento es el entregable del paso 0 de la fase R (ratios): evaluar, por
 activo, de dónde pueden salir precios **observados**, trazables y validables,
-con la misma disciplina que S2. No hay código detrás de este archivo.
+con la misma disciplina que S2. Este archivo no tiene código: el pipeline que usa
+estas fuentes es `senales/ratios.py`, del paso 1.
 
 Los cinco activos son los que usan los cinco pares del sitio (BTC/Oro,
 Oro/S&P 500, BTC/S&P 500, Nasdaq/S&P 500, Oro/Plata): S&P 500, Nasdaq
@@ -64,11 +65,18 @@ La clasificación es una lectura de las cláusulas, no un dictamen legal.
 ### 0.2 La regla de publicación
 
 La clase de licencia decide qué fuente se usa. Qué se **publica** es más
-estricto: solo las series cuya licencia permite publicar sin interpretación
-(CC BY, dominio público, o CC BY-NC dado el uso no comercial del sitio). Una
-fuente s/d o (b) con reserva puede alimentar el pipeline, pero lo que sale de
-ella se publica como **NO MEDIDO** hasta tener el permiso escrito del dueño.
-Detalle en 9.1.
+estricto, y tiene dos filtros.
+
+- **La licencia.** Solo las series cuya licencia permite publicar sin
+  interpretación (CC BY, dominio público, o CC BY-NC dado el uso no comercial
+  del sitio). Una fuente s/d o (b) con reserva puede alimentar el pipeline,
+  pero lo que sale de ella se publica como **NO MEDIDO** hasta tener el
+  permiso escrito del dueño.
+- **La validación.** Ninguna serie se publica sin un caso de validación contra
+  una segunda fuente. Si no cierra, la serie se publica como **NO MEDIDO: sin
+  validación externa**.
+
+Detalle en 9.1 y 9.6.
 
 ### 0.3 La regla de la convención
 
@@ -110,6 +118,8 @@ directa, las leyó. Estado por host tras las dos:
 | api.coingecko.com, www.coingecko.com | API probada; términos leídos. |
 | query1.finance.yahoo.com, legal.yahoo.com | La API responde HTTP 200 desde la máquina con salida directa (el HTTP 429 de la primera pasada era del otro entorno). Términos leídos. |
 | stooq.com | Desafío JavaScript en las dos pasadas. |
+| pubs.usgs.gov, www.usgs.gov | Capítulos de oro y plata de los *Mineral Commodity Summaries* y política de derechos, leídos. |
+| www.imf.org | curl recibe HTTP 403 ("Access Denied"). La página y los términos se leyeron con navegador; la planilla y la documentación, con `python-requests`. |
 | data.nasdaq.com | Leída en la primera pasada (no sirve, sección 7). No se volvió a probar. |
 
 **Nota sobre FRED.** En la segunda pasada, los primeros cuatro pedidos se
@@ -368,6 +378,94 @@ la primera pasada tuvo la misma causa.
   y 5.59 %). Para 2026M08: Pink Sheet 4411, promedio del futuro 4468.9, cierre
   de fin de mes 4481.5. Un futuro no es el spot, así que el contraste confirma
   que la serie es un promedio y no un cierre; no valida el nivel al centavo.
+
+### 4.6 USGS, Mineral Commodity Summaries — leída, dominio público
+
+Evaluada como fuente de contraste para el gate de oro y plata (9.6). Vale para
+los dos metales.
+
+- Publicación: *Mineral Commodity Summaries 2026*, de febrero de 2026
+  (`https://doi.org/10.3133/mcs2026`). Capítulos:
+  `https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-gold.pdf` (138.864 bytes)
+  y `https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-silver.pdf` (138.760
+  bytes).
+- Frecuencia nativa: **anual**. La tabla "Salient Statistics—United States"
+  trae cinco años, de 2021 a 2025, y marca el último como estimado.
+- **Convención del oro** (fila "Price, dollars per troy ounce", nota 5,
+  literal): *"Engelhard's average gold price quotation for the year. In 2025,
+  the price was estimated by the U.S. Geological Survey based on data from
+  January through November."*
+- **Convención de la plata** (fila "Price, bullion, average, dollars per troy
+  ounce", nota 4, literal): *"Engelhard's industrial bullion quotations.
+  Source: S&P Global Platts Metals Week."*
+- Es el promedio anual de la cotización de un comerciante de Estados Unidos, no
+  del fixing de Londres. Es una cotización independiente de la que usa el Banco
+  Mundial.
+- Unidad y moneda: USD por onza troy. El oro viene al dólar entero y la plata
+  al centavo.
+- Valores leídos:
+
+  | | 2021 | 2022 | 2023 | 2024 | 2025 (estimado) |
+  | --- | --- | --- | --- | --- | --- |
+  | Oro | 1801 | 1802 | 1945 | 2388 | 3300 |
+  | Plata | 25.23 | 21.88 | 23.54 | 28.37 | 38 |
+
+- Clave / registro: no.
+- **Licencia: dominio público.** Política del USGS
+  (`https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits`),
+  literal: *"USGS-authored or produced data and information are considered to
+  be in the U.S. Public Domain."* La misma página dice que el material de
+  terceros con copyright suele ir marcado; la tabla de precios no lleva ninguna
+  marca. De todos modos acá no se copia el documento: se transcriben ocho
+  cifras, con su cita.
+
+### 4.7 FMI, Primary Commodity Prices — leída, alternativa
+
+- Página: `https://www.imf.org/en/research/commodity-prices`. Archivo enlazado
+  como "Excel Database: September 2026":
+  `https://www.imf.org/-/media/files/research/commodityprices/monthly/external-data.xlsx`
+  (619.264 bytes).
+- Estructura: una hoja, `External`. Las cuatro primeras filas son el código, la
+  descripción, el tipo de dato y la frecuencia; los datos van de `1980M1` a
+  `2026M8`, 560 filas.
+- Frecuencia nativa: mensual.
+- **Convención** (fila de descripción, literal). `PGOLD`: *"Gold, Fixing
+  Committee of the London Bullion Market Association, London 3 PM fixed price,
+  US$ per troy ounce"*. `PSILVER`: *"Silver, London Bullion Market Association,
+  USD/troy ounce"*.
+- Precisión: sin redondear (2024M12: 2640.6055 el oro y 30.3707 la plata).
+- Clave / registro: no.
+- **Licencia: reutilización libre con atribución.** La página "Copyright and
+  Usage" (`https://www.imf.org/en/about/copyright-and-terms`, vigente desde el
+  2024-10-11) tiene términos especiales para los datos estadísticos, y nombra a
+  *Primary Commodity Prices* entre ellos: se pueden descargar, copiar, publicar
+  y distribuir, con atribución al FMI y diciendo si se transformaron. Dos
+  límites: pide escribir para *"any potential commercial reuse"*, y prohíbe la
+  descarga masiva por medios automatizados sin permiso.
+- **Por qué no es el gate.** Comparte el origen con el Pink Sheet —el fixing de
+  Londres—, así que contrasta cómo procesa el dato el Banco Mundial más que el
+  precio. Y por sus términos no puede entrar a un pipeline sin transcribirla a
+  mano. Queda como referencia.
+
+Comparación de las tres fuentes sobre los años del gate. Es una lectura de un
+día, no un contraste del pipeline:
+
+| Año | Metal | Banco Mundial, doce meses | FMI, doce meses | USGS | BM contra FMI | BM contra USGS |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2021 | Oro | 1799.58 | 1799.77 | 1801 | −0.010 % | −0.079 % |
+| 2022 | Oro | 1800.75 | 1801.53 | 1802 | −0.043 % | −0.069 % |
+| 2023 | Oro | 1942.75 | 1943.07 | 1945 | −0.016 % | −0.116 % |
+| 2024 | Oro | 2387.58 | 2387.21 | 2388 | 0.016 % | −0.017 % |
+| 2021 | Plata | 25.167 | 25.166 | 25.23 | 0.003 % | −0.251 % |
+| 2022 | Plata | 21.783 | 21.771 | 21.88 | 0.057 % | −0.442 % |
+| 2023 | Plata | 23.408 | 23.398 | 23.54 | 0.042 % | −0.559 % |
+| 2024 | Plata | 28.275 | 28.226 | 28.37 | 0.174 % | −0.335 % |
+
+Mes a mes, el Pink Sheet y el FMI difieren en una mediana de 0.06 % en el oro y
+de 0.35 % en la plata (560 meses, 1980-01 a 2026-08). En la plata la diferencia
+es del orden del redondeo del Pink Sheet, y no es pareja: 0.21 % de mediana
+entre 2021 y 2024, 0.63 % desde junio de 2025, con un máximo de 3.76 % en
+diciembre de 2025 (Banco Mundial 62.3, FMI 64.73).
 
 ---
 
@@ -641,9 +739,13 @@ evidencia.
 
 ### 9.1 Regla de publicación
 
-Solo se publican series cuya licencia permite publicar **sin interpretación**:
-CC BY, dominio público, o CC BY-NC dado el uso no comercial del sitio
-(A-R0-14).
+Una serie se publica si pasa dos filtros (A-R0-14). **La licencia:** tiene que
+permitir publicar sin interpretación (CC BY, dominio público, o CC BY-NC dado
+el uso no comercial del sitio). **La validación:** su contraste contra una
+segunda fuente tiene que haber cerrado (9.6). La tabla de abajo es el estado al
+2026-10-04, con los tres contrastes y el gate de oro y plata cerrados; si un
+gate deja de cerrar, la serie y sus pares pasan a **"NO MEDIDO: sin validación
+externa"**.
 
 | Serie | Licencia | ¿Se publica? |
 | --- | --- | --- |
@@ -777,59 +879,71 @@ Todo ratio con índices es de **precio**, no de retorno total (A-R0-13).
 ### 9.6 Validación
 
 Con la misma lógica del gate de S2: una segunda fuente independiente, una
-tolerancia escrita antes de mirar el resultado, y la corrida se detiene si no
-cierra.
+tolerancia escrita antes de mirar el resultado, y **ninguna serie publicada sin
+su caso de validación**.
 
-**Las fuentes (c) se usan solo para contrastar.** De cada contraste se registra
-la fecha, el valor y la diferencia. El archivo no se guarda ni se publica
-(A-R0-12).
-
-| Serie | Contraste | Lo observado el 2026-10-04 | Tolerancia |
+| Serie | Contraste | Resultado del 2026-10-04 | Tolerancia |
 | --- | --- | --- | --- |
-| S&P 500 | Shiller contra el promedio de los cierres diarios de FRED `SP500` (ventana de 10 años) | Contra Cboe, 620 meses: mediana 0.0003 %, máxima 0.30 % | ±0.5 % por mes |
-| Nasdaq Composite | Promedio de FRED contra promedio de api.nasdaq.com | 119 meses: máxima 0.027 % | ±0.1 % por mes |
-| BTC | Promedio de Coin Metrics contra promedio de cierres de Bitstamp | Desde 2013-01, 165 meses: mediana 0.044 %, máxima 1.31 % | ±2 % por mes |
-| Oro, plata | Un valor de referencia de LBMA para un mes, transcrito a mano, con cita | **Sin ancla todavía** | ±0.5 % (oro), ±1 % (plata) |
+| S&P 500 | Shiller contra el promedio de los cierres diarios de FRED `SP500` (ventana de 10 años) | 119 meses, mediana 0.000 %, máxima 0.232 % | ±0.5 % por mes |
+| Nasdaq Composite | Promedio de FRED contra promedio de api.nasdaq.com (últimos 10 años) | 119 meses, mediana 0.000 %, máxima 0.027 % | ±0.1 % por mes |
+| BTC | Promedio de Coin Metrics contra promedio de cierres de Bitstamp | Desde 2013-01, 165 meses: mediana 0.044 %, máxima 1.332 % | ±2 % por mes |
+| Oro | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.116 % | ±0.5 % por año |
+| Plata | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.559 % | ±1 % por año |
 
-**El gate de oro y plata, como el del H.4.1.** La decisión es validar el Pink
-Sheet contra un promedio mensual de LBMA transcrito a mano, con su cita. El
-ancla **no está transcrita** (A-R0-16), y no se inventa una:
+**Las fuentes (c) se usan solo para contrastar.** El archivo no se guarda ni se
+publica (A-R0-12). En el changelog queda, por corrida, cuántos meses se
+compararon, la diferencia mediana y, del mes que más se aparta, la fecha y la
+diferencia. **Del S&P 500 y del Nasdaq no queda ningún nivel del índice.**
 
-- La tabla de precios de LBMA exige iniciar sesión: la página dice *"Sign in
-  to view the tables of data"* y remite al portal, que pide licencia de IBA.
-- La página pública muestra solo un gráfico.
-- El informe trimestral público
-  (`https://www.lbma.org.uk/articles/lbma-precious-metals-market-report-q2-2026`)
-  da precios de días sueltos y los extremos del trimestre, no promedios
-  mensuales.
+Si el contraste de BTC o de un índice no cierra, la corrida se detiene. Si no
+cierra el gate de un metal, la corrida sigue y el metal y sus pares se publican
+como NO MEDIDO.
 
-Las tolerancias de la tabla quedan fijadas **antes** de ver el ancla, para que
-no se ajusten al resultado. Cubren el redondeo del Pink Sheet y, en el oro, que
-desde junio de 2025 se compara un promedio "spot" contra un promedio de la
-subasta de la tarde.
+**El gate de oro y plata** (A-R0-16). No hay una segunda fuente mensual abierta
+para los metales, así que el gate es anual: el promedio de los doce meses del
+Pink Sheet contra el precio promedio del año que publica el USGS (4.6), para
+todos los años que la última edición trae sin estimar. Hoy son cuatro, 2021 a
+2024.
 
-Mientras no haya ancla, lo único verificable con cifras públicas de LBMA es un
-**control de banda**, que es más débil que un gate. El informe del segundo
-trimestre de 2026 da para el oro un mínimo de 3994.50 (25 de junio, AM) y un
-máximo de 4870.50 (17 de abril, PM), y para la plata un máximo de 86.79 (4 de
-abril) y un mínimo de 57.37 (26 de junio). Los tres promedios mensuales del
-Pink Sheet de ese trimestre caen dentro: oro 4721, 4587 y 4228; plata 75.9, 78
-y 66.7. Un promedio fuera de los extremos de su trimestre sería un error
-seguro; uno adentro no prueba que el promedio esté bien.
+| Año | Oro, Pink Sheet | Oro, USGS | Diferencia | Plata, Pink Sheet | Plata, USGS | Diferencia |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2021 | 1799.58 | 1801 | −0.079 % | 25.167 | 25.23 | −0.251 % |
+| 2022 | 1800.75 | 1802 | −0.069 % | 21.783 | 21.88 | −0.442 % |
+| 2023 | 1942.75 | 1945 | −0.116 % | 23.408 | 23.54 | −0.559 % |
+| 2024 | 2387.58 | 2388 | −0.017 % | 28.275 | 28.37 | −0.335 % |
+
+Las tolerancias se fijaron antes de calcular el gate, y están justificadas en
+A-R0-16 componente por componente: redondeo de las dos fuentes, el efecto de
+promediar promedios mensuales, y un margen para la diferencia entre la
+cotización de Engelhard y el fixing de Londres. Las ocho diferencias tienen el
+mismo signo: es esa diferencia de cotización, no ruido.
+
+El gate valida cuatro años. No dice nada de 1960 ni de los meses posteriores al
+quiebre del oro de junio de 2025.
+
+**Lo que se evaluó y no decide.** El FMI (4.7), como alternativa. El ancla
+mensual de LBMA, que era la decisión original y no se pudo cumplir: la tabla de
+precios de LBMA exige iniciar sesión (*"Sign in to view the tables of data"*) y
+licencia de IBA, la página pública muestra solo un gráfico, y el informe
+trimestral
+(`https://www.lbma.org.uk/articles/lbma-precious-metals-market-report-q2-2026`)
+da extremos y precios de días sueltos, no promedios. De ese informe sale un
+control adicional, más débil que el gate: los promedios mensuales del segundo
+trimestre de 2026 tienen que caer entre el mínimo y el máximo del trimestre
+(oro 3994.50 a 4870.50; plata 57.37 a 86.79), y caen.
 
 ### 9.7 Crudos y reproducibilidad
 
 | Fuente | Dónde vive el crudo | Qué se publica |
 | --- | --- | --- |
-| Abierta, (a): Pink Sheet | En el repositorio, `data/raw/`, como las descargas de S2 (A-S2-10). | El archivo, y su URL, fecha y SHA-256. |
-| No abierta: Shiller (s/d), FRED `NASDAQCOM` y Coin Metrics, (b) | **Fuera del repositorio**, en un directorio ignorado por git. | URL, fecha y SHA-256 de cada descarga, y el código de transformación. |
-| De contraste, (c): FRED `SP500`, api.nasdaq.com, Bitstamp, LBMA | En ningún lado. | Fecha, valor y diferencia de cada contraste. |
+| Con licencia que permite redistribuir: Pink Sheet (CC BY 4.0) y Coin Metrics (CC BY-NC 4.0) | En el repositorio, `data/raw/`, con su atribución y licencia en `data/raw/ATRIBUCION.md`. | El archivo, y su URL, fecha y SHA-256. |
+| Sin esa licencia: Shiller (s/d) y FRED `NASDAQCOM` ((b) con reserva) | **Fuera del repositorio**, en `data/privado/`, ignorado por git. | URL, fecha y SHA-256 de cada descarga, y el código de transformación. |
+| De contraste, (c): FRED `SP500`, api.nasdaq.com, Bitstamp | En ningún lado. | Lo que dice 9.6: meses, mediana, y fecha y diferencia del peor mes. |
+| De contraste, transcrita a mano: USGS | En `configuracion.py`, ocho cifras con su cita. | Las cifras, y la diferencia de cada año. |
 
 Quien baje el mismo archivo puede comprobar el hash y rehacer la serie con el
-código del repositorio, sin que el repositorio redistribuya nada (A-R0-15).
-Coin Metrics es CC BY-NC y su crudo se podría versionar con atribución; queda
-afuera igual porque la regla separa abiertas de no abiertas, y (b) no es
-abierta.
+código del repositorio. Si el crudo que hay en disco no coincide con el hash
+publicado, la corrida se detiene (A-R0-15).
 
 ### 9.8 Qué reemplazar en el sitio
 
@@ -923,25 +1037,31 @@ Están en `SUPUESTOS.md`. Índice:
 | A-R0-9 | El Pink Sheet viene redondeado | dato |
 | A-R0-10 | Los pares con BTC se publican desde 2013-01 | supuesto |
 | A-R0-11 | La última fila de Shiller no es un mes completo; rezago | dato; supuesto la regla |
-| A-R0-12 | Las fuentes (c) solo contrastan; tolerancias | supuesto |
+| A-R0-12 | Las fuentes (c) solo contrastan; tolerancias; qué queda escrito | supuesto |
 | A-R0-13 | Los ratios con índices son de precio | dato |
-| A-R0-14 | Publicación estricta | supuesto |
-| A-R0-15 | Crudos de fuentes no abiertas fuera del repositorio | supuesto |
-| A-R0-16 | El gate de oro y plata no tiene ancla | no medido |
+| A-R0-14 | Se publica lo que la licencia permite y una segunda fuente valida | supuesto |
+| A-R0-15 | Un crudo entra al repositorio solo si su licencia permite redistribuirlo | supuesto |
+| A-R0-16 | Gate anual de oro y plata contra el USGS; cerró el 2026-10-04 | supuesto la regla; dato el resultado |
 
 ---
 
 ## 12. Lo que sigue abierto
 
 1. **Los tres permisos de la sección 10.**
-2. **El ancla de LBMA para oro y plata** (9.6). Hace falta un promedio mensual
-   de LBMA que alguien con acceso a los precios diarios pueda citar.
+2. **El gate de oro y plata cubre 2021 a 2024.** El 2025 entra cuando el USGS
+   lo publique sin estimar, en la edición siguiente. Hasta entonces el tramo
+   "spot" del oro (desde junio de 2025) no tiene un año validado.
 3. **Shiller.** No se encontró licencia ni un contacto para pedirla en la
    página.
 4. **Rezago de Shiller.** Sin calendario declarado; hoy lleva un mes.
 5. **Términos de Coin Metrics.** La licencia está en una línea de la
    documentación; la página a la que remite para el detalle ya no existe.
-6. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
+6. **La plata después de junio de 2025.** Se aparta más del FMI que antes (4.7)
+   y el Banco Mundial no declara ningún cambio. Es una de las preguntas de la
+   sección 10.3.
+7. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
    y no tiene decisión.
-7. **No leído:** los ZIP históricos de Kraken, los términos de datos de
-   Kraken, los términos del Bundesbank, y la exportación de S&P DJI.
+8. **No leído:** los ZIP históricos de Kraken, los términos de datos de
+   Kraken, los términos del Bundesbank, la exportación de S&P DJI, y la
+   documentación técnica del FMI (se leyó la descripción de cada serie en la
+   planilla).

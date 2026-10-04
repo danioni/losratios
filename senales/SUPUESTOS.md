@@ -441,10 +441,19 @@ para índices y metales, y el borrador de `FUENTES.md` proponía el cierre seman
 del viernes. Decidió la licencia: las únicas fuentes abiertas de oro y plata son
 promedios mensuales.
 
-**Solo entran meses completos.** Un mes cuenta como completo cuando terminó
-antes de la fecha que la propia fuente da para su última actualización, o antes
-de la fecha de descarga si la fuente no da ninguna. El mes en curso no se
-publica, y el último mes de un par es el último mes completo en sus dos fuentes.
+**Solo entran meses completos.** La regla depende de cómo viene la fuente:
+
+- En una fuente diaria, un mes está completo cuando la serie ya tiene una
+  observación posterior a su último día. Si la serie arranca con el mes
+  empezado, ese primer mes tampoco entra.
+- En BTC, que opera todos los días, el mes además tiene que traer todos sus
+  días. Si falta uno, el mes no se publica y se reporta.
+- En una fuente que ya viene mensual, un mes está completo cuando terminó antes
+  de la fecha en que la fuente dice haberse actualizado. Si no declara esa
+  fecha, la última fila se descarta.
+
+El mes en curso no se publica, y el último mes de un par es el último mes
+completo en sus dos fuentes.
 
 ---
 
@@ -568,6 +577,14 @@ cierres del futuro de plata, y a 3.79 % del cierre de fin de mes. El contraste
 es fuerte pero indirecto —un futuro no es el spot— y por eso el estado es
 estimación y no dato.
 
+Hay una segunda evidencia, también indirecta. La serie mensual de plata del FMI,
+que declara ser el precio de LBMA, coincide con la del Pink Sheet con una
+diferencia mediana de 0.35 % en 560 meses (1980-01 a 2026-08), que es del orden
+del redondeo a un decimal. No es pareja en el tiempo: la mediana es de 0.21 %
+entre 2021 y 2024 y sube a 0.63 % desde junio de 2025, con un mes a 3.76 %
+(diciembre de 2025). El Banco Mundial no declara ningún cambio en la plata en
+esa fecha; el del oro sí está declarado (A-R0-7).
+
 Pasa a **dato** cuando el Banco Mundial confirme la convención por escrito
 (`FUENTES.md`, sección 10.3).
 
@@ -616,7 +633,9 @@ de ese mes es 7669.41.
 
 Por A-R0-1, esa fila se excluye: septiembre no había terminado cuando el archivo
 se actualizó. La regla no depende de leer la nota del archivo, que es texto
-libre y puede cambiar de redacción.
+libre y puede cambiar de redacción. La fecha de actualización es la cabecera
+`Last-Modified` de la descarga, y queda guardada en el manifiesto; si no se
+conoce, la última fila se descarta siempre.
 
 **El rezago.** La fuente no publica un calendario de actualización. Al 2026-10-04
 el último mes completo del S&P 500 es agosto de 2026, un mes por detrás del oro,
@@ -640,7 +659,7 @@ Los contrastes y sus tolerancias, por mes:
 | S&P 500 | Promedio de los cierres diarios de FRED `SP500` | ±0.5 % | Máxima de 0.30 % en 620 meses |
 | Nasdaq Composite | Promedio de los cierres de la API de nasdaq.com | ±0.1 % | Máxima de 0.027 % en 119 meses |
 | BTC | Promedio de los cierres diarios de Bitstamp | ±2 % | Máxima de 1.31 % en 165 meses, desde 2013-01 |
-| Oro, plata | Un promedio mensual de LBMA, transcrito a mano | ±0.5 % y ±1 % | Sin ancla: A-R0-16 |
+| Oro, plata | El precio promedio anual del USGS, transcrito a mano, contra el promedio de los doce meses | ±0.5 % y ±1 % | Fijadas antes de calcular el gate: A-R0-16 |
 
 Las tolerancias son convenciones. Están puestas por encima de lo observado y por
 debajo de lo que produce un error de convención: un cierre de fin de mes se
@@ -651,6 +670,23 @@ contraste se hace sobre todos los meses comunes y no sobre uno.
 
 Si un contraste no cierra, la corrida se detiene. **No se ajusta la tolerancia
 para que cuadre**: se revisa la fuente, la convención y el mes, en ese orden.
+
+**Qué queda escrito de cada contraste.** En el changelog, por corrida: cuántos
+meses se compararon, la diferencia mediana y, del mes que más se aparta, la
+fecha y la diferencia. De BTC, que se publica, quedan además los dos valores de
+ese mes.
+
+**Del S&P 500 y del Nasdaq no queda ningún nivel del índice**, ni el propio ni
+el de contraste. Son series que no se publican (A-R0-14), y un nivel en el
+changelog sería publicarlas de a un mes por corrida.
+
+De ninguna queda la serie de contraste mes a mes: eso sería republicar,
+promediada, una fuente que no se puede redistribuir.
+
+La diferencia se mide sobre el valor de contraste. Con esa base, la máxima de
+BTC en la primera corrida fue de 1.33 % (diciembre de 2017); el 1.31 % de la
+tabla es la misma distancia medida sobre Coin Metrics. El contraste del Nasdaq
+usa los últimos diez años, la ventana con la que se fijó su tolerancia.
 
 ---
 
@@ -667,13 +703,15 @@ Shiller trae además una columna de retorno total. No se usa.
 
 ---
 
-## A-R0-14 · Solo se publica lo que la licencia permite publicar sin interpretarla
+## A-R0-14 · Solo se publica lo que la licencia permite y una segunda fuente valida
 
 **Estado: supuesto.**
 
-Se publican las series con licencia CC BY, de dominio público, o CC BY-NC dado
-el uso no comercial del sitio. Hoy son tres: oro y plata (CC BY 4.0) y BTC
-(CC BY-NC 4.0).
+Una serie se publica si pasa dos filtros.
+
+**La licencia.** Se publican las series con licencia CC BY, de dominio público, o
+CC BY-NC dado el uso no comercial del sitio. Por licencia pueden publicarse tres:
+oro y plata (CC BY 4.0) y BTC (CC BY-NC 4.0).
 
 El S&P 500 y el Nasdaq Composite **se calculan en el pipeline y no se publican**.
 Los pares que los llevan —Oro/S&P 500, BTC/S&P 500 y Nasdaq/S&P 500— se publican
@@ -685,56 +723,143 @@ alcanzan para calcular, no para publicar: uno descansa en una fuente que no dice
 nada sobre su licencia, y el otro en la más favorable de dos frases que no
 coinciden.
 
+**La validación.** Ninguna serie se publica sin un caso de validación contra una
+segunda fuente, que es la regla de todo el marco. BTC tiene su contraste mensual
+(A-R0-12); el oro y la plata, su gate anual (A-R0-16). Si el gate de un metal no
+cierra, el metal y los pares que lo llevan se calculan y se publican con el texto
+**"NO MEDIDO: sin validación externa"**. Si a un par le faltan las dos cosas, lo
+que dice es el permiso.
+
+Los dos textos están en `data/series/pares.csv`, que lista los cinco pares, y en
+`data/series/series.csv`, que lista las cinco series. `data/series/ratios.csv` y
+`data/series/precios_mensuales.csv` solo traen valores de lo que se publica.
+
 Publicar "NO MEDIDO" donde hay un número calculado es incómodo y es a propósito.
-Dice dos cosas ciertas: que el par existe, y que no hay permiso para mostrarlo.
+Dice dos cosas ciertas: que el par existe, y que falta algo para mostrarlo.
 
 ---
 
-## A-R0-15 · Los crudos de fuentes no abiertas quedan fuera del repositorio
+## A-R0-15 · Un crudo entra al repositorio solo si su licencia permite redistribuirlo
 
-**Estado: supuesto.** Excepción a A-S2-10 para las fuentes de la fase R que no
-son de clase (a).
+**Estado: supuesto.** Excepción a A-S2-10 para las fuentes de la fase R.
 
-El crudo del Pink Sheet se versiona en `data/raw/`, como los de S2. Los crudos de
-Shiller, de FRED `NASDAQCOM` y de Coin Metrics van a un directorio ignorado por
-git: el repositorio no los redistribuye.
+| Fuente | Licencia | Dónde vive el crudo |
+| --- | --- | --- |
+| Pink Sheet | CC BY 4.0 | `data/raw/`, versionado |
+| Coin Metrics | CC BY-NC 4.0 | `data/raw/`, versionado |
+| Shiller | Sin licencia declarada | `data/privado/`, ignorado por git |
+| FRED `NASDAQCOM` | Permiso previo del dueño | `data/privado/`, ignorado por git |
 
-Para que la corrida siga siendo reproducible sin el archivo, por cada descarga se
-publica la **URL, la fecha y el SHA-256**, y el código de transformación está en
-el repositorio. Quien baje el mismo archivo puede comprobar el hash y rehacer la
-serie.
+CC BY y CC BY-NC permiten redistribuir con atribución. La atribución y la
+licencia de cada crudo versionado están en `data/raw/ATRIBUCION.md`, junto a los
+archivos. El de Coin Metrics arrastra además su condición: quien redistribuya el
+repositorio tiene que mantener el uso no comercial.
 
-El costo es real: si la fuente revisa o retira el archivo, la corrida vieja ya no
-se puede reconstruir desde el repositorio, solo verificar que el archivo cambió.
-A-S2-10 existe para evitar eso, y acá se acepta perderlo.
+En `data/privado/` van también las series y los pares que se calculan y no se
+publican.
 
-Coin Metrics es CC BY-NC y su crudo se podría versionar con atribución. Queda
-afuera igual: la regla separa fuentes abiertas de no abiertas, y una licencia no
-comercial no es abierta.
+Para que la corrida siga siendo reproducible sin los crudos que no viajan, por
+cada descarga se publica la **URL, la fecha y el SHA-256** en
+`data/series/descargas_ratios.csv`, y el código de transformación está en el
+repositorio. Quien baje el mismo archivo puede comprobar el hash y rehacer la
+serie. Si el crudo que hay en disco no coincide con el hash publicado, la corrida
+se detiene.
+
+El costo es real para los dos crudos que quedan afuera: si la fuente revisa o
+retira el archivo, la corrida vieja ya no se puede reconstruir desde el
+repositorio, solo verificar que el archivo cambió. A-S2-10 existe para evitar
+eso, y acá se acepta perderlo.
+
+Y hay un costo de tamaño para los dos que entran: el crudo de Coin Metrics pesa
+medio megabyte y trae la historia completa en cada descarga.
 
 ---
 
-## A-R0-16 · El gate de oro y plata no tiene ancla todavía
+## A-R0-16 · El gate de oro y plata es anual, contra el USGS
 
-**Estado: no medido.**
+**Estado: supuesto la regla y las tolerancias. El resultado está al final.**
 
-La decisión es validar el Pink Sheet como se valida S2.1 contra el H.4.1: un
-valor de referencia de LBMA para un mes, transcrito a mano, con su cita, y una
-tolerancia (±0.5 % el oro, ±1 % la plata; A-R0-12).
+Ninguna serie se publica sin un caso de validación externa (A-R0-14). Para el oro
+y la plata no hay una segunda fuente mensual abierta, así que el gate es anual:
+**el promedio de los doce meses del Pink Sheet de un año contra el precio
+promedio de ese año que publica el USGS** en sus *Mineral Commodity Summaries*,
+que es de dominio público. Las cifras del USGS se transcriben a mano, con su
+cita, como el ancla del H.4.1.
 
-Ese valor no está transcrito, y no se pone uno para llenar el campo. LBMA no
-publica promedios mensuales en lo que se pudo leer sin iniciar sesión: la tabla
-de precios exige cuenta y licencia de IBA, la página pública muestra solo un
-gráfico, y el informe trimestral da precios de días sueltos y los extremos del
-trimestre.
+**Qué años.** Todos los que la última edición trae sin marca de estimado. La de
+febrero de 2026 trae 2021, 2022, 2023 y 2024; el 2025 está estimado con datos de
+enero a noviembre y no entra. Tienen que ser al menos tres, y tienen que cerrar
+todos.
 
-Lo que sí se pudo verificar con cifras públicas de LBMA es más débil que un
-gate: los tres promedios mensuales del Pink Sheet del segundo trimestre de 2026
-caen dentro del mínimo y el máximo que el informe de LBMA da para ese trimestre,
-en el oro y en la plata. Un promedio fuera de los extremos sería un error
-seguro. Uno adentro no prueba que el promedio esté bien.
+**La convención no es la misma, y está dicho.** El USGS publica el promedio anual
+de la cotización de Engelhard, un comerciante de metales de Estados Unidos. El
+Pink Sheet promedia el fixing de Londres y, desde junio de 2025, un precio spot
+(A-R0-7). Son dos cotizaciones del mismo metal, no la misma cotización. Por eso
+el contraste es independiente, y por eso necesita tolerancia.
 
-Mientras este supuesto siga en **no medido**, el oro y la plata se publican sin
-gate de nivel, y eso se dice junto a la serie. Pasa a **dato** cuando alguien con
-acceso a los precios diarios de LBMA transcriba el promedio de un mes, con la
-cita, y el contraste cierre dentro de la tolerancia que ya está escrita.
+### Las tolerancias: ±0.5 % el oro, ±1 % la plata
+
+Se fijaron el 2026-10-04, **antes de calcular el gate**, y no se cambian después
+de ver el resultado. De qué están hechas:
+
+| Componente | Oro | Plata | De dónde sale |
+| --- | --- | --- | --- |
+| Redondeo del Pink Sheet (A-R0-9) | ≤ 0.03 % | ≤ 0.23 % | ±0.5 USD sobre 1801 y ±0.05 USD sobre 21.88, los precios anuales más bajos de la ventana. Es el peor caso: los doce meses redondeados para el mismo lado. |
+| Redondeo del USGS | ≤ 0.03 % | ≤ 0.02 % | Publica el oro al dólar y la plata al centavo. |
+| Promediar doce promedios mensuales en lugar de todos los días del año | ≤ 0.27 % | ≤ 0.27 % | Medido sobre un sustituto, los cierres diarios del Nasdaq Composite de 1972 a 2025: mediana 0.05 %, máximo 0.27 %. El Nasdaq es más volátil que el oro, así que la cota es holgada. |
+| **Suma de lo acotado** | **0.33 %** | **0.52 %** | |
+| Margen para la diferencia de cotización, fixing de Londres contra Engelhard | 0.17 % | 0.48 % | No se pudo medir. Es lo que el gate pone a prueba. |
+
+El margen para la diferencia de cotización es chico a propósito. Si las dos
+cotizaciones se apartan más que eso, el gate no cierra, y eso también es un
+resultado: quiere decir que el Pink Sheet y el USGS no describen el mismo precio
+con esta precisión. **No se ensancha la tolerancia para que cierre.**
+
+### Si no cierra
+
+El metal y los pares que lo llevan se calculan y se publican como **"NO MEDIDO:
+sin validación externa"** (A-R0-14). La corrida no se detiene: BTC y los índices
+tienen su propio contraste.
+
+### Lo que se evaluó y no decide
+
+- **El FMI, Primary Commodity Prices.** Existe, es mensual y sin redondear, y
+  declara su convención: el oro es el fixing de las 3 PM de Londres y la plata,
+  el precio de LBMA. Sus términos permiten reutilizar los datos con atribución.
+  No es el gate por dos razones. Comparte el origen con el Pink Sheet, el fixing
+  de Londres, así que contrasta cómo procesa el dato el Banco Mundial más que el
+  precio. Y sus términos prohíben la descarga masiva automatizada sin permiso,
+  de modo que tampoco podría entrar al pipeline sin transcribirla a mano. La
+  comparación está en `FUENTES.md`, como referencia.
+- **El ancla mensual de LBMA.** Era la decisión original y no se pudo cumplir:
+  LBMA no publica promedios mensuales fuera de su portal con licencia.
+- **Las bandas trimestrales de LBMA.** Siguen como control adicional: un
+  promedio mensual no puede caer fuera del mínimo y el máximo que LBMA publicó
+  para su trimestre. Un promedio fuera es un error seguro; uno adentro no prueba
+  nada.
+
+### El resultado
+
+**Estado: dato.** El gate cerró el 2026-10-04, con las tolerancias ya escritas.
+
+| Año | Oro: doce meses del Pink Sheet | Oro: USGS | Diferencia | Plata: doce meses | Plata: USGS | Diferencia |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2021 | 1799.58 | 1801 | −0.079 % | 25.167 | 25.23 | −0.251 % |
+| 2022 | 1800.75 | 1802 | −0.069 % | 21.783 | 21.88 | −0.442 % |
+| 2023 | 1942.75 | 1945 | −0.116 % | 23.408 | 23.54 | −0.559 % |
+| 2024 | 2387.58 | 2388 | −0.017 % | 28.275 | 28.37 | −0.335 % |
+
+Cuatro años de cuatro en los dos metales: el oro dentro de ±0.5 % y la plata
+dentro de ±1 %.
+
+Dos cosas que el resultado muestra y que no cambian el gate:
+
+- **Las ocho diferencias tienen el mismo signo.** El Pink Sheet queda siempre por
+  debajo de Engelhard. No es ruido: es la diferencia de cotización para la que se
+  reservó el margen. En el oro usa menos de lo previsto. En la plata llega a
+  0.56 %, por encima del margen de 0.48 % que quedaba después de lo acotado;
+  cierra porque el redondeo y el efecto del calendario no consumieron sus cotas.
+- **El gate valida cuatro años, no toda la historia.** Dice que entre 2021 y 2024
+  el nivel anual del Pink Sheet es el de una cotización independiente. No dice
+  nada de 1960, ni de los meses posteriores al quiebre de junio de 2025
+  (A-R0-7), que el USGS todavía no publica sin estimar.
