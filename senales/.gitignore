@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.tmp
+*.csv.tmp
+.venv/
+
+# A-R0-15: crudos de fuentes no abiertas y series que no se publican.
+data/privado/

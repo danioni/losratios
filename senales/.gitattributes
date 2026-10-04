@@ -1,0 +1,6 @@
+# Los crudos de la fase R se verifican contra el SHA-256 publicado en
+# data/series/descargas_ratios.csv. Git no puede tocarles un solo byte: sin esto,
+# un checkout con autocrlf convertiría los saltos de línea y el hash dejaría de
+# coincidir (A-R0-15).
+data/raw/*.json -text
+data/raw/*.xlsx binary
