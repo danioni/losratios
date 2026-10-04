@@ -628,9 +628,9 @@ tolerancia más laxa empezaría antes.
 **Estado: dato la fila y el rezago; supuesto la regla.**
 
 El archivo descargado el 2026-10-04 se modificó por última vez el 2 de
-septiembre de 2026. Su última fila, septiembre de 2026, vale 7631.47, y el propio
-archivo dice que es el cierre del 1 de septiembre. El promedio de los 21 cierres
-de ese mes es 7669.41.
+septiembre de 2026. Su última fila, septiembre de 2026, es el cierre del 1 de
+septiembre: lo dice el propio archivo, y coincide con el cierre de ese día en
+Cboe. Queda 0.495 % por debajo del promedio de los 21 cierres de ese mes.
 
 Por A-R0-1, esa fila se excluye: septiembre no había terminado cuando el archivo
 se actualizó. La regla no depende de leer la nota del archivo, que es texto

@@ -135,6 +135,11 @@ la primera pasada tuvo la misma causa.
 
 ## 2. S&P 500
 
+> **Sin niveles del índice.** El S&P 500 y el Nasdaq Composite no se publican
+> (A-R0-14), y este documento es público. De cada muestra de las secciones 2,
+> 3 y 8 queda la fecha, la diferencia porcentual y la fuente del contraste; el
+> nivel del índice, no.
+
 ### 2.1 FRED `SP500` — leída
 
 - URL: `https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500`
@@ -146,8 +151,8 @@ la primera pasada tuvo la misma causa.
   cierra típicamente a las 4 PM ET, salvo feriados con cierre anticipado.
 - Unidad: "Index, Not Seasonally Adjusted" (puntos de índice). Es índice de
   precio, sin dividendos; la nota lo dice.
-- Inicio real: **2016-10-03 = 2161.20**. El CSV trae 2.610 filas, 2.514 con
-  valor y 96 vacías, hasta 2026-10-02 = 7722.72. La nota explica el corte: por
+- Inicio real: **2016-10-03**. El CSV trae 2.610 filas, 2.514 con valor y 96
+  vacías, hasta el 2026-10-02. La nota explica el corte: por
   un acuerdo entre el banco y S&P Dow Jones Indices, FRED incluye 10 años de
   historia diaria de estas series.
 - Clave / registro: no.
@@ -156,9 +161,10 @@ la primera pasada tuvo la misma causa.
   *"Reproduction of S&P 500 in any form is prohibited except with the prior
   written permission of S&P Dow Jones Indices LLC"*. El permiso se pide a
   `index_services@spdji.com` (dato de la misma nota).
-- Muestra: **2026-09-30 = 7651.54** y **2020-03-20 = 2304.92**; Cboe da las
-  mismas dos cifras (2.3). De 2.514 fechas comunes con Cboe, 8 difieren en más
-  de 0.01; la mayor es 2019-02-28 (FRED 2784.49, Cboe 2792.38).
+- Muestra: los cierres del **2026-09-30** y del **2020-03-20**, contra el CSV
+  de Cboe (2.3): diferencia de 0.000 % en los dos. De 2.514 fechas comunes con
+  Cboe, 8 difieren en más de 0.01 puntos; la mayor es la del 2019-02-28, donde
+  FRED queda 0.283 % por debajo.
 
 ### 2.2 Robert Shiller, `ie_data.xls` — leída
 
@@ -176,18 +182,19 @@ la primera pasada tuvo la misma causa.
   **Verificado contra cierres diarios** (2.3): el promedio de los cierres del
   SPX de Cboe reproduce la columna `P` en 620 meses comunes (1975-01 a
   2026-08) con diferencia relativa mediana de 0.0003 % y máxima de 0.30 %.
-  Los dos meses que más se apartan son 2016-08 (Shiller 2170.95, promedio de
-  cierres 2177.48) y 2024-01 (Shiller 4815.61, promedio 4804.49).
-- **La última fila no es un promedio.** La fila `2026.09` vale 7631.47 y la
-  fila siguiente del archivo trae la nota literal *"Sept price is Sept 1st
-  close"*. Coincide con el cierre del SPX del 2026-09-01 en Cboe (7631.47); el
-  promedio de los 21 cierres de septiembre es 7669.41. La última fila es
-  provisional hasta la actualización siguiente.
+  Los dos meses que más se apartan son 2016-08, donde Shiller queda 0.300 %
+  por debajo del promedio de los cierres, y 2024-01, donde queda 0.231 % por
+  encima.
+- **La última fila no es un promedio.** La fila siguiente a `2026.09` trae la
+  nota literal *"Sept price is Sept 1st close"*, y el valor de esa fila
+  coincide con el cierre del SPX del 2026-09-01 en Cboe (diferencia de
+  0.000 %). Queda 0.495 % por debajo del promedio de los 21 cierres de
+  septiembre. La última fila es provisional hasta la actualización siguiente.
 - Rezago: el archivo se modificó por última vez el 2026-09-02. Al 2026-10-04
   el último mes completo que trae es **agosto de 2026**. La página no declara
   un calendario de actualización.
 - Unidad y moneda: puntos de índice.
-- Inicio real: **1871.01 = 4.44** (leído del archivo).
+- Inicio real: **1871.01** (leído del archivo).
 - Clave / registro: no.
 - **Licencia: sin licencia declarada (s/d).** Ni la página ni el archivo
   tienen términos de uso. Lo único que hay es un descargo de responsabilidad:
@@ -195,9 +202,9 @@ la primera pasada tuvo la misma causa.
   Shiller using various public sources"* y niega garantías; la página repite
   un descargo equivalente. No hay cláusula que permita ni que prohíba
   republicar. El índice subyacente es de S&P (2.1).
-- Muestra: **2026.08 = 7711.32** (promedio de 21 cierres de Cboe: 7711.3233;
-  promedio de los cierres de FRED `SP500`: 7711.3233). **2020.03 = 2652.39**
-  (Cboe: 2652.3905; FRED: 2652.3936).
+- Muestra: **2026.08**, contra el promedio de los 21 cierres de Cboe y contra
+  el de los cierres de FRED `SP500`: diferencia de 0.000 % con los dos.
+  **2020.03**: 0.000 % contra FRED y 0.0001 % contra Cboe.
 - Qué permite que FRED no: historia desde 1871 y retorno total mensual. Qué no
   permite: cierres, ni el mes en curso.
 
@@ -205,8 +212,8 @@ la primera pasada tuvo la misma causa.
 
 | Candidata | Estado | Lo verificado |
 | --- | --- | --- |
-| S&P Dow Jones Indices (www.spglobal.com), originador | leída, **(c)** | La página del índice muestra el nivel (7722.72 al 2026-10-02), un control de exportación y rangos hasta 10 años; la exportación no se probó. Aviso legal, literal: *"Redistribution or reproduction in whole or in part are prohibited without written permission"*. |
-| Cboe, `https://cdn.cboe.com/api/global/us_indices/daily_prices/SPX_History.csv` | leída, **(c)** | Diaria, columnas `DATE,SPX`, 13.047 filas del 1975-01-02 (70.23) al 2026-10-02 (7722.72); 293.010 bytes. La página de datos históricos de Cboe enlaza los CSV de la familia VIX en esa misma ruta, pero no este: no está documentado. Términos de cboe.com: una copia para *"personal non-commercial use"* y prohibición de publicar sin consentimiento escrito. **Se usó solo como contraste.** |
+| S&P Dow Jones Indices (www.spglobal.com), originador | leída, **(c)** | La página del índice muestra el nivel al 2026-10-02, que coincide con el cierre de Cboe de ese día (0.000 %), un control de exportación y rangos hasta 10 años; la exportación no se probó. Aviso legal, literal: *"Redistribution or reproduction in whole or in part are prohibited without written permission"*. |
+| Cboe, `https://cdn.cboe.com/api/global/us_indices/daily_prices/SPX_History.csv` | leída, **(c)** | Diaria, columnas `DATE,SPX`, 13.047 filas del 1975-01-02 al 2026-10-02; 293.010 bytes. La página de datos históricos de Cboe enlaza los CSV de la familia VIX en esa misma ruta, pero no este: no está documentado. Términos de cboe.com: una copia para *"personal non-commercial use"* y prohibición de publicar sin consentimiento escrito. **Se usó solo como contraste.** |
 | Nasdaq (api.nasdaq.com), símbolo SPX | **no sirve** | Responde `"Symbol not exists."`. |
 | Stooq `^spx` | **no sirve** | Ver sección 7. |
 | Yahoo Finance `^GSPC` | leída, **(c)** | Responde desde la máquina con salida directa. Es lo que usa hoy el sitio: ver sección 8. |
@@ -224,8 +231,8 @@ la primera pasada tuvo la misma causa.
 - **Convención: cierre del día**, con la misma nota que `SP500`: valor del
   índice al cierre del mercado, típicamente 4 PM ET.
 - Unidad: "Index Feb 5, 1971=100".
-- Inicio real: **1971-02-05 = 100.000**. 14.520 filas, 14.033 con valor y 487
-  vacías (feriados), hasta 2026-10-02 = 27190.860.
+- Inicio real: **1971-02-05**, el día de la base del índice. 14.520 filas,
+  14.033 con valor y 487 vacías (feriados), hasta el 2026-10-02.
 - Clave / registro: no.
 - **Licencia: (b) con reserva.** La nota de la serie dice solo *"Copyright ©
   2016, NASDAQ OMX Group, Inc."* y la etiqueta es "Copyrighted: Pre-Approval
@@ -237,23 +244,22 @@ la primera pasada tuvo la misma causa.
   uso que no sea el personal hay que contactar al dueño de los datos. Un sitio
   público de investigación sin fines comerciales cabe en la primera frase y no
   en la segunda. La salida limpia es pedirle el permiso a Nasdaq.
-- Muestra: **2026-09-30 = 26861.06** y **2020-03-20 = 6879.52**;
-  api.nasdaq.com da las mismas dos cifras (3.2).
+- Muestra: los cierres del **2026-09-30** y del **2020-03-20**, contra
+  api.nasdaq.com (3.2): diferencia de 0.000 % en los dos.
 - Contraste diario completo: 2.513 fechas comunes con api.nasdaq.com
-  (2016-10-04 a 2026-10-02). 49 difieren en más de 0.01; casi todas por 0.01 a
-  0.05, unas pocas por más (por ejemplo 2019-04-25: FRED 8106.29, Nasdaq
-  8118.68), y la mayor es de 50.93 puntos (0.38 %). FRED trae además un valor
+  (2016-10-04 a 2026-10-02). 49 difieren en más de 0.01 puntos; casi todas por
+  0.01 a 0.05, unas pocas por más (por ejemplo el 2019-04-25, donde FRED queda
+  0.153 % por debajo), y la mayor es de 0.38 %. FRED trae además un valor
   para el 2019-04-19 que la API de Nasdaq no tiene. Sobre el **promedio
   mensual**, esas diferencias pesan como máximo 0.027 % (2023-08).
-- Promedios mensuales calculados: 2026-08 = 26388.689 (21 cierres); 2026-09 =
-  26541.661 (21); 2020-03 = 7772.206 (22). Febrero de 1971 tiene 15 cierres:
-  el primer mes completo es **1971-03**.
+- Cierres por mes: 21 en agosto y en septiembre de 2026, 22 en marzo de 2020.
+  Febrero de 1971 tiene 15: el primer mes completo es **1971-03**.
 
 ### 3.2 Otras candidatas
 
 | Candidata | Estado | Lo verificado |
 | --- | --- | --- |
-| Nasdaq (api.nasdaq.com), `/api/quote/COMP/historical?assetclass=index`, originador | leída, **(c)** | Diaria, cierre. Con `fromdate=1971-01-01` devuelve 10.849 filas y la más antigua es **1984-10-11 = 244.70**. API sin documentación pública; exige cabeceras de navegador. Términos de nasdaq.com: licencia *"solely for your personal, non-commercial use"* y prohibición de copiar o publicar el contenido sin aprobación escrita. **Se usó solo como contraste.** |
+| Nasdaq (api.nasdaq.com), `/api/quote/COMP/historical?assetclass=index`, originador | leída, **(c)** | Diaria, cierre. Con `fromdate=1971-01-01` devuelve 10.849 filas y la más antigua es del **1984-10-11**. API sin documentación pública; exige cabeceras de navegador. Términos de nasdaq.com: licencia *"solely for your personal, non-commercial use"* y prohibición de copiar o publicar el contenido sin aprobación escrita. **Se usó solo como contraste.** |
 | indexes.nasdaqomx.com | parcial, **(c)** | La página "History for COMP" existe; no se exploró. Mismo dueño y mismos términos. |
 | Nasdaq Data Link (data.nasdaq.com) | **no sirve** | Ver sección 7. |
 | Yahoo Finance `^IXIC` | **(c)** | Es lo que usa hoy el sitio: ver sección 8. |
@@ -744,7 +750,7 @@ reemplazar.
 
 | Dato | Qué pide el código | Qué convención sale de ahí | Licencia |
 | --- | --- | --- | --- |
-| S&P 500, Nasdaq Composite | `https://query1.finance.yahoo.com/v8/finance/chart/<símbolo>?range=10y&interval=1mo` para `^GSPC` y `^IXIC`, con la cabecera `User-Agent: Mozilla/5.0`. Toma el `close` de cada vela mensual. | **Cierre de fin de mes.** Verificado: las velas mensuales de `^GSPC` de junio a septiembre de 2026 valen 7499.36, 7489.72, 7686.14 y 7651.54, que son los cierres del último día hábil de cada mes en Cboe. La vela del mes en curso trae el último precio. | **(c).** Ver abajo. |
+| S&P 500, Nasdaq Composite | `https://query1.finance.yahoo.com/v8/finance/chart/<símbolo>?range=10y&interval=1mo` para `^GSPC` y `^IXIC`, con la cabecera `User-Agent: Mozilla/5.0`. Toma el `close` de cada vela mensual. | **Cierre de fin de mes.** Verificado: las velas mensuales de `^GSPC` de junio a septiembre de 2026 coinciden con el cierre del último día hábil de cada mes en Cboe (diferencia de 0.000 % en las cuatro). La vela del mes en curso trae el último precio. | **(c).** Ver abajo. |
 | Oro, plata | El mismo endpoint para `GC=F` y `SI=F`. | Cierre de fin de mes de un **futuro de COMEX**, no del spot. Yahoo los identifica como `instrumentType: FUTURE`, bolsa `CMX`, contrato de diciembre de 2026. | **(c).** |
 | BTC, historia | `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=3650&interval=daily`, sin clave. Se queda con la primera observación de cada mes. | **Precio del día 1 de cada mes a las 00:00 UTC**: una tercera convención, distinta de las dos de arriba. Pero ese pedido **responde HTTP 401** (sección 7), y con menos de 24 meses el código cae a `BTC_STATIC_ANCHORS`: 13 cifras de diciembre (2013 a 2025) escritas a mano e interpoladas. No se observó el sitio desplegado; es lo que se sigue del código y de la respuesta de hoy. | Plan gratuito: no da la historia. |
 | BTC, precio actual | `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin`. Pisa el último punto de la serie. | Precio spot del momento. No se probó hoy. | Ver abajo. |

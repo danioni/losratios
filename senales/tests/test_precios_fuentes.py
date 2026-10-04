@@ -81,11 +81,11 @@ def test_sin_la_fecha_de_actualizacion_el_pink_sheet_la_deja_vacia():
 
 def test_shiller_lee_la_fecha_como_anio_punto_mes():
     serie = fuentes_precios.interpretar_shiller(
-        filas_shiller({"1871-01": 4.44, "1871-10": 4.59, "2026-08": 7700.0})
+        filas_shiller({"1871-01": 5.0, "1871-10": 5.5, "2026-08": 7000.0})
     )
     # 1871.1 es octubre, no enero: los dos primeros decimales son el mes.
-    assert serie[pd.Timestamp("1871-10-01")] == 4.59
-    assert serie[pd.Timestamp("1871-01-01")] == 4.44
+    assert serie[pd.Timestamp("1871-10-01")] == 5.5
+    assert serie[pd.Timestamp("1871-01-01")] == 5.0
     assert len(serie) == 3
 
 
@@ -134,11 +134,11 @@ def test_coin_metrics_paginado_no_se_trunca_en_silencio():
 
 def test_la_api_de_nasdaq_se_lee_con_su_formato_de_fecha_y_de_miles():
     documento = {"data": {"tradesTable": {"rows": [
-        {"date": "10/02/2026", "close": "27,190.86"},
-        {"date": "10/01/2026", "close": "26,871.60"},
+        {"date": "10/02/2026", "close": "12,345.67"},
+        {"date": "10/01/2026", "close": "12,300.00"},
     ]}}}
     serie = fuentes_precios.interpretar_nasdaq_api(documento)
-    assert serie[pd.Timestamp("2026-10-02")] == 27190.86
+    assert serie[pd.Timestamp("2026-10-02")] == 12345.67
     assert serie.index.is_monotonic_increasing
 
 
