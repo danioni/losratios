@@ -20,12 +20,15 @@ from senales.configuracion import (
 from senales.fuentes_fred import ErrorDeFuente
 from senales.ratios import promedio_mensual
 from tests.datos_ratios import (
+    ARCHIVO_CONGELADA,
     ORO,
+    ORO_CONGELADA,
     anclas_de_prueba,
     csv_fred,
     diaria_calendario,
     diaria_habil,
     documento_coin_metrics,
+    escribir_edicion_congelada,
     escribir_pink_sheet,
     filas_shiller,
 )
@@ -80,6 +83,8 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     for directorio in (crudo, series, privado, series_privado):
         directorio.mkdir(parents=True)
     _sembrar_crudos(crudo, privado, FECHA)
+    # A-R0-19: la edición congelada es una copia versionada, con su hash declarado.
+    edicion = escribir_edicion_congelada(crudo)
 
     # La primera corrida real deja en el manifiesto la fecha que declaró Shiller
     # en la cabecera HTTP. Acá se siembra esa fila, porque no hay descarga.
@@ -119,6 +124,7 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     # Las anclas reales del USGS son de 2021 a 2024; los datos de prueba, de 2023 a
     # 2026. Acá el gate cierra contra anclas hechas para estos datos.
     monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba())
+    monkeypatch.setattr(ratios, "PINK_SHEET_CONGELADA", edicion)
 
     def prohibido(*args, **kwargs):
         raise AssertionError("ningún test sale a la red")
@@ -186,6 +192,7 @@ def test_el_directorio_publico_solo_recibe_los_crudos_que_se_pueden_redistribuir
     assert sorted(ruta.name for ruta in entorno["crudo"].iterdir()) == [
         f"coin_metrics_btc_{FECHA}.json",
         f"pink_sheet_{FECHA}.xlsx",
+        ARCHIVO_CONGELADA,
     ]
     assert sorted(ruta.name for ruta in entorno["privado"].iterdir()) == [
         f"NASDAQCOM_{FECHA}.csv",
@@ -230,12 +237,15 @@ def test_cada_par_llega_hasta_el_ultimo_mes_completo_de_sus_dos_fuentes(entorno)
 def test_el_manifiesto_publica_url_fecha_y_hash_de_cada_descarga(entorno):
     _correr()
     tabla = pd.read_csv(entorno["series"] / "descargas_ratios.csv", dtype=str, keep_default_na=False)
-    assert set(tabla["fuente"]) == {"pink_sheet", "shiller_ie_data", "NASDAQCOM", "coin_metrics_btc"}
+    assert set(tabla["fuente"]) == {
+        "pink_sheet", "pink_sheet_edicion_2025-01-03", "shiller_ie_data", "NASDAQCOM", "coin_metrics_btc",
+    }
     assert (tabla["fecha_descarga"] == FECHA).all()
     assert tabla["sha256"].str.fullmatch(r"[0-9a-f]{64}").all()
     en_repo = dict(zip(tabla["fuente"], tabla["crudo_en_repo"]))
     assert en_repo == {
-        "pink_sheet": "sí", "shiller_ie_data": "no", "NASDAQCOM": "no", "coin_metrics_btc": "sí",
+        "pink_sheet": "sí", "pink_sheet_edicion_2025-01-03": "sí", "shiller_ie_data": "no",
+        "NASDAQCOM": "no", "coin_metrics_btc": "sí",
     }
 
 
@@ -249,7 +259,7 @@ def test_un_contraste_que_no_cierra_detiene_la_corrida_sin_publicar(entorno, mon
     error = capsys.readouterr().err
     assert "No ajustar la tolerancia" in error
     # El manifiesto registra lo que se bajó, cierre o no la validación.
-    assert len(pd.read_csv(entorno["series"] / "descargas_ratios.csv")) == 4
+    assert len(pd.read_csv(entorno["series"] / "descargas_ratios.csv")) == 5
 
 
 def test_una_fuente_de_contraste_inalcanzable_es_un_error_de_fuente(entorno, monkeypatch):
@@ -393,17 +403,91 @@ def test_un_gate_que_deja_de_cerrar_se_anota_como_un_solo_hecho(entorno, monkeyp
 
 
 def test_lo_publicado_lleva_el_error_por_redondeo_y_la_marca_de_apto(entorno):
-    """A-R0-17."""
+    """A-R0-17 y A-R0-19: el error es el de la edición usada en cada mes."""
     _correr()
-    precios = pd.read_csv(entorno["series"] / "precios_mensuales.csv")
-    assert (precios["oro_error_redondeo_pct"].dropna() > 0).all()
-    assert (precios["plata_error_redondeo_pct"].dropna() > 0).all()
+    precios = pd.read_csv(entorno["series"] / "precios_mensuales.csv").set_index("mes")
+    # 2023 y 2024 salen de la edición congelada, al centavo; desde 2025, de la vigente, al dólar.
+    assert precios.loc["2023-05", "oro_error_redondeo_pct"] < 0.001
+    assert precios.loc["2025-05", "oro_error_redondeo_pct"] == pytest.approx(0.5 / 4300 * 100, abs=1e-4)
+    assert precios.loc["2025-05", "plata_error_redondeo_pct"] == pytest.approx(0.05 / 64 * 100, abs=1e-4)
     largos = pd.read_csv(entorno["series"] / "ratios.csv")
     assert set(largos["apto_metricas"]) <= {"sí", "no"}
-    oro_plata = largos[largos["par"] == "oro_plata"]
-    btc_oro = largos[largos["par"] == "btc_oro"]
-    # Oro/Plata suma dos errores; BTC/Oro, solo el del oro.
-    assert oro_plata["error_redondeo_pct"].min() > btc_oro["error_redondeo_pct"].max()
+    oro_plata = largos[largos["par"] == "oro_plata"].set_index("mes")
+    btc_oro = largos[largos["par"] == "btc_oro"].set_index("mes")
+    # En un mismo mes, Oro/Plata suma dos errores y BTC/Oro lleva solo el del oro.
+    assert oro_plata.loc["2026-08", "error_redondeo_pct"] > btc_oro.loc["2026-08", "error_redondeo_pct"]
     pares = pd.read_csv(entorno["series"] / "pares.csv", keep_default_na=False).set_index("par")
     assert pares.loc["oro_plata", "apto_desde"] == "2023-01"
     assert int(pares.loc["oro_plata", "meses_aptos"]) == len(oro_plata)
+
+
+# --- A-R0-19: empalme de las dos ediciones del Pink Sheet --------------------
+
+
+def test_los_metales_salen_de_la_edicion_congelada_hasta_2024_y_de_la_vigente_despues(entorno):
+    _correr()
+    precios = pd.read_csv(entorno["series"] / "precios_mensuales.csv", keep_default_na=False).set_index("mes")
+    assert precios.loc["2023-05", "pink_sheet_edicion"] == "2025-01-03"
+    assert precios.loc["2024-12", "pink_sheet_edicion"] == "2025-01-03"
+    assert precios.loc["2025-01", "pink_sheet_edicion"] == "vigente"
+    # Sin redondear hasta diciembre de 2024, redondeado después.
+    assert float(precios.loc["2023-05", "oro_usd_oz"]) == 4100.27
+    assert float(precios.loc["2023-05", "plata_usd_oz"]) == 60.0137
+    assert float(precios.loc["2025-05", "oro_usd_oz"]) == 4300.0
+
+
+def test_el_control_del_empalme_queda_en_el_changelog_con_sus_empates(entorno):
+    _correr()
+    texto = (entorno["series"] / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "Empalme del Pink Sheet" in texto
+    assert "OK - Oro: redondear la edición del 2025-01-03 reproduce la vigente en 24 de 24" in texto
+    assert "2024-06 (4200.5 y 4200.0)" in texto, "el mes a medio paso exacto va listado"
+    assert "OK - Plata: redondear la edición del 2025-01-03 reproduce la vigente en 24 de 24" in texto
+
+
+def test_la_corrida_no_sale_a_buscar_la_edicion_congelada(entorno):
+    """El pipeline usa la copia versionada: no depende de que la URL siga en línea.
+
+    La fixture ya prohíbe toda salida a la red, y la corrida cierra igual.
+    """
+    assert _correr() == 0
+    tabla = pd.read_csv(entorno["series"] / "descargas_ratios.csv", dtype=str, keep_default_na=False)
+    fila = tabla[tabla["fuente"] == "pink_sheet_edicion_2025-01-03"].iloc[0]
+    assert fila["url"].startswith("https://thedocs.worldbank.org/")
+    assert fila["actualizada"] == "2025-01-03"
+    assert fila["sha256"] == fuentes_precios.sha256_de(entorno["crudo"] / ARCHIVO_CONGELADA)
+
+
+def test_si_la_fuente_revisa_un_mes_viejo_el_control_detiene_la_corrida(entorno, capsys):
+    """Redondear la congelada ya no reproduce la vigente: no son la misma serie."""
+    revisado = {**ORO, "2024-03": ORO["2024-03"] + 30.0}
+    escribir_pink_sheet(entorno["crudo"] / f"pink_sheet_{FECHA}.xlsx", oro=revisado)
+    assert _correr() == ratios.CODIGO_VALIDACION_FALLIDA
+    for nombre in ("precios_mensuales.csv", "ratios.csv", "CHANGELOG.md"):
+        assert not (entorno["series"] / nombre).exists(), nombre
+    error = capsys.readouterr().err
+    assert "NO coinciden 1: 2024-03 (4199.84 y 4230.0)" in error
+    assert "A-R0-19" in error
+
+
+def test_una_copia_de_la_edicion_congelada_que_cambio_no_se_usa(entorno):
+    """La copia versionada se identifica por su hash. Otra planilla, aunque sea válida, no pasa."""
+    otra = {**ORO_CONGELADA, "2023-01": 4100.31}
+    escribir_pink_sheet(
+        entorno["crudo"] / ARCHIVO_CONGELADA,
+        descripcion_oro=ratios.PINK_SHEET_CONGELADA.descripcion_oro,
+        oro=otra,
+        actualizado="Updated on January 03, 2025",
+    )
+    assert _correr() == ratios.CODIGO_ERROR_FUENTE
+    assert not (entorno["series"] / "precios_mensuales.csv").exists()
+
+
+def test_sin_la_copia_y_sin_red_no_hay_empalme(entorno, monkeypatch):
+    def sin_conexion(*args, **kwargs):
+        raise fuentes_precios.requests.ConnectionError("sin conexión")
+
+    monkeypatch.setattr(fuentes_precios.requests, "get", sin_conexion)
+    (entorno["crudo"] / ARCHIVO_CONGELADA).unlink()
+    assert _correr() == ratios.CODIGO_ERROR_FUENTE
+    assert not (entorno["series"] / "precios_mensuales.csv").exists()

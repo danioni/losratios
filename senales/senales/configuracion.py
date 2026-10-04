@@ -341,9 +341,34 @@ DESCARGA_PINK_SHEET = Descarga(
     extension="xlsx",
     atribucion=(
         "The World Bank: World Bank Commodity Price Data (The Pink Sheet). "
-        "Licencia CC BY 4.0. Los valores mensuales se publican sin cambios."
+        "Licencia CC BY 4.0. Edición del 3 de enero de 2025 para 1960-01 a 2024-12 y "
+        "edición vigente desde 2025-01. Los valores mensuales se publican sin cambios."
     ),
     patron_enlace=r'href="([^"]*CMO-Historical-Data-Monthly\.xlsx[^"]*)"',
+)
+
+# A-R0-19: la edición de enero de 2025 del mismo archivo, la última que el Banco
+# Mundial publicó sin redondear. La URL es la que el archivo tenía entonces; la
+# página actual no la enlaza. El pipeline no depende de ella: usa la copia
+# versionada en data/raw/.
+DESCARGA_PINK_SHEET_CONGELADA = Descarga(
+    clave="pink_sheet_edicion_2025-01-03",
+    descripcion=(
+        "Banco Mundial, Commodity Price Data (The Pink Sheet), precios mensuales, "
+        "edición del 3 de enero de 2025, sin redondear"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia="CC BY 4.0",
+    url=(
+        "https://thedocs.worldbank.org/en/doc/5d903e848db1d1b83e0ec8f744e55570-0350012021/"
+        "related/CMO-Historical-Data-Monthly.xlsx"
+    ),
+    extension="xlsx",
+    atribucion=(
+        "The World Bank: World Bank Commodity Price Data (The Pink Sheet), edición del "
+        "3 de enero de 2025. Licencia CC BY 4.0. Los valores mensuales se publican sin "
+        "cambios."
+    ),
 )
 
 DESCARGA_SHILLER = Descarga(
@@ -412,6 +437,42 @@ PINK_SHEET_DESCRIPCION_PLATA = (
     "Handy & Harman. Grade prior to 1962 unrefined silver."
 )
 
+
+@dataclass(frozen=True)
+class EdicionCongelada:
+    """Una edición vieja de una fuente, guardada tal cual y usada para un tramo fijo.
+
+    El archivo está versionado en data/raw/ con un nombre fijo y se identifica
+    por su SHA-256. El pipeline usa esa copia y no sale a la red a buscarla: si
+    la URL deja de responder, nada cambia.
+    """
+
+    descarga: Descarga
+    archivo: str  # nombre fijo dentro de data/raw/
+    fecha_edicion: date  # la que la propia planilla declara
+    fecha_descarga: date  # cuándo se bajó la copia versionada
+    sha256: str
+    ultimo_mes: str  # A-R0-19: último mes que se toma de esta edición
+    descripcion_oro: str
+    descripcion_plata: str
+
+
+# A-R0-19: el empalme. De 1960-01 a 2024-12 el oro y la plata salen de esta
+# edición, sin redondear; desde 2025-01, de la edición vigente, redondeada.
+#
+# La descripción del oro es la anterior al cambio de junio de 2025 (A-R0-7): en
+# enero de 2025 todavía era el fixing de la tarde de Londres.
+PINK_SHEET_CONGELADA = EdicionCongelada(
+    descarga=DESCARGA_PINK_SHEET_CONGELADA,
+    archivo="pink_sheet_edicion_2025-01-03.xlsx",
+    fecha_edicion=date(2025, 1, 3),
+    fecha_descarga=date(2026, 10, 4),
+    sha256="bd89b83eeceadaecb803018c104f76b316d2df3fae28ef7afde48021100c7e11",
+    ultimo_mes="2024-12",
+    descripcion_oro="Gold (UK), 99.5% fine, London afternoon fixing, average of daily rates",
+    descripcion_plata=PINK_SHEET_DESCRIPCION_PLATA,
+)
+
 # A-R0-7: primer mes del oro "spot". Antes es el fixing de la tarde de Londres.
 ORO_QUIEBRE_DEFINICION = "2025-06"
 ORO_DEFINICION_ANTES = "fixing de la tarde de Londres"
@@ -427,8 +488,8 @@ SERIE_ORO = SeriePrecio(
     unidad="USD por onza troy",
     estado=ESTADO_DATO,
     banda_plausible=(30.0, 50_000.0),
-    supuestos=("A-R0-7", "A-R0-9", "A-R0-17"),
-    medio_paso_redondeo=0.5,  # el Pink Sheet publica el oro al dólar entero
+    supuestos=("A-R0-7", "A-R0-9", "A-R0-17", "A-R0-19"),
+    medio_paso_redondeo=0.5,  # la edición vigente del Pink Sheet publica el oro al dólar entero
 )
 
 SERIE_PLATA = SeriePrecio(
@@ -439,7 +500,7 @@ SERIE_PLATA = SeriePrecio(
     # A-R0-8: que la serie sea un promedio mensual se infiere, no está escrito.
     estado=ESTADO_ESTIMACION,
     banda_plausible=(0.5, 1_000.0),
-    supuestos=("A-R0-8", "A-R0-9", "A-R0-17"),
+    supuestos=("A-R0-8", "A-R0-9", "A-R0-17", "A-R0-19"),
     medio_paso_redondeo=0.05,  # y la plata, a un decimal
 )
 
@@ -615,6 +676,7 @@ COLUMNAS_PRECIOS = [
     "plata_usd_oz",
     "plata_error_redondeo_pct",
     "plata_estado",
+    "pink_sheet_edicion",
     "btc_usd",
 ]
 COLUMNAS_RATIOS = ["mes", "par", "valor", "error_redondeo_pct", "apto_metricas", "estado"]

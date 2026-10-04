@@ -153,13 +153,14 @@ cita.
 ## 2026-10-04 · ratios
 
 - Descargas:
+  - pink_sheet_edicion_2025-01-03: https://thedocs.worldbank.org/en/doc/5d903e848db1d1b83e0ec8f744e55570-0350012021/related/CMO-Historical-Data-Monthly.xlsx, sha256 bd89b83eeceadaecb803018c104f76b316d2df3fae28ef7afde48021100c7e11, actualizada el 2025-01-03
   - pink_sheet: https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx, sha256 ea1c350827878ea3bbe30e3cda16a13fd3bd5b409b8458940dc94a36b5a33154, actualizada el 2026-10-02
   - shiller_ie_data: https://img1.wsimg.com/blobby/go/e5e77e0b-59d1-44d9-ab25-4763ac982e53/downloads/70fec4f5-727f-4e53-b5f1-179af109c5fa/ie_data.xls?ver=1788371540009, sha256 044196dafe44c3030b2facbdea023975b3f6aa68b4e52f8f9bafc403e19589c1, actualizada el 2026-09-02
   - NASDAQCOM: https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQCOM, sha256 5f40c787ab892665ed1239b0ccad0eda45b3c725ef09a66d3c0026c25e56de04, actualizada el 2026-10-03
   - coin_metrics_btc: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD&frequency=1d&page_size=10000, sha256 b1acbe3f13bf639f3f4f508a03bd722908c50ffd3e315ac0337b410669027e8a
 - Series, en meses completos:
-  - Oro: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-7, A-R0-9, A-R0-17)
-  - Plata: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-8, A-R0-9, A-R0-17)
+  - Oro: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-7, A-R0-9, A-R0-17, A-R0-19)
+  - Plata: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-8, A-R0-9, A-R0-17, A-R0-19)
   - BTC: 2013-01 a 2026-09, 165 meses, se publica (CC BY-NC 4.0; A-R0-4, A-R0-5, A-R0-10)
   - S&P 500: 1871-01 a 2026-08, 1868 meses, se calcula y no se publica: NO MEDIDO: pendiente de permiso del dueño del índice (sin licencia declarada; A-R0-2, A-R0-11, A-R0-13)
   - Nasdaq Composite: 1971-03 a 2026-09, 667 meses, se calcula y no se publica: NO MEDIDO: pendiente de permiso del dueño del índice (Copyrighted: Pre-Approval Required; uso educativo no comercial; A-R0-3, A-R0-13)
@@ -171,35 +172,42 @@ cita.
   - Nasdaq Composite | 1971-02: la serie empieza el 1971-02-05, con el mes empezado
   - Nasdaq Composite | 2026-10: mes en curso (la última observación es del 2026-10-02)
 - Pares:
-  - Oro / Plata: estimación, 1960-01 a 2026-09, 801 meses; apto para métricas desde 2009-02 (212 meses con error de redondeo <= 0.5 %, A-R0-17)
+  - Oro / Plata: estimación, 1960-01 a 2026-09, 801 meses; apto para métricas desde 1968-04 (702 meses con error de redondeo <= 0.5 %, A-R0-17)
   - BTC / Oro: dato, 2013-01 a 2026-09, 165 meses; apto para métricas desde 2013-01 (165 meses con error de redondeo <= 0.5 %, A-R0-17)
   - Oro / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 1960-01 a 2026-08, 800 meses
   - BTC / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 2013-01 a 2026-08, 164 meses
   - Nasdaq / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 1971-03 a 2026-08, 666 meses
-- Meses agregados: 801 [2026-05, 2026-06, 2026-07, 2026-08, 2026-09] (últimos 5 de 801)
-- Revisiones de datos históricos: ninguna
+- Meses agregados: 0
+- Revisiones de datos históricos:
+  - oro_usd_oz: 770 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 1.389 % en 1968-01 (36.0000 -> 35.5000)
+  - plata_usd_oz: 774 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 4.280 % en 1962-01 (1.0000 -> 1.0428)
+  - oro_plata: 780 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 4.615 % en 1962-09 (29.1667 -> 30.5127)
+  - btc_oro: 143 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 0.042 % en 2015-06 (0.2014 -> 0.2014)
+  - son 2467 cambios, más de 40: es un cambio de método y no una revisión de la fuente, y por eso va resumido por columna
+- Empalme del Pink Sheet:
+  - OK - Oro: redondear la edición del 2025-01-03 reproduce la vigente en 780 de 780 meses superpuestos; 11 quedan exactamente a medio paso de redondeo: 1968-01 (35.5 y 36.0), 1971-10 (42.5 y 43.0), 1973-04 (90.5 y 91.0), 1982-12 (444.5 y 445.0), 1985-03 (313.5 y 314.0), 1985-06 (316.5 y 317.0), 1985-11 (321.5 y 322.0), 2002-02 (295.5 y 296.0), 2015-06 (1181.5 y 1182.0), 2016-02 (1199.5 y 1200.0), 2022-05 (1848.5 y 1849.0)
+  - OK - Plata: redondear la edición del 2025-01-03 reproduce la vigente en 780 de 780 meses superpuestos; 1 queda exactamente a medio paso de redondeo: 2015-09 (14.75 y 14.8)
 - Contrastes:
   - OK - S&P 500 contra FRED SP500, promedio mensual de los cierres diarios: 119 meses, diferencia mediana 0.000 %, máxima 0.232 % en 2024-01, tolerancia +/-0.50 %
   - OK - Nasdaq Composite contra API de nasdaq.com, promedio mensual de los cierres diarios: 119 meses, diferencia mediana 0.000 %, máxima 0.027 % en 2023-08, tolerancia +/-0.10 %
   - OK - BTC contra Bitstamp, promedio mensual de los cierres de la vela diaria UTC: 165 meses, diferencia mediana 0.044 %, máxima 1.332 % en 2017-12 (15194.1050 contra 14994.4103), tolerancia +/-2.00 %
 - Oro y plata:
   - OK - Oro: gate anual contra el USGS, 4 de 4 años dentro de +/-0.50 %
-  - OK - Oro 2021: promedio de los 12 meses 1799.5833 contra 1801.00 del USGS, diferencia -0.079 %, tolerancia +/-0.50 %
-  - OK - Oro 2022: promedio de los 12 meses 1800.7500 contra 1802.00 del USGS, diferencia -0.069 %, tolerancia +/-0.50 %
-  - OK - Oro 2023: promedio de los 12 meses 1942.7500 contra 1945.00 del USGS, diferencia -0.116 %, tolerancia +/-0.50 %
-  - OK - Oro 2024: promedio de los 12 meses 2387.5833 contra 2388.00 del USGS, diferencia -0.017 %, tolerancia +/-0.50 %
+  - OK - Oro 2021: promedio de los 12 meses 1799.6292 contra 1801.00 del USGS, diferencia -0.076 %, tolerancia +/-0.50 %
+  - OK - Oro 2022: promedio de los 12 meses 1800.6025 contra 1802.00 del USGS, diferencia -0.078 %, tolerancia +/-0.50 %
+  - OK - Oro 2023: promedio de los 12 meses 1942.6658 contra 1945.00 del USGS, diferencia -0.120 %, tolerancia +/-0.50 %
+  - OK - Oro 2024: promedio de los 12 meses 2387.7025 contra 2388.00 del USGS, diferencia -0.012 %, tolerancia +/-0.50 %
   - OK - Plata: gate anual contra el USGS, 4 de 4 años dentro de +/-1.00 %
-  - OK - Plata 2021: promedio de los 12 meses 25.1667 contra 25.23 del USGS, diferencia -0.251 %, tolerancia +/-1.00 %
-  - OK - Plata 2022: promedio de los 12 meses 21.7833 contra 21.88 del USGS, diferencia -0.442 %, tolerancia +/-1.00 %
-  - OK - Plata 2023: promedio de los 12 meses 23.4083 contra 23.54 del USGS, diferencia -0.559 %, tolerancia +/-1.00 %
-  - OK - Plata 2024: promedio de los 12 meses 28.2750 contra 28.37 del USGS, diferencia -0.335 %, tolerancia +/-1.00 %
+  - OK - Plata 2021: promedio de los 12 meses 25.1646 contra 25.23 del USGS, diferencia -0.259 %, tolerancia +/-1.00 %
+  - OK - Plata 2022: promedio de los 12 meses 21.7944 contra 21.88 del USGS, diferencia -0.391 %, tolerancia +/-1.00 %
+  - OK - Plata 2023: promedio de los 12 meses 23.3986 contra 23.54 del USGS, diferencia -0.601 %, tolerancia +/-1.00 %
+  - OK - Plata 2024: promedio de los 12 meses 28.2692 contra 28.37 del USGS, diferencia -0.355 %, tolerancia +/-1.00 %
   - OK - Oro 2026-04: 4721.00 dentro de [3994.50, 4870.50] (LBMA Precious Metals Market Report, Q2 2026: Price Low 25 Jun am $3,994.50; Price High 17 Apr pm $4,870.50)
   - OK - Oro 2026-05: 4587.00 dentro de [3994.50, 4870.50] (LBMA Precious Metals Market Report, Q2 2026: Price Low 25 Jun am $3,994.50; Price High 17 Apr pm $4,870.50)
   - OK - Oro 2026-06: 4228.00 dentro de [3994.50, 4870.50] (LBMA Precious Metals Market Report, Q2 2026: Price Low 25 Jun am $3,994.50; Price High 17 Apr pm $4,870.50)
   - OK - Plata 2026-04: 75.90 dentro de [57.37, 86.79] (LBMA Precious Metals Market Report, Q2 2026: Price Low 26 Jun $57.37; Price High 4 Apr $86.79)
   - OK - Plata 2026-05: 78.00 dentro de [57.37, 86.79] (LBMA Precious Metals Market Report, Q2 2026: Price Low 26 Jun $57.37; Price High 4 Apr $86.79)
   - OK - Plata 2026-06: 66.70 dentro de [57.37, 86.79] (LBMA Precious Metals Market Report, Q2 2026: Price Low 26 Jun $57.37; Price High 4 Apr $86.79)
-- Nota: primera publicación de las series: no hay corrida anterior con que comparar
 - Nota: los crudos que no se pueden redistribuir y las series que no se publican están fuera del repositorio (A-R0-15); de las fuentes de contraste no se guarda nada (A-R0-12)
 
 ## 2026-10-03

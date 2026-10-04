@@ -37,6 +37,7 @@ from senales.configuracion import (
     PINK_SHEET_UNIDAD,
     Contraste,
     Descarga,
+    EdicionCongelada,
 )
 from senales.fuentes_fred import ErrorDeFuente
 from senales.nucleo import normalizar_texto
@@ -107,6 +108,8 @@ class RegistroDescarga:
 
     def linea(self) -> str:
         accion = "descargada" if self.descargada_ahora else "reutilizada"
+        if self.fecha_descarga != date.today() and not self.descargada_ahora:
+            accion = f"copia del {self.fecha_descarga}"
         lugar = "data/raw" if self.descarga.crudo_versionado else "fuera del repositorio"
         return (
             f"{self.descarga.clave}: {accion} {self.ruta.name} ({lugar}), "
@@ -269,6 +272,51 @@ def descargar(
     )
 
 
+def cargar_edicion_congelada(
+    edicion: EdicionCongelada, dir_crudo: Path, sesion=None
+) -> RegistroDescarga:
+    """La copia versionada de una edición congelada, verificada contra su hash.
+
+    El pipeline no depende de que la URL de la edición siga en línea: usa la
+    copia que viaja con el repositorio (A-R0-19). Solo si esa copia falta sale a
+    buscarla, y la acepta únicamente si su SHA-256 es el esperado.
+    """
+    ruta = dir_crudo / edicion.archivo
+    descargada = False
+    if not ruta.exists():
+        respuesta = _pedir(edicion.descarga.url, sesion)
+        contenido = respuesta.content
+        _verificar_formato(edicion.descarga, contenido, edicion.descarga.url)
+        if hashlib.sha256(contenido).hexdigest() != edicion.sha256:
+            raise ErrorDeFuente(
+                f"{edicion.descarga.clave}: {edicion.descarga.url} ya no entrega la edición "
+                f"del {edicion.fecha_edicion} (el sha256 no es {edicion.sha256[:16]}…). Sin la "
+                f"copia versionada de {edicion.archivo} no se puede reconstruir el empalme."
+            )
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        temporal = ruta.with_suffix(ruta.suffix + ".tmp")
+        temporal.write_bytes(contenido)
+        temporal.replace(ruta)
+        descargada = True
+
+    resumen = sha256_de(ruta)
+    if resumen != edicion.sha256:
+        raise ErrorDeFuente(
+            f"{edicion.descarga.clave}: {ruta.name} tiene sha256 {resumen[:16]}… y la edición "
+            f"congelada es {edicion.sha256[:16]}…. El archivo cambió; no se usa."
+        )
+    return RegistroDescarga(
+        descarga=edicion.descarga,
+        fecha_descarga=edicion.fecha_descarga,
+        ruta=ruta,
+        url=edicion.descarga.url,
+        bytes=ruta.stat().st_size,
+        sha256=resumen,
+        actualizada=edicion.fecha_edicion,
+        descargada_ahora=descargada,
+    )
+
+
 def actualizar_manifiesto(ruta: Path, registros: list[RegistroDescarga]) -> bool:
     """Deja una fila por (fecha, fuente). Devuelve True si el archivo cambió."""
     previo = leer_manifiesto(ruta)
@@ -374,8 +422,17 @@ def _verificar_descripcion(filas: list[tuple], esperada: str, que: str) -> None:
     )
 
 
-def interpretar_pink_sheet(precios: list[tuple], descripcion: list[tuple]) -> PinkSheet:
-    """Saca oro y plata de las filas de las hojas 'Monthly Prices' y 'Description'."""
+def interpretar_pink_sheet(
+    precios: list[tuple],
+    descripcion: list[tuple],
+    descripcion_oro: str = PINK_SHEET_DESCRIPCION_ORO,
+    descripcion_plata: str = PINK_SHEET_DESCRIPCION_PLATA,
+) -> PinkSheet:
+    """Saca oro y plata de las filas de las hojas 'Monthly Prices' y 'Description'.
+
+    Las descripciones esperadas son las de la edición vigente, salvo que se lea
+    otra edición: cada una se verifica contra la frase que tenía cuando se leyó.
+    """
     fila_nombres = next(
         (
             i
@@ -402,8 +459,8 @@ def interpretar_pink_sheet(precios: list[tuple], descripcion: list[tuple]) -> Pi
             )
         columnas[nombre] = columna
 
-    _verificar_descripcion(descripcion, PINK_SHEET_DESCRIPCION_ORO, "del oro")
-    _verificar_descripcion(descripcion, PINK_SHEET_DESCRIPCION_PLATA, "de la plata")
+    _verificar_descripcion(descripcion, descripcion_oro, "del oro")
+    _verificar_descripcion(descripcion, descripcion_plata, "de la plata")
 
     oro: list[tuple[pd.Timestamp, float]] = []
     plata: list[tuple[pd.Timestamp, float]] = []
@@ -426,10 +483,16 @@ def interpretar_pink_sheet(precios: list[tuple], descripcion: list[tuple]) -> Pi
     )
 
 
-def leer_pink_sheet(ruta: Path) -> PinkSheet:
+def leer_pink_sheet(
+    ruta: Path,
+    descripcion_oro: str = PINK_SHEET_DESCRIPCION_ORO,
+    descripcion_plata: str = PINK_SHEET_DESCRIPCION_PLATA,
+) -> PinkSheet:
     return interpretar_pink_sheet(
         filas_de_xlsx(ruta, PINK_SHEET_HOJA_PRECIOS),
         filas_de_xlsx(ruta, PINK_SHEET_HOJA_DESCRIPCION),
+        descripcion_oro,
+        descripcion_plata,
     )
 
 

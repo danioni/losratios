@@ -71,6 +71,7 @@ from senales.configuracion import (
     ORO_DEFINICION_DESPUES,
     ORO_QUIEBRE_DEFINICION,
     PARES,
+    PINK_SHEET_CONGELADA,
     SERIES_PRECIO,
     TOLERANCIA_GATE_ORO_PCT,
     TOLERANCIA_GATE_PLATA_PCT,
@@ -229,18 +230,18 @@ def verificar_redondeo(mensual: pd.Series, serie: SeriePrecio) -> None:
         )
 
 
-def error_redondeo_pct(mensual: pd.Series, serie: SeriePrecio) -> pd.Series:
+def error_redondeo_pct(mensual: pd.Series, medio_paso: pd.Series) -> pd.Series:
     """Error máximo de cada valor por el redondeo de la fuente, en porcentaje.
 
-    Es medio paso de redondeo sobre el valor: 0.5/oro y 0.05/plata. Una fuente
-    que no redondea no aporta error.
+    Es medio paso de redondeo sobre el valor. El medio paso va mes por mes,
+    porque depende de qué edición de la fuente se usó en cada uno (A-R0-19):
+    0.5 para el oro y 0.05 para la plata en la edición vigente, y 0 donde la
+    fuente no redondea.
     """
-    if serie.medio_paso_redondeo is None:
-        return mensual * 0.0
-    return serie.medio_paso_redondeo / mensual * 100.0
+    return medio_paso.reindex(mensual.index).fillna(0.0) / mensual * 100.0
 
 
-def errores_de_pares(precios: pd.DataFrame) -> pd.DataFrame:
+def errores_de_pares(precios: pd.DataFrame, pasos: pd.DataFrame) -> pd.DataFrame:
     """Error máximo de cada ratio por redondeo: la suma de los de sus dos lados.
 
     Es la cota de primer orden del error relativo de un cociente.
@@ -248,10 +249,129 @@ def errores_de_pares(precios: pd.DataFrame) -> pd.DataFrame:
     errores = pd.DataFrame(index=precios.index)
     for par in PARES:
         errores[par.clave] = sum(
-            error_redondeo_pct(precios[lado], SERIES_POR_CLAVE[lado])
+            error_redondeo_pct(precios[lado], pasos[lado])
             for lado in (par.numerador, par.denominador)
         )
     return errores
+
+
+# --- A-R0-19: empalme de las dos ediciones del Pink Sheet ---------------------
+
+
+@dataclass(frozen=True)
+class ResultadoEmpalme:
+    """Si redondear la edición congelada reproduce la vigente, mes por mes."""
+
+    serie: str
+    meses: int
+    empates: list[str]
+    fuera: list[str]
+
+    @property
+    def ok(self) -> bool:
+        return self.meses > 0 and not self.fuera
+
+    def resumen(self) -> str:
+        nombre = SERIES_POR_CLAVE[self.serie].nombre
+        if self.meses == 0:
+            return f"FALLA - {nombre}: las dos ediciones no tienen ningún mes en común"
+        linea = (
+            f"{'OK' if self.ok else 'FALLA'} - {nombre}: redondear la edición del "
+            f"{PINK_SHEET_CONGELADA.fecha_edicion} reproduce la vigente en "
+            f"{self.meses - len(self.fuera)} de {self.meses} meses superpuestos"
+        )
+        if self.empates:
+            linea += (
+                f"; {len(self.empates)} {'queda' if len(self.empates) == 1 else 'quedan'} "
+                "exactamente a medio paso de redondeo: "
+                + ", ".join(self.empates)
+            )
+        if self.fuera:
+            linea += f"; NO coinciden {len(self.fuera)}: " + ", ".join(self.fuera[:8])
+            if len(self.fuera) > 8:
+                linea += f" y {len(self.fuera) - 8} más"
+        return linea
+
+
+def controlar_empalme(
+    congelada: pd.Series, vigente: pd.Series, serie: SeriePrecio
+) -> ResultadoEmpalme:
+    """Redondear la edición congelada tiene que reproducir la vigente.
+
+    Es lo que justifica empalmarlas: son la misma serie, publicada con distinta
+    precisión. Un mes coincide si la edición congelada queda a no más de medio
+    paso de redondeo de la vigente. Los que quedan exactamente a medio paso —un
+    valor terminado en ,5 justo— se aceptan y se listan: ahí las dos formas de
+    redondear son válidas. Cualquier otro desvío quiere decir que el Banco
+    Mundial revisó ese mes después de congelada la edición, y la corrida se
+    detiene.
+    """
+    medio_paso = serie.medio_paso_redondeo or 0.0
+    comunes = congelada.dropna().index.intersection(vigente.dropna().index)
+    distancia = (congelada.loc[comunes] - vigente.loc[comunes]).abs()
+    holgura = 1e-9
+    empates = distancia[(distancia - medio_paso).abs() <= holgura]
+    fuera = distancia[distancia > medio_paso + holgura]
+    return ResultadoEmpalme(
+        serie=serie.clave,
+        meses=len(comunes),
+        empates=[
+            f"{_mes(mes)} ({float(congelada[mes])!r} y {float(vigente[mes])!r})"
+            for mes in empates.index
+        ],
+        fuera=[
+            f"{_mes(mes)} ({float(congelada[mes])!r} y {float(vigente[mes])!r})"
+            for mes in fuera.index
+        ],
+    )
+
+
+def empalmar(congelada: pd.Series, vigente: pd.Series, ultimo_mes: str) -> pd.Series:
+    """La edición congelada hasta `ultimo_mes`, y la vigente desde el mes siguiente."""
+    corte = pd.Timestamp(ultimo_mes + "-01")
+    if congelada.empty or congelada.index[-1] < corte:
+        raise ErrorDeFuente(
+            f"la edición congelada llega hasta {_mes(congelada.index[-1]) if len(congelada) else 'ningún mes'} "
+            f"y el empalme la necesita hasta {ultimo_mes}"
+        )
+    serie = pd.concat([congelada[congelada.index <= corte], vigente[vigente.index > corte]])
+    serie.index.name = "mes"
+    return serie
+
+
+def medio_paso_publicado(valor: float) -> float:
+    """Media unidad del último decimal con que un valor está publicado.
+
+    35.27 está publicado al centavo: medio paso 0.005. 36.0 está publicado al
+    dólar: medio paso 0.5. No se supone que un valor que termina en cero tenga
+    más precisión de la que muestra; es la lectura conservadora.
+    """
+    if pd.isna(valor):
+        return 0.0
+    texto = repr(float(valor))
+    decimales = 0 if texto.endswith(".0") or "e" in texto else len(texto.split(".")[1])
+    return 0.5 * 10.0**-decimales
+
+
+def medios_pasos(precios: pd.DataFrame, ultimo_mes_congelada: str) -> pd.DataFrame:
+    """Medio paso de redondeo de cada valor, según la edición de la que salió.
+
+    La edición vigente del Pink Sheet declara su precisión: el oro al dólar y la
+    plata a un decimal. La edición congelada no declara ninguna y trae cada mes
+    con los decimales que tenga, de ninguno a once: ahí el medio paso es el del
+    último decimal publicado de ese valor. Una fuente que no redondea aporta 0.
+    """
+    corte = pd.Timestamp(ultimo_mes_congelada + "-01")
+    pasos = pd.DataFrame(0.0, index=precios.index, columns=precios.columns)
+    congelados = pasos.index <= corte
+    for serie in SERIES_PRECIO:
+        if serie.medio_paso_redondeo is None:
+            continue
+        pasos.loc[~congelados, serie.clave] = serie.medio_paso_redondeo
+        pasos.loc[congelados, serie.clave] = (
+            precios.loc[congelados, serie.clave].map(medio_paso_publicado).to_numpy()
+        )
+    return pasos
 
 
 def apto_desde(error: pd.Series) -> str:
@@ -348,7 +468,7 @@ def _redondear(valores: pd.Series, decimales: int = 4):
     return valores.round(decimales).to_numpy()
 
 
-def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+def tabla_precios(precios: pd.DataFrame, pasos: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     """Las series que se publican, con lo que hay que decir junto a cada una.
 
     Las columnas son siempre las mismas. La de una serie que no se publica queda
@@ -365,9 +485,7 @@ def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     tabla = pd.DataFrame({"mes": [_mes(mes) for mes in visibles.index]})
     tabla["oro_usd_oz"] = visibles["oro"].to_numpy()
     # A-R0-17: el error máximo por redondeo va junto a cada valor.
-    tabla["oro_error_redondeo_pct"] = _redondear(
-        error_redondeo_pct(visibles["oro"], SERIES_POR_CLAVE["oro"])
-    )
+    tabla["oro_error_redondeo_pct"] = _redondear(error_redondeo_pct(visibles["oro"], pasos["oro"]))
     # A-R0-7: el quiebre de definición del oro va declarado fila por fila.
     tabla["oro_definicion"] = [
         "" if pd.isna(valor) else (ORO_DEFINICION_ANTES if mes < quiebre else ORO_DEFINICION_DESPUES)
@@ -375,11 +493,19 @@ def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     ]
     tabla["plata_usd_oz"] = visibles["plata"].to_numpy()
     tabla["plata_error_redondeo_pct"] = _redondear(
-        error_redondeo_pct(visibles["plata"], SERIES_POR_CLAVE["plata"])
+        error_redondeo_pct(visibles["plata"], pasos["plata"])
     )
     # A-R0-8: la plata es una estimación, y se ve.
     tabla["plata_estado"] = [
         "" if pd.isna(valor) else SERIES_POR_CLAVE["plata"].estado for valor in visibles["plata"]
+    ]
+    # A-R0-19: de qué edición del Pink Sheet salen los metales de cada mes.
+    corte = pd.Timestamp(PINK_SHEET_CONGELADA.ultimo_mes + "-01")
+    tabla["pink_sheet_edicion"] = [
+        ""
+        if pd.isna(oro) and pd.isna(plata)
+        else (PINK_SHEET_CONGELADA.fecha_edicion.isoformat() if mes <= corte else "vigente")
+        for mes, oro, plata in zip(visibles.index, visibles["oro"], visibles["plata"])
     ]
     tabla["btc_usd"] = visibles["btc"].to_numpy()
     return tabla
@@ -703,6 +829,7 @@ class EntradaRatios:
     revisiones: list[str]
     contrastes: list[str]
     metales: list[str]
+    empalme: list[str] = field(default_factory=list)
     notas: list[str] = field(default_factory=list)
 
     @property
@@ -731,6 +858,7 @@ class EntradaRatios:
         else:
             lineas.append("- Meses agregados: 0")
         bloque("Revisiones de datos históricos", self.revisiones, "ninguna")
+        bloque("Empalme del Pink Sheet", self.empalme, "sin control")
         bloque("Contrastes", self.contrastes, "ninguno")
         bloque("Oro y plata", self.metales, "sin controles")
         for nota in self.notas:
@@ -832,11 +960,13 @@ def _ancho(largo: pd.DataFrame | None) -> pd.DataFrame | None:
 
 @dataclass
 class Fuentes:
-    """Lo que entregan las cuatro descargas, antes de recortar a meses completos."""
+    """Lo que entregan las descargas, antes de recortar a meses completos."""
 
     registros: list[RegistroDescarga]
-    oro: pd.Series
+    oro: pd.Series  # edición vigente del Pink Sheet, redondeada
     plata: pd.Series
+    oro_congelada: pd.Series  # edición de enero de 2025, sin redondear (A-R0-19)
+    plata_congelada: pd.Series
     pink_sheet_actualizada: date | None
     sp500: pd.Series
     shiller_actualizada: date | None
@@ -848,6 +978,10 @@ def cargar_fuentes(fecha_descarga: date) -> Fuentes:
     manifiesto = fuentes_precios.leer_manifiesto(ARCHIVO_DESCARGAS)
     registros: dict[str, RegistroDescarga] = {}
     try:
+        # La edición congelada no se baja: es la copia versionada (A-R0-19).
+        registros[PINK_SHEET_CONGELADA.descarga.clave] = fuentes_precios.cargar_edicion_congelada(
+            PINK_SHEET_CONGELADA, DIR_CRUDO
+        )
         for descarga in (
             DESCARGA_PINK_SHEET,
             DESCARGA_SHILLER,
@@ -863,10 +997,23 @@ def cargar_fuentes(fecha_descarga: date) -> Fuentes:
             fuentes_precios.actualizar_manifiesto(ARCHIVO_DESCARGAS, list(registros.values()))
 
     pink = fuentes_precios.leer_pink_sheet(registros[DESCARGA_PINK_SHEET.clave].ruta)
+    congelada = fuentes_precios.leer_pink_sheet(
+        registros[PINK_SHEET_CONGELADA.descarga.clave].ruta,
+        PINK_SHEET_CONGELADA.descripcion_oro,
+        PINK_SHEET_CONGELADA.descripcion_plata,
+    )
+    if congelada.actualizada != PINK_SHEET_CONGELADA.fecha_edicion:
+        raise ErrorDeFuente(
+            f"{PINK_SHEET_CONGELADA.archivo} dice haberse actualizado el "
+            f"{congelada.actualizada} y la edición congelada es la del "
+            f"{PINK_SHEET_CONGELADA.fecha_edicion}"
+        )
     return Fuentes(
         registros=list(registros.values()),
         oro=pink.oro,
         plata=pink.plata,
+        oro_congelada=congelada.oro,
+        plata_congelada=congelada.plata,
         # La fecha que la propia planilla declara manda sobre la de la cabecera HTTP.
         pink_sheet_actualizada=pink.actualizada
         or registros[DESCARGA_PINK_SHEET.clave].actualizada,
@@ -879,12 +1026,27 @@ def cargar_fuentes(fecha_descarga: date) -> Fuentes:
     )
 
 
-def construir_precios(fuentes: Fuentes) -> tuple[pd.DataFrame, dict[str, list[str]]]:
-    """Las cinco series, en meses completos, y lo que se descartó de cada una."""
+def construir_precios(
+    fuentes: Fuentes,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, list[str]], list[ResultadoEmpalme]]:
+    """Las cinco series en meses completos, el medio paso de redondeo de cada valor,
+    lo que se descartó de cada serie y el control del empalme del Pink Sheet.
+    """
     verificar_base_nasdaq(fuentes.nasdaq_diaria)
+    ultimo = PINK_SHEET_CONGELADA.ultimo_mes
+    vigentes = {"oro": fuentes.oro, "plata": fuentes.plata}
+    congeladas = {"oro": fuentes.oro_congelada, "plata": fuentes.plata_congelada}
+    controles, metales = [], {}
+    for metal in ("oro", "plata"):
+        serie = SERIES_POR_CLAVE[metal]
+        # La precisión declarada es la de la edición vigente, entera.
+        verificar_redondeo(vigentes[metal], serie)
+        controles.append(controlar_empalme(congeladas[metal], vigentes[metal], serie))
+        completos, fuera = meses_completos(vigentes[metal], fuentes.pink_sheet_actualizada)
+        metales[metal] = (empalmar(congeladas[metal], completos, ultimo), fuera)
     mensuales = {
-        "oro": meses_completos(fuentes.oro, fuentes.pink_sheet_actualizada),
-        "plata": meses_completos(fuentes.plata, fuentes.pink_sheet_actualizada),
+        "oro": metales["oro"],
+        "plata": metales["plata"],
         "btc": promedio_mensual(fuentes.btc_diaria, dias_calendario=True),
         "sp500": meses_completos(fuentes.sp500, fuentes.shiller_actualizada),
         "nasdaq": promedio_mensual(fuentes.nasdaq_diaria, dias_calendario=False),
@@ -894,12 +1056,11 @@ def construir_precios(fuentes: Fuentes) -> tuple[pd.DataFrame, dict[str, list[st
         mensual, fuera = mensuales[serie.clave]
         mensual, antes = desde_el_mes(mensual, serie)
         verificar_banda(mensual, serie)
-        verificar_redondeo(mensual, serie)
         columnas[serie.clave] = mensual
         descartados[serie.clave] = fuera + antes
     precios = pd.DataFrame(columnas).sort_index()
     precios.index.name = "mes"
-    return precios, descartados
+    return precios, medios_pasos(precios, ultimo), descartados, controles
 
 
 def _validacion_de_contraste(contraste: Contraste) -> str:
@@ -927,14 +1088,29 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         fuentes = cargar_fuentes(fecha_descarga)
-        precios, descartados = construir_precios(fuentes)
+        precios, pasos, descartados, controles = construir_precios(fuentes)
         referencias = obtener_referencias(fecha_descarga)
     except ErrorDeFuente as error:
         print(f"ERROR DE FUENTE: {error}", file=sys.stderr)
         return CODIGO_ERROR_FUENTE
 
+    lineas_empalme = [control.resumen() for control in controles]
+    if not all(control.ok for control in controles):
+        print("Empalme del Pink Sheet", file=sys.stderr)
+        for linea in lineas_empalme:
+            print(f"  {linea}", file=sys.stderr)
+        print(
+            "La corrida se detiene: redondear la edición congelada del Pink Sheet no "
+            "reproduce la vigente. No se escribió ninguna serie ni el changelog. El Banco "
+            "Mundial revisó meses anteriores a 2025, y el empalme ya no une dos versiones "
+            "de la misma serie (A-R0-19). No se corrige a mano: hay que releer la fuente y "
+            "decidir de nuevo de dónde sale ese tramo.",
+            file=sys.stderr,
+        )
+        return CODIGO_VALIDACION_FALLIDA
+
     pares = calcular_pares(precios)
-    errores = errores_de_pares(precios)
+    errores = errores_de_pares(precios, pasos)
 
     # --- Validación -----------------------------------------------------------
     contrastes = [
@@ -957,6 +1133,9 @@ def main(argv: list[str] | None = None) -> int:
 
     print("Descargas")
     for linea in lineas_descargas:
+        print(f"  {linea}")
+    print("Empalme del Pink Sheet")
+    for linea in lineas_empalme:
         print(f"  {linea}")
     print("Contrastes")
     for linea in lineas_contrastes:
@@ -1021,7 +1200,7 @@ def main(argv: list[str] | None = None) -> int:
         for motivo in motivos
     ]
 
-    publicada_precios = tabla_precios(precios, validadas)
+    publicada_precios = tabla_precios(precios, pasos, validadas)
     publicada_ratios = tabla_ratios(pares, errores, validadas)
     publicada_pares = tabla_pares(pares, errores, validadas)
     interna = tabla_interna(precios, pares)
@@ -1092,6 +1271,7 @@ def main(argv: list[str] | None = None) -> int:
         revisiones=cambios_de_estado + resumir_revisiones(revisiones),
         contrastes=lineas_contrastes,
         metales=lineas_metales,
+        empalme=lineas_empalme,
         notas=notas,
     )
     cambio = bitacora.actualizar_changelog(ARCHIVO_CHANGELOG, entrada)

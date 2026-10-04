@@ -62,6 +62,15 @@ SIN_METALES = {"btc", "sp500", "nasdaq"}
 PARES_POR_CLAVE = {par.clave: par for par in PARES}
 
 
+def _pasos(precios: pd.DataFrame) -> pd.DataFrame:
+    """Todos los meses como si salieran de la edición vigente: 0.5 el oro, 0.05 la plata."""
+    return ratios.medios_pasos(precios, "1900-01")
+
+
+def _errores(precios: pd.DataFrame) -> pd.DataFrame:
+    return errores_de_pares(precios, _pasos(precios))
+
+
 @pytest.fixture
 def precios() -> pd.DataFrame:
     return pd.DataFrame(
@@ -148,7 +157,7 @@ def test_un_par_al_que_le_falta_un_lado_queda_vacio(precios):
 
 
 def test_los_ratios_publicados_no_traen_ningun_par_con_indices(precios):
-    tabla = tabla_ratios(calcular_pares(precios), errores_de_pares(precios), TODAS)
+    tabla = tabla_ratios(calcular_pares(precios), _errores(precios), TODAS)
     assert set(tabla["par"]) == {"oro_plata", "btc_oro"}
     assert set(tabla["estado"]) == {"estimación", "dato"}
     assert tabla["valor"].notna().all()
@@ -156,20 +165,20 @@ def test_los_ratios_publicados_no_traen_ningun_par_con_indices(precios):
 
 
 def test_sin_validacion_los_ratios_publicados_quedan_vacios(precios):
-    tabla = tabla_ratios(calcular_pares(precios), errores_de_pares(precios), SIN_METALES)
+    tabla = tabla_ratios(calcular_pares(precios), _errores(precios), SIN_METALES)
     assert tabla.empty
     assert list(tabla.columns) == COLUMNAS_RATIOS
 
 
 def test_los_precios_publicados_no_traen_ninguna_columna_de_indices(precios):
-    tabla = tabla_precios(precios, TODAS)
+    tabla = tabla_precios(precios, _pasos(precios), TODAS)
     assert list(tabla.columns) == COLUMNAS_PRECIOS
     assert not any("sp500" in columna or "nasdaq" in columna for columna in tabla.columns)
 
 
 def test_sin_validacion_las_columnas_de_los_metales_quedan_vacias(precios):
     """Las columnas son las mismas; lo que no se publica no tiene valores."""
-    tabla = tabla_precios(precios, SIN_METALES)
+    tabla = tabla_precios(precios, _pasos(precios), SIN_METALES)
     assert list(tabla.columns) == COLUMNAS_PRECIOS
     assert tabla["oro_usd_oz"].isna().all() and tabla["plata_usd_oz"].isna().all()
     assert set(tabla["oro_definicion"]) == {""} and set(tabla["plata_estado"]) == {""}
@@ -178,7 +187,7 @@ def test_sin_validacion_las_columnas_de_los_metales_quedan_vacias(precios):
 
 
 def test_la_tabla_de_pares_muestra_los_cinco_y_dice_que_le_falta_a_cada_uno(precios):
-    tabla = tabla_pares(calcular_pares(precios), errores_de_pares(precios), SIN_METALES).set_index("par")
+    tabla = tabla_pares(calcular_pares(precios), _errores(precios), SIN_METALES).set_index("par")
     assert len(tabla) == 5
     assert tabla.loc["oro_sp500", "estado"] == NO_MEDIDO_PERMISO
     assert tabla.loc["oro_plata", "estado"] == NO_MEDIDO_SIN_VALIDACION
@@ -211,13 +220,13 @@ def test_todo_lo_calculado_va_a_la_tabla_interna(precios):
 
 def test_el_quiebre_del_oro_va_declarado_fila_por_fila(precios):
     """A-R0-7: junio de 2025 es el primer mes del oro 'spot'."""
-    tabla = tabla_precios(precios, TODAS).set_index("mes")
+    tabla = tabla_precios(precios, _pasos(precios), TODAS).set_index("mes")
     assert tabla.loc["2025-05", "oro_definicion"] == "fixing de la tarde de Londres"
     assert tabla.loc["2025-06", "oro_definicion"] == "spot"
 
 
 def test_la_plata_lleva_su_estado_a_la_vista(precios):
-    tabla = tabla_precios(precios, TODAS)
+    tabla = tabla_precios(precios, _pasos(precios), TODAS)
     assert set(tabla["plata_estado"]) == {"estimación"}
 
 
@@ -476,22 +485,25 @@ def test_una_serie_que_deja_de_publicarse_es_un_hecho_y_no_ochocientas_revisione
 def test_el_error_de_cada_metal_es_medio_paso_de_redondeo_sobre_el_valor():
     """0.5/oro y 0.05/plata, en porcentaje."""
     serie = _mensual([35.0, 1592.0, 4319.0])
-    assert list(error_redondeo_pct(serie, SERIE_ORO)) == pytest.approx(
+    medio_dolar = pd.Series(SERIE_ORO.medio_paso_redondeo, index=serie.index)
+    assert list(error_redondeo_pct(serie, medio_dolar)) == pytest.approx(
         [0.5 / 35.0 * 100, 0.5 / 1592.0 * 100, 0.5 / 4319.0 * 100]
     )
     plata = _mensual([0.9, 4.2, 64.6])
-    assert list(error_redondeo_pct(plata, SERIE_PLATA)) == pytest.approx(
+    medio_decimo = pd.Series(SERIE_PLATA.medio_paso_redondeo, index=plata.index)
+    assert list(error_redondeo_pct(plata, medio_decimo)) == pytest.approx(
         [0.05 / 0.9 * 100, 0.05 / 4.2 * 100, 0.05 / 64.6 * 100]
     )
 
 
 def test_una_fuente_que_no_redondea_no_aporta_error():
     assert SERIE_BTC.medio_paso_redondeo is None
-    assert list(error_redondeo_pct(_mensual([15.6, 80473.08]), SERIE_BTC)) == [0.0, 0.0]
+    btc = _mensual([15.6, 80473.08])
+    assert list(error_redondeo_pct(btc, pd.Series(0.0, index=btc.index))) == [0.0, 0.0]
 
 
 def test_el_error_del_ratio_es_la_suma_de_los_de_sus_dos_lados(precios):
-    errores = errores_de_pares(precios)
+    errores = _errores(precios)
     mes = MESES[0]  # oro 3200, plata 32
     assert errores.loc[mes, "oro_plata"] == pytest.approx(0.5 / 3200 * 100 + 0.05 / 32 * 100)
     # BTC no redondea: el error de BTC/Oro es solo el del oro.
@@ -519,7 +531,7 @@ def test_cada_fila_del_ratio_dice_su_error_y_si_es_apta_para_metricas():
     # Con el oro a 900 (0.056 %), la plata tiene que estar a 11.3 o más para que
     # la suma no pase de 0.5 %.
     precios = _con_plata([18.0, 9.9, 11.2, 11.3, 12.0])
-    tabla = tabla_ratios(calcular_pares(precios), errores_de_pares(precios), TODAS)
+    tabla = tabla_ratios(calcular_pares(precios), _errores(precios), TODAS)
     oro_plata = tabla[tabla["par"] == "oro_plata"].set_index("mes")
     # Julio cumple el umbral, pero queda antes de la interrupción: no es apto.
     assert list(oro_plata["apto_metricas"]) == ["no", "no", "no", "sí", "sí"]
@@ -531,7 +543,7 @@ def test_cada_fila_del_ratio_dice_su_error_y_si_es_apta_para_metricas():
 
 def test_apto_desde_es_el_primer_mes_del_tramo_final_sin_interrupcion():
     precios = _con_plata([18.0, 9.9, 11.2, 11.3, 12.0])
-    errores = errores_de_pares(precios)
+    errores = _errores(precios)
     assert apto_desde(errores["oro_plata"]) == "2008-10"
     tabla = tabla_pares(calcular_pares(precios), errores, TODAS).set_index("par")
     assert tabla.loc["oro_plata", "apto_desde"] == "2008-10"
@@ -542,16 +554,16 @@ def test_apto_desde_es_el_primer_mes_del_tramo_final_sin_interrupcion():
 
 
 def test_si_el_ultimo_mes_no_es_apto_no_hay_tramo_final():
-    errores = errores_de_pares(_con_plata([18.0, 12.0, 9.0]))
+    errores = _errores(_con_plata([18.0, 12.0, 9.0]))
     assert apto_desde(errores["oro_plata"]) == ""
     assert not ratios.meses_aptos(errores["oro_plata"]).any()
 
 
 def test_los_precios_publicados_llevan_el_error_de_cada_metal(precios):
-    tabla = tabla_precios(precios, TODAS).set_index("mes")
+    tabla = tabla_precios(precios, _pasos(precios), TODAS).set_index("mes")
     assert tabla.loc["2025-04", "oro_error_redondeo_pct"] == pytest.approx(0.0156, abs=1e-4)
     assert tabla.loc["2025-04", "plata_error_redondeo_pct"] == pytest.approx(0.1563, abs=1e-4)
-    sin = tabla_precios(precios, SIN_METALES)
+    sin = tabla_precios(precios, _pasos(precios), SIN_METALES)
     assert sin["oro_error_redondeo_pct"].isna().all() and sin["plata_error_redondeo_pct"].isna().all()
 
 
@@ -587,3 +599,114 @@ def test_un_cambio_masivo_se_resume_por_columna():
     assert "plata_usd_oz: 60 meses cambiaron" in lineas[1]
     assert "30.000 % en 1964-12 (1.0000 -> 1.3000)" in lineas[1]
     assert "120 cambios" in lineas[2] and "cambio de método" in lineas[2]
+
+
+# --- A-R0-19: empalme de las dos ediciones del Pink Sheet --------------------
+
+
+def _serie(valores: dict[str, float]) -> pd.Series:
+    indice = pd.DatetimeIndex([pd.Timestamp(m + "-01") for m in valores], name="mes")
+    return pd.Series(list(valores.values()), index=indice, dtype="float64")
+
+
+def test_el_empalme_toma_la_edicion_congelada_hasta_el_corte_y_la_vigente_despues():
+    congelada = _serie({"2024-11": 2651.13, "2024-12": 2648.01})
+    vigente = _serie({"2024-11": 2651.0, "2024-12": 2648.0, "2025-01": 2710.0, "2025-02": 2895.0})
+    serie = ratios.empalmar(congelada, vigente, "2024-12")
+    assert list(serie) == [2651.13, 2648.01, 2710.0, 2895.0]
+    assert list(serie.index) == list(vigente.index)
+
+
+def test_si_la_edicion_congelada_no_llega_al_corte_la_corrida_se_detiene():
+    congelada = _serie({"2024-10": 2690.08, "2024-11": 2651.13})
+    vigente = _serie({"2024-11": 2651.0, "2024-12": 2648.0, "2025-01": 2710.0})
+    with pytest.raises(ErrorDeFuente, match="la necesita hasta 2024-12"):
+        ratios.empalmar(congelada, vigente, "2024-12")
+
+
+def test_el_control_cierra_si_redondear_la_congelada_reproduce_la_vigente():
+    congelada = _serie({"2024-10": 2690.08, "2024-11": 2651.13, "2024-12": 2648.01})
+    vigente = _serie({"2024-10": 2690.0, "2024-11": 2651.0, "2024-12": 2648.0, "2025-01": 2710.0})
+    control = ratios.controlar_empalme(congelada, vigente, SERIE_ORO)
+    assert control.ok
+    assert control.meses == 3 and control.empates == [] and control.fuera == []
+    assert "3 de 3 meses superpuestos" in control.resumen()
+
+
+def test_un_valor_exactamente_a_medio_paso_se_acepta_y_se_lista():
+    """1848.5 se puede publicar como 1848 o como 1849: las dos son un redondeo válido."""
+    congelada = _serie({"2022-04": 1936.86, "2022-05": 1848.5})
+    for publicado in (1849.0, 1848.0):
+        vigente = _serie({"2022-04": 1937.0, "2022-05": publicado})
+        control = ratios.controlar_empalme(congelada, vigente, SERIE_ORO)
+        assert control.ok
+        assert control.empates == [f"2022-05 (1848.5 y {publicado!r})"]
+        assert "exactamente a medio paso" in control.resumen()
+
+
+def test_un_mes_revisado_por_la_fuente_hace_fallar_el_control():
+    """Si el Banco Mundial cambia un mes viejo, las dos ediciones ya no son la misma serie."""
+    congelada = _serie({"2024-10": 2690.08, "2024-11": 2651.13, "2024-12": 2648.01})
+    vigente = _serie({"2024-10": 2690.0, "2024-11": 2653.0, "2024-12": 2648.0})
+    control = ratios.controlar_empalme(congelada, vigente, SERIE_ORO)
+    assert not control.ok
+    assert control.fuera == ["2024-11 (2651.13 y 2653.0)"]
+    assert "NO coinciden 1" in control.resumen()
+
+
+def test_el_control_de_la_plata_usa_su_propio_paso():
+    congelada = _serie({"2015-08": 14.9374, "2015-09": 14.75, "2015-10": 15.71})
+    vigente = _serie({"2015-08": 14.9, "2015-09": 14.8, "2015-10": 15.7})
+    control = ratios.controlar_empalme(congelada, vigente, SERIE_PLATA)
+    assert control.ok and control.empates == ["2015-09 (14.75 y 14.8)"]
+    # Una décima de más ya no es redondeo.
+    assert not ratios.controlar_empalme(congelada, vigente + 0.1, SERIE_PLATA).ok
+
+
+def test_sin_meses_superpuestos_no_hay_control():
+    control = ratios.controlar_empalme(_serie({"2024-12": 2648.01}), _serie({"2025-01": 2710.0}), SERIE_ORO)
+    assert not control.ok and "ningún mes en común" in control.resumen()
+
+
+@pytest.mark.parametrize(
+    "valor, medio_paso",
+    [(35.27, 0.005), (36.0, 0.5), (35.5, 0.05), (0.9137, 0.00005), (760.863, 0.0005), (17.5, 0.05)],
+)
+def test_el_medio_paso_de_la_edicion_congelada_sale_de_los_decimales_publicados(valor, medio_paso):
+    """No se supone que un valor que termina en cero tenga más precisión de la que muestra."""
+    assert ratios.medio_paso_publicado(valor) == pytest.approx(medio_paso)
+
+
+def test_el_error_por_redondeo_es_el_de_la_edicion_usada_en_cada_mes():
+    """A-R0-19: antes del corte, el decimal publicado; después, el paso de la vigente."""
+    indice = pd.DatetimeIndex([pd.Timestamp(m + "-01") for m in ("1968-02", "2024-12", "2025-01")], name="mes")
+    precios = pd.DataFrame(
+        {"oro": [36.0, 2648.01, 2710.0], "plata": [1.8547, 30.764, 30.4], "btc": [float("nan"), 98000.5, 100000.25],
+         "sp500": [90.0, 6000.0, 6000.0], "nasdaq": [float("nan"), 19000.0, 19500.0]},
+        index=indice,
+    )
+    pasos = ratios.medios_pasos(precios, "2024-12")
+    assert list(pasos["oro"]) == pytest.approx([0.5, 0.005, 0.5])
+    assert list(pasos["plata"]) == pytest.approx([0.00005, 0.0005, 0.05])
+    assert list(pasos["btc"]) == [0.0, 0.0, 0.0] and list(pasos["sp500"]) == [0.0, 0.0, 0.0]
+    errores = errores_de_pares(precios, pasos)
+    # Febrero de 1968 está publicado al dólar: el error es el de un valor entero.
+    assert errores.loc[indice[0], "oro_plata"] == pytest.approx(0.5 / 36.0 * 100 + 0.00005 / 1.8547 * 100)
+    assert errores.loc[indice[1], "oro_plata"] < 0.01
+    assert errores.loc[indice[2], "oro_plata"] == pytest.approx(0.5 / 2710.0 * 100 + 0.05 / 30.4 * 100)
+
+
+def test_los_precios_publicados_dicen_de_que_edicion_sale_cada_mes():
+    indice = pd.DatetimeIndex([pd.Timestamp(m + "-01") for m in ("2024-12", "2025-01")], name="mes")
+    precios = pd.DataFrame(
+        {"oro": [2648.01, 2710.0], "plata": [30.764, 30.4], "btc": [98000.5, 100000.25],
+         "sp500": [6000.0, 6000.0], "nasdaq": [19000.0, 19500.0]},
+        index=indice,
+    )
+    tabla = tabla_precios(precios, ratios.medios_pasos(precios, "2024-12"), TODAS).set_index("mes")
+    assert tabla.loc["2024-12", "pink_sheet_edicion"] == "2025-01-03"
+    assert tabla.loc["2025-01", "pink_sheet_edicion"] == "vigente"
+    assert tabla.loc["2024-12", "oro_usd_oz"] == 2648.01
+    assert tabla.loc["2024-12", "oro_error_redondeo_pct"] < tabla.loc["2025-01", "oro_error_redondeo_pct"]
+    sin = tabla_precios(precios, ratios.medios_pasos(precios, "2024-12"), SIN_METALES)
+    assert set(sin["pink_sheet_edicion"]) == {""}
