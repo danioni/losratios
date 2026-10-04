@@ -928,3 +928,50 @@ hasta su edición de enero de 2025, y ese archivo sigue disponible. Con él, el
 error por redondeo desaparece hasta diciembre de 2024 y Oro/Plata sería apto
 desde mucho antes. Está propuesto en `FUENTES.md`, sección 5.5, y no está
 implementado.
+
+---
+
+## A-R0-18 · En los ocho contrastes anuales, el Banco Mundial queda por debajo de Engelhard
+
+**Estado: dato.** Es una observación, no un problema.
+
+El gate de oro y plata (A-R0-16) compara el promedio de doce meses del Pink
+Sheet contra el precio anual del USGS, que es la cotización de Engelhard. Son
+ocho contrastes, cuatro años por dos metales, y en los ocho el Pink Sheet queda
+por debajo:
+
+| Año | Oro | Plata |
+| --- | --- | --- |
+| 2021 | −0.079 % | −0.251 % |
+| 2022 | −0.069 % | −0.442 % |
+| 2023 | −0.116 % | −0.559 % |
+| 2024 | −0.017 % | −0.335 % |
+| Promedio | −0.070 % | −0.397 % |
+
+Ocho de ocho con el mismo signo no es ruido de redondeo, que no tiene
+preferencia de lado. Es un sesgo.
+
+**De dónde sale.** De la cotización, no de cómo procesa los datos el Banco
+Mundial. La serie del FMI, que declara ser el fixing de Londres y viene sin
+redondear, queda por debajo de Engelhard en los mismos ocho contrastes y por
+montos parecidos: de −0.03 % a −0.10 % en el oro y de −0.25 % a −0.60 % en la
+plata. Y el Pink Sheet y el FMI coinciden entre sí dentro de 0.04 % en el oro y
+de 0.17 % en la plata. Las dos series de Londres están juntas, y Engelhard está
+un poco más arriba que las dos.
+
+Que la cotización de un comerciante quede por encima de un fixing de mercado es
+esperable, y el margen de la tolerancia del gate estaba reservado para eso. Lo
+que no está medido es por qué el sesgo de la plata es más de cinco veces el del oro: no
+se leyó cómo forma Engelhard su cotización.
+
+**Qué implica.**
+
+- **Para el gate, nada.** Cierra dentro de la tolerancia en los ocho. El sesgo
+  consume margen, sobre todo en la plata, donde llega a 0.56 % de un 1 %.
+- **Para leer el gate.** Una diferencia de signo contrario, o una que crezca,
+  sería una señal más fuerte que una del mismo signo y tamaño parecido. Si un
+  año futuro da positivo, conviene mirarlo aunque cierre.
+- **Para las series.** No se corrige nada. Las series publicadas son las del
+  Banco Mundial tal como vienen; no se les suma el sesgo para acercarlas a
+  Engelhard. El gate dice que las dos cotizaciones describen el mismo precio
+  dentro de la tolerancia, no que sean iguales.

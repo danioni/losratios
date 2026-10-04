@@ -11,6 +11,12 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-04 · A-R0-18 · Dato nuevo: en los ocho contrastes anuales del gate, el
+  Banco Mundial queda por debajo de Engelhard.** En promedio, 0.070 % en el oro y
+  0.397 % en la plata. El FMI queda por debajo de Engelhard en los mismos ocho y
+  por montos parecidos: el sesgo es de la cotización, no del procesamiento. No
+  cambia el gate ni las series.
+
 - **2026-10-04 · A-R0-17 · Supuesto nuevo: las métricas sobre un ratio solo usan
   los meses con error máximo por redondeo de hasta 0.5 %.** `precios_mensuales.csv`
   y `ratios.csv` publican ese error fila por fila (0.5/oro, 0.05/plata, y la suma

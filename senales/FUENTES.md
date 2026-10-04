@@ -973,7 +973,8 @@ Las tolerancias se fijaron antes de calcular el gate, y están justificadas en
 A-R0-16 componente por componente: redondeo de las dos fuentes, el efecto de
 promediar promedios mensuales, y un margen para la diferencia entre la
 cotización de Engelhard y el fixing de Londres. Las ocho diferencias tienen el
-mismo signo: es esa diferencia de cotización, no ruido.
+mismo signo: es esa diferencia de cotización, no ruido. Está registrado como
+dato en A-R0-18, con la comparación contra el FMI que lo confirma (4.7).
 
 El gate valida cuatro años. No dice nada de 1960 ni de los meses posteriores al
 quiebre del oro de junio de 2025.
@@ -1100,6 +1101,7 @@ Están en `SUPUESTOS.md`. Índice:
 | A-R0-15 | Un crudo entra al repositorio solo si su licencia permite redistribuirlo | supuesto |
 | A-R0-16 | Gate anual de oro y plata contra el USGS; cerró el 2026-10-04 | supuesto la regla; dato el resultado |
 | A-R0-17 | Las métricas solo usan meses con error de redondeo del ratio de hasta 0.5 % | dato el error; supuesto el umbral |
+| A-R0-18 | En los ocho contrastes anuales el Banco Mundial queda por debajo de Engelhard | dato |
 
 ---
 

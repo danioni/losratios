@@ -392,7 +392,7 @@ TQQQ) van como módulos hermanos de `liquidez_neta.py`, no dentro de él:
 
 ## Supuestos
 
-Treinta y una decisiones sostienen estos números —catorce de S2 y diecisiete de
+Treinta y dos decisiones sostienen estos números —catorce de S2 y dieciocho de
 la fase R— y ninguna es obvia. Están todas en **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas
 y con estado (dato / estimación / supuesto / no medido).
 
