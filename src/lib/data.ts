@@ -1,7 +1,8 @@
 // ============================================================
-// Los Ratios — Data Layer
-// 5 ratios that matter + universe of winners
-// Structure ready for real APIs (CoinGecko, FRED, Yahoo Finance)
+// Los Ratios — métricas y tablas que todavía no se publican
+// Los ratios que muestra el sitio no salen de acá: se leen de senales/ en el
+// build (src/lib/series.ts). Este archivo conserva el código de lo que está
+// oculto: las funciones de las métricas y los datos de las tablas de CAGR.
 // ============================================================
 
 export interface AssetDataPoint {
@@ -11,38 +12,6 @@ export interface AssetDataPoint {
   sp500: number;
   nasdaq: number;
   btc: number;
-  // M2 EE.UU. (FRED M2SL) en billones (10^12) de USD. Solo disponible vía API;
-  // no existe serie estática: los anclajes anuales no incluyen M2.
-  m2Usd?: number;
-}
-
-// The 5 ratios that matter
-export interface ClassRatioDataPoint {
-  date: string;
-  btcGold: number;       // BTC / Oro — EL RATIO CENTRAL
-  goldSp500: number;     // Oro / S&P 500
-  btcSp500: number;      // BTC / S&P 500
-  nasdaqSp500: number;   // Nasdaq / S&P 500
-  goldSilver: number;    // Oro / Plata
-}
-
-export interface RatioSummary {
-  name: string;
-  pair: string;
-  current: number;
-  mean: number;
-  stdDev: number;
-  zScore: number;
-  signal: string;
-  signalType: "overbought" | "oversold" | "neutral";
-  context: string;
-}
-
-export interface RotationSignal {
-  message: string;
-  type: "rotate_from" | "rotate_to";
-  pair: string;
-  zScore: number;
 }
 
 // ============================================================
@@ -77,39 +46,36 @@ export interface AssetPerformance {
   beatsM2: boolean;
 }
 
-// ============================================================
-// PAIR DEFINITIONS — only the 5 that matter
-// ============================================================
-export const PAIR_DEFS: { name: string; pair: string; key: keyof ClassRatioDataPoint; description: string; color: string; startYear: number }[] = [
-  { name: "BTC ÷ Oro", pair: "BTC / Oro", key: "btcGold", description: "Market share del digital gold — ¿está ganando el argumento?", color: "gold", startYear: 2010 },
-  { name: "Oro ÷ S&P 500", pair: "Oro / S&P 500", key: "goldSp500", description: "Fear vs greed — protección vs crecimiento", color: "amber", startYear: 1971 },
-  { name: "BTC ÷ S&P 500", pair: "BTC / S&P 500", key: "btcSp500", description: "Hard money vs capital productivo", color: "cyan", startYear: 2010 },
-  { name: "Nasdaq ÷ S&P 500", pair: "Nasdaq / S&P 500", key: "nasdaqSp500", description: "Growth vs quality — el ciclo dentro del ciclo", color: "blue", startYear: 1971 },
-  { name: "Oro ÷ Plata", pair: "Oro / Plata", key: "goldSilver", description: "Escasez pura vs escasez con utilidad — >80 = plata barata", color: "red", startYear: 1971 },
-];
-
 const SMA_LONG = 200;  // meses — ventana para media y z-score
 const SMA_SHORT = 50;  // meses — media corta para cruces
 
 // ============================================================
-// MÉTRICAS NO DEFENDIBLES — FLAG
-// Todo el historial que muestra el sitio es interpolación entre valores de
-// referencia; solo el último punto es observado. Sobre esa base, z-score,
-// percentil, etiquetas (Neutral/Extendido/Extremo), bandas de Bollinger y
-// señales de rotación no se publican. El código de cálculo se conserva y se
-// reactiva cambiando este flag a true cuando haya series observadas.
+// MÉTRICAS — FLAG
+// El sitio muestra el nivel mensual de cada ratio. z-score, percentil,
+// etiquetas (Neutral/Extendido/Extremo), bandas de Bollinger y señales de
+// rotación no se publican todavía: se publicarán en la siguiente etapa sobre
+// estas mismas series, y solo con los meses que ratios.csv marca como aptos
+// (apto_metricas, A-R0-17 y A-R0-20). Las funciones de cálculo se conservan
+// abajo; el flag queda en false hasta entonces.
 // ============================================================
 export const METRICAS_VERIFICADAS = false;
-export const NO_MEDIDO = "NO MEDIDO: se publicará con datos observados.";
+export const NO_MEDIDO = "NO MEDIDO: se publicarán en la siguiente etapa sobre estas mismas series.";
+
+// ============================================================
+// TABLAS DE CAGR Y PODER ADQUISITIVO — FLAG
+// Sus cifras salen de valores de referencia escritos a mano (los anclajes de
+// abajo y los de currency.ts), no de series observadas. Quedan ocultas hasta
+// tenerlas; el código de las tablas se conserva.
+// ============================================================
+export const TABLAS_MEDIDAS = false;
+export const NO_MEDIDO_TABLAS = "NO MEDIDO: se publicarán cuando haya series observadas para ellas.";
 export const NOTA_VALORES_REFERENCIA =
   "Calculado sobre valores de referencia sin procedencia verificada; se reemplaza cuando haya series observadas.";
 
 // ============================================================
-// HISTORICAL ANCHORS (1971-2026)
-// Starts at 1971: Nixon shock (fiat standard) + Nasdaq launch
-// Sources: Yahoo Finance, WGC, CoinGecko,
-//          elnumerador.com, eldenominador.com
-// BTC = 0 before 2009 (didn't exist); BTC ratios skip those rows
+// VALORES DE REFERENCIA (1971-2026)
+// Escritos a mano, sin procedencia verificada. Ya no alimentan ningún ratio:
+// solo los lee getAnchorPrice(), para la tabla de CAGR, que está oculta.
 // ============================================================
 const anchors: AssetDataPoint[] = [
   // ── Fiat standard era (1971-1994) ────────────────────────
@@ -161,65 +127,6 @@ const anchors: AssetDataPoint[] = [
   { date: "2025", gold: 4315, silver: 72, sp500: 6845, nasdaq: 23242, btc: 87500 },
   { date: "2026", gold: 5162, silver: 87, sp500: 6901, nasdaq: 22878, btc: 67650 },
 ];
-
-/** Anclas de referencia (solo lectura), expuestas para scripts/verify-series.ts */
-export const ANCHORS: readonly AssetDataPoint[] = anchors;
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-// Geometric interpolation: a * (b/a)^t — correct for exponential assets like BTC
-function glerp(a: number, b: number, t: number): number {
-  if (a <= 0 || b <= 0) return lerp(a, b, t);
-  return a * Math.pow(b / a, t);
-}
-
-function generateMonthlyData(): AssetDataPoint[] {
-  const result: AssetDataPoint[] = [];
-  for (let i = 0; i < anchors.length - 1; i++) {
-    const a = anchors[i];
-    const b = anchors[i + 1];
-    const yearA = parseInt(a.date, 10);
-    const yearB = parseInt(b.date, 10);
-    // 12 meses por cada año entre anclas (antes de 1995 las anclas son bianuales),
-    // con t proporcional, para que no falte ningún mes de la serie.
-    const totalMonths = 12 * (yearB - yearA);
-    for (let m = 0; m < totalMonths; m++) {
-      const t = m / totalMonths;
-      // Interpolación pura entre anclas: lineal (lerp) y geométrica (glerp) para BTC.
-      // Sin ruido sintético: cualquier "variación" mensual sería inventada.
-      result.push({
-        date: `${yearA + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, "0")}`,
-        gold: lerp(a.gold, b.gold, t),
-        silver: lerp(a.silver, b.silver, t),
-        sp500: lerp(a.sp500, b.sp500, t),
-        nasdaq: lerp(a.nasdaq, b.nasdaq, t),
-        btc: glerp(a.btc, b.btc, t),
-      });
-    }
-  }
-  const last = anchors[anchors.length - 1];
-  result.push({ ...last, date: `${last.date}-01` });
-  return result;
-}
-
-function safeDiv(a: number, b: number): number {
-  if (!b || !isFinite(b)) return 0;
-  const r = a / b;
-  return isFinite(r) ? r : 0;
-}
-
-function computeRatios(assets: AssetDataPoint[]): ClassRatioDataPoint[] {
-  return assets.map((d) => ({
-    date: d.date,
-    btcGold: safeDiv(d.btc, d.gold),
-    goldSp500: safeDiv(d.gold, d.sp500),
-    btcSp500: safeDiv(d.btc, d.sp500),
-    nasdaqSp500: safeDiv(d.nasdaq, d.sp500),
-    goldSilver: safeDiv(d.gold, d.silver),
-  }));
-}
 
 // ============================================================
 // LOG-SCALE DETECTION
@@ -318,7 +225,7 @@ export function computeSMA(values: number[], period: number, useLogScale?: boole
 // ============================================================
 // STATISTICS & SIGNALS
 // ============================================================
-function computeStats(values: number[]): { mean: number; stdDev: number } {
+export function computeStats(values: number[]): { mean: number; stdDev: number } {
   const n = values.length;
   if (n === 0) return { mean: 0, stdDev: 0 };
   const mean = values.reduce((s, v) => s + v, 0) / n;
@@ -331,7 +238,7 @@ function computeStats(values: number[]): { mean: number; stdDev: number } {
  * Returns the z-score of log(current) relative to the distribution of log(values).
  * This gives meaningful z-scores for exponential assets like BTC.
  */
-function computeLogStats(values: number[]): { mean: number; stdDev: number; logMean: number; logStdDev: number } {
+export function computeLogStats(values: number[]): { mean: number; stdDev: number; logMean: number; logStdDev: number } {
   const positives = values.filter(v => v > 0);
   const n = positives.length;
   if (n === 0) return { mean: 0, stdDev: 0, logMean: 0, logStdDev: 0 };
@@ -380,7 +287,7 @@ export function formatZ(zScore: number): string {
   return `${zScore >= 0 ? "+" : ""}${zScore.toFixed(1)}σ`;
 }
 
-function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
+export function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
   const absZ = Math.abs(zScore);
   const context = generateNarrative(pair, zScore);
   if (absZ >= Z_EXTREME) {
@@ -411,110 +318,6 @@ export function generateNarrative(pair: string, zScore: number): string {
     return `${a} ${zScore > 0 ? "caro" : "barato"} vs ${b} respecto de su historia (${z})`;
   }
   return `${a}/${b} en zona extrema de su historia (${z}). Históricamente los extremos tienden a revertir; el momento no es predecible.`;
-}
-
-// ============================================================
-// BUILD SUMMARIES & ROTATION SIGNALS
-// ============================================================
-// ============================================================
-// HUECO AL FINAL DE LA SERIE
-// El último punto puede ser un precio en vivo con fecha real (p. ej. 2026-10)
-// mientras el anterior es el último valor de referencia (2026-01). No se
-// rellenan los meses intermedios: el hueco se declara y ese punto queda fuera
-// de las medias móviles, las bandas y la ventana del z-score.
-// ============================================================
-export interface TrailingGap {
-  /** Último mes de la serie mensual continua */
-  prev: string;
-  /** Fecha del último punto (separado del anterior por más de un mes) */
-  last: string;
-  /** Primer y último mes sin datos */
-  missingFrom: string;
-  missingTo: string;
-  missingMonths: number;
-}
-
-/** Meses entre dos fechas YYYY-MM (positivo si `to` es posterior). */
-export function monthsBetween(from: string, to: string): number {
-  const [fy, fm] = from.split("-").map(Number);
-  const [ty, tm] = to.split("-").map(Number);
-  return (ty - fy) * 12 + (tm - fm);
-}
-
-function addMonths(date: string, n: number): string {
-  const [y, m] = date.split("-").map(Number);
-  const idx = y * 12 + (m - 1) + n;
-  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
-}
-
-/** Devuelve el hueco si el último punto no es el mes siguiente al penúltimo; si no, null. */
-export function findTrailingGap(dates: string[]): TrailingGap | null {
-  if (dates.length < 2) return null;
-  const prev = dates[dates.length - 2];
-  const last = dates[dates.length - 1];
-  const gap = monthsBetween(prev, last);
-  if (gap <= 1) return null;
-  return { prev, last, missingFrom: addMonths(prev, 1), missingTo: addMonths(last, -1), missingMonths: gap - 1 };
-}
-
-function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
-  const gap = findTrailingGap(ratios.map((d) => d.date));
-  return PAIR_DEFS.map(({ pair, key }) => {
-    const values = ratios.map((d) => d[key] as number);
-    const current = values[values.length - 1];
-
-    // Con hueco al final, el punto en vivo no forma parte de la historia mensual:
-    // se compara contra la ventana anterior, pero no entra en su media ni en su σ.
-    const history = gap ? values.slice(0, -1) : values;
-    const windowSize = Math.min(SMA_LONG, history.length);
-    const windowValues = history.slice(-windowSize);
-
-    // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
-    const useLog = needsLogScale(windowValues);
-
-    let zScore: number;
-    let mean: number;
-    let stdDev: number;
-
-    if (useLog && current > 0) {
-      const logStats = computeLogStats(windowValues);
-      zScore = logStats.logStdDev > 0 ? (Math.log(current) - logStats.logMean) / logStats.logStdDev : 0;
-      mean = logStats.mean;    // geometric mean
-      stdDev = logStats.logStdDev;  // in log space
-    } else {
-      const stats = computeStats(windowValues);
-      zScore = stats.stdDev > 0 ? (current - stats.mean) / stats.stdDev : 0;
-      mean = stats.mean;
-      stdDev = stats.stdDev;
-    }
-
-    const computed = getSignal(zScore, pair);
-    // Sin métricas verificadas, la etiqueta y su contexto no se publican
-    // (el z-score numérico se conserva en el objeto para reactivar sin recalcular).
-    const { signal, signalType, context } = METRICAS_VERIFICADAS
-      ? computed
-      : { signal: NO_MEDIDO, signalType: "neutral" as const, context: NO_MEDIDO };
-    return { name: `${pair}`, pair, current, mean, stdDev, zScore, signal, signalType, context };
-  });
-}
-
-// Solo pares en zona extrema (|z| ≥ Z_EXTREME). El mensaje es la misma
-// plantilla descriptiva de generateNarrative: sin "oportunidad" ni acciones.
-function buildRotationSignals(sums: RatioSummary[]): RotationSignal[] {
-  const signals: RotationSignal[] = [];
-  // Sin métricas verificadas no se emite ninguna señal (el cálculo queda abajo).
-  if (!METRICAS_VERIFICADAS) return signals;
-  for (const s of sums) {
-    if (Math.abs(s.zScore) >= Z_EXTREME) {
-      signals.push({
-        message: generateNarrative(s.pair, s.zScore),
-        type: s.zScore > 0 ? "rotate_from" : "rotate_to",
-        pair: s.pair,
-        zScore: s.zScore,
-      });
-    }
-  }
-  return signals.sort((a, b) => Math.abs(b.zScore) - Math.abs(a.zScore));
 }
 
 // ============================================================
@@ -556,27 +359,10 @@ export function getAnchorPrice(asset: 'gold' | 'silver' | 'sp500' | 'nasdaq' | '
   return best[asset];
 }
 
-// Map PERFORMANCE_ANCHORS tickers to AssetDataPoint keys for live price overrides
-const TICKER_TO_ASSET_KEY: Partial<Record<string, keyof AssetDataPoint>> = {
-  BTC: "btc",
-  GOLD: "gold",
-  SPX: "sp500",
-  SILVER: "silver",
-};
-
-function buildPerformanceData(liveLastPoint?: AssetDataPoint): AssetPerformance[] {
+function buildPerformanceData(): AssetPerformance[] {
   const currentYear = 2026;
   return PERFORMANCE_ANCHORS.map(a => {
-    let priceCurrent = a.priceCurrent;
-
-    // Override with live API data when available
-    if (liveLastPoint) {
-      const assetKey = TICKER_TO_ASSET_KEY[a.ticker];
-      if (assetKey) {
-        const livePrice = liveLastPoint[assetKey] as number;
-        if (livePrice > 0) priceCurrent = livePrice;
-      }
-    }
+    const priceCurrent = a.priceCurrent;
 
     const years = currentYear - a.ipoYear;
     const cagrHistorical = computeCAGR(a.priceStart, priceCurrent, years);
@@ -600,76 +386,7 @@ function buildPerformanceData(liveLastPoint?: AssetDataPoint): AssetPerformance[
   }).sort((a, b) => b.cagrHistorical - a.cagrHistorical);
 }
 
-// ============================================================
-// BUILD ALL DATA
-// ============================================================
-const rawAssets = generateMonthlyData();
-const ratioData = computeRatios(rawAssets);
-const summariesData = buildSummaries(ratioData);
-
-// EXPORTS (static fallback data for SSR / offline)
-export const assetData = rawAssets;
-export const ratios = ratioData;
-export const summaries = summariesData;
-export const rotationSignals = buildRotationSignals(summaries);
 export const assetPerformance = buildPerformanceData();
-
-// ============================================================
-// COMPUTED MARKET DATA — used by API route
-// ============================================================
-/** Procedencia de los datos devueltos por /api/market-data. */
-export interface MarketDataMeta {
-  /** Fecha (YYYY-MM) del último punto de la serie devuelta por la API */
-  lastDate: string;
-  /** BTC: CoinGecko en vivo, o anclajes estáticos interpolados (rate limit) */
-  btcSource: "coingecko" | "static-fallback";
-  /** Si el BTC del último punto se sobrescribió con el precio spot de CoinGecko */
-  btcSpotOverride: boolean;
-}
-
-export interface ComputedMarketData {
-  assetData: AssetDataPoint[];
-  ratios: ClassRatioDataPoint[];
-  summaries: RatioSummary[];
-  rotationSignals: RotationSignal[];
-  assetPerformance: AssetPerformance[];
-  meta?: MarketDataMeta;
-}
-
-/**
- * Takes raw AssetDataPoint[] (from real APIs) and computes everything.
- */
-export function computeAllFromRawAssets(assets: AssetDataPoint[]): ComputedMarketData {
-  const ratioD = computeRatios(assets);
-  const sumsD = buildSummaries(ratioD);
-  const rotD = buildRotationSignals(sumsD);
-  const lastPoint = assets.length > 0 ? assets[assets.length - 1] : undefined;
-  const perfD = buildPerformanceData(lastPoint); // uses live prices when available
-
-  return {
-    assetData: assets,
-    ratios: ratioD,
-    summaries: sumsD,
-    rotationSignals: rotD,
-    assetPerformance: perfD,
-  };
-}
-
-export function getFilteredData(
-  timeframe: string,
-  sourceAssets?: AssetDataPoint[],
-): {
-  assets: AssetDataPoint[];
-  ratios: ClassRatioDataPoint[];
-} {
-  const assets = sourceAssets ?? rawAssets;
-  const months = timeframe === "1Y" ? 12 : timeframe === "3Y" ? 36 : timeframe === "5Y" ? 60 : timeframe === "10Y" ? 120 : assets.length;
-  const sliced = assets.slice(-months);
-  return {
-    assets: sliced,
-    ratios: computeRatios(sliced),
-  };
-}
 
 const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
@@ -690,25 +407,6 @@ export function formatRatio(value: number): string {
   if (value >= 0.01) return value.toFixed(4);
   if (value >= 0.0001) return value.toFixed(6);
   return value.toExponential(2);
-}
-
-// Compute SMA series for a given ratio key over filtered data
-export function computeRatioSMAs(
-  data: ClassRatioDataPoint[],
-  key: keyof ClassRatioDataPoint,
-): { sma50: (number | null)[]; sma200: (number | null)[]; isLogScale: boolean } {
-  const allValues = data.map((d) => d[key] as number);
-  const useLog = needsLogScale(allValues);
-  // Con hueco al final, el punto en vivo no entra en las medias móviles (queda null).
-  const gap = findTrailingGap(data.map((d) => d.date));
-  const values = gap ? allValues.slice(0, -1) : allValues;
-  const sma50 = computeSMA(values, Math.min(SMA_SHORT, values.length), useLog);
-  const sma200 = computeSMA(values, Math.min(SMA_LONG, values.length), useLog);
-  if (gap) {
-    sma50.push(null);
-    sma200.push(null);
-  }
-  return { sma50, sma200, isLogScale: useLog };
 }
 
 export { SMA_LONG, SMA_SHORT };

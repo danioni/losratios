@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useDataStatus, shortDataLabel } from "./DataStatusContext";
+import { formatDateLabel } from "@/lib/data";
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -106,9 +107,7 @@ function EcosystemBar() {
   );
 }
 
-export default function Header() {
-  const { status } = useDataStatus();
-  const isFallback = status.origin === "fallback";
+export default function Header({ ultimoMes }: { ultimoMes: string | null }) {
   return (
     <header
       className="relative"
@@ -121,7 +120,7 @@ export default function Header() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center justify-between gap-3">
         {/* Logo */}
-        <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-4 min-w-0">
           <div
             className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0"
             style={{
@@ -158,18 +157,25 @@ export default function Header() {
               Numerador ÷ Denominador · Cross-Asset Ratios
             </p>
           </div>
-        </div>
+        </Link>
 
         {/* Right side */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Frescura real: fecha del último punto de la serie mostrada, no "Live" */}
-          <div className="label-badge" title={isFallback ? "Anclajes estáticos; la API no respondió" : "Último punto de la serie mostrada"}>
+          <Link
+            href="/fuentes"
+            className="hidden sm:inline text-[9px] sm:text-[10px] tracking-wider uppercase whitespace-nowrap transition-opacity hover:opacity-80"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Fuentes y metodolog&iacute;a
+          </Link>
+          {/* Fecha del último dato: el último mes de los pares publicados, leído de los CSV */}
+          <div className="label-badge" title="Último mes con dato en senales/data/series/ratios.csv">
             <div
-              className={`w-1.5 h-1.5 rounded-full ${status.origin === "api" ? "pulse-dot" : ""}`}
-              style={{ background: isFallback ? "var(--accent-amber)" : "var(--accent-green)" }}
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: ultimoMes ? "var(--accent-green)" : "var(--accent-amber)" }}
             />
             <span className="text-[9px] sm:text-[10px] tracking-wider uppercase whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
-              {shortDataLabel(status)}
+              {ultimoMes ? `Datos al ${formatDateLabel(ultimoMes)}` : "Sin pares publicados"}
             </span>
           </div>
           <ThemeToggle />

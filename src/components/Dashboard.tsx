@@ -1,52 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ComposedChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  summaries as fallbackSummaries,
-  // rotationSignals as fallbackRotationSignals,
-  getFilteredData,
-  formatRatio,
-  PAIR_DEFS,
-  computeRatioSMAs,
-  computeBollingerBands,
-  needsLogScale,
-  computeAllFromRawAssets,
-  assetPerformance as fallbackAssetPerformance,
-  assetData as fallbackAssetData,
-  SMA_LONG,
-  SMA_SHORT,
-  generateNarrative,
-  computeEmpiricalPercentile,
-  Z_EXTENDED,
+  assetPerformance,
   formatDateLabel,
-  findTrailingGap,
   METRICAS_VERIFICADAS,
   NO_MEDIDO,
-  type AssetDataPoint,
-  type ClassRatioDataPoint,
+  NO_MEDIDO_TABLAS,
+  TABLAS_MEDIDAS,
 } from "@/lib/data";
+import type { Par, ParPublicado } from "@/lib/series";
 import MetricCard from "./MetricCard";
-import ChartSection from "./ChartSection";
+import NoMedidoCard from "./NoMedidoCard";
+import RatioChart, { type TimeRange } from "./RatioChart";
 import PerformanceTable from "./PerformanceTable";
 import CurrencySelector from "./CurrencySelector";
 import CurrencyDepreciation from "./CurrencyDepreciation";
-import { useCurrencyBase } from "./CurrencyContext";
-import { useDataStatus, longDataLabel } from "./DataStatusContext";
 
-type TimeRange = "1Y" | "3Y" | "5Y" | "MAX";
-
-function formatDateRange(startDate: string, endDate: string): string {
-  return `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}`;
-}
+// Color de cada par en su gráfico. Un par que no esté acá usa el cian.
+const COLOR_DEL_PAR: Record<string, keyof typeof DEFAULT_COLORS> = {
+  btc_oro: "gold",
+  oro_sp500: "amber",
+  btc_sp500: "cyan",
+  nasdaq_sp500: "blue",
+  oro_plata: "red",
+};
+// Los pares que la portada presenta con texto propio, en este orden.
+const PARES_DE_PORTADA = ["btc_oro", "oro_sp500", "btc_sp500", "nasdaq_sp500", "oro_plata"];
 
 const DEFAULT_COLORS = {
   green: "#00ff88", greenDim: "#00cc6a", blue: "#3388ff",
@@ -90,43 +71,6 @@ function useThemeColors() {
   return colors;
 }
 
-function RatioTooltip({ active, payload, label, isLogScale }: any) {
-  if (!active || !payload) return null;
-  return (
-    <div
-      className="rounded-lg px-4 py-3 text-xs"
-      style={{
-        background: "var(--bg-tooltip)",
-        border: "1px solid var(--border)",
-        backdropFilter: "blur(10px)",
-      }}
-    >
-      <p className="mb-2 font-medium" style={{ color: "var(--text-secondary)" }}>
-        {label}
-      </p>
-      {payload.map((entry: any, i: number) => {
-        // Convert log10 back to real value for display
-        let displayValue = entry.value;
-        if (typeof displayValue === "number" && isLogScale) {
-          displayValue = Math.pow(10, displayValue);
-        }
-        const formatted = typeof displayValue === "number"
-          ? (displayValue < 1 ? displayValue.toFixed(4) : displayValue >= 100 ? displayValue.toFixed(1) : displayValue.toFixed(2))
-          : displayValue;
-        return (
-          <div key={i} className="flex items-center gap-2 py-0.5">
-            <div className="w-2 h-2 rounded-full" style={{ background: entry.color }} />
-            <span style={{ color: "var(--text-muted)" }}>{entry.name}:</span>
-            <span className="font-medium tabular-nums" style={{ color: entry.color }}>
-              {formatted}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function TimeRangeSelector({ range, onChange }: { range: TimeRange; onChange: (r: TimeRange) => void }) {
   const options: TimeRange[] = ["1Y", "3Y", "5Y", "MAX"];
   return (
@@ -150,370 +94,29 @@ function TimeRangeSelector({ range, onChange }: { range: TimeRange; onChange: (r
   );
 }
 
-function RatioChart({
-  pairDef,
-  filteredRatios,
-  xTicks,
-  ratioDateRange,
-  COLORS,
-}: {
-  pairDef: typeof PAIR_DEFS[number];
-  filteredRatios: ClassRatioDataPoint[];
-  xTicks: string[];
-  ratioDateRange: string;
-  COLORS: typeof DEFAULT_COLORS;
-}) {
-  const { status: dataStatus } = useDataStatus();
-  const { pairStats, bollingerChartData, isLogScale, zWindow, gap } = useMemo(() => {
-    const key = pairDef.key as keyof ClassRatioDataPoint;
-    const allValues = filteredRatios.map((d) => d[key] as number);
-    const allDates = filteredRatios.map((d) => d.date);
-    const current = allValues[allValues.length - 1];
-
-    // Hueco al final (último punto en vivo separado del último mes de referencia):
-    // ese punto no entra en la historia mensual. Se compara contra la ventana
-    // anterior, pero queda fuera de media, σ, medias móviles y bandas.
-    const gap = findTrailingGap(allDates);
-    const values = gap ? allValues.slice(0, -1) : allValues;
-    const dates = gap ? allDates.slice(0, -1) : allDates;
-
-    const windowSize = Math.min(SMA_LONG, values.length);
-    const windowValues = values.slice(-windowSize);
-    const windowDates = dates.slice(-windowSize);
-
-    // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
-    const useLog = needsLogScale(windowValues);
-
-    let mean: number;
-    let zScore: number;
-    // Observaciones efectivamente usadas para media/σ. El percentil empírico
-    // se calcula sobre exactamente este mismo conjunto.
-    let zValues: number[];
-
-    if (useLog && current > 0) {
-      const positives = windowValues.filter(v => v > 0);
-      zValues = positives;
-      const logVals = positives.map(v => Math.log(v));
-      const logMean = logVals.reduce((s, v) => s + v, 0) / logVals.length;
-      const logVariance = logVals.reduce((s, v) => s + (v - logMean) ** 2, 0) / logVals.length;
-      const logStdDev = Math.sqrt(logVariance);
-      zScore = logStdDev > 0 ? (Math.log(current) - logMean) / logStdDev : 0;
-      mean = Math.exp(logMean);  // geometric mean
-    } else {
-      zValues = windowValues;
-      mean = windowValues.reduce((s, v) => s + v, 0) / windowValues.length;
-      const variance = windowValues.reduce((s, v) => s + (v - mean) ** 2, 0) / windowValues.length;
-      const stdDev = Math.sqrt(variance);
-      zScore = stdDev > 0 ? (current - mean) / stdDev : 0;
-    }
-
-    const { sma50, sma200, isLogScale } = computeRatioSMAs(filteredRatios, key); // ya excluye el punto en vivo si hay hueco
-    // Bandas de Bollinger: solo con métricas verificadas (el cálculo se conserva).
-    const bb = METRICAS_VERIFICADAS ? computeBollingerBands(values, dates, Math.min(20, values.length), isLogScale) : [];
-    const lastIdx = filteredRatios.length - 1;
-
-    // For log-scale ratios, transform all values to log space for charting
-    // This makes the chart visually correct (no flat-then-spike)
-    const toChart = (v: number | null): number | null => {
-      if (v === null || v === undefined) return null;
-      if (isLogScale && v > 0) return Math.log10(v);
-      return v;
-    };
-
-    const chartData = filteredRatios.map((d, i) => {
-      const isLivePoint = gap !== null && i === lastIdx;
-      return {
-        date: d.date,
-        // Con hueco, la línea del ratio se corta en el último mes de referencia
-        // y el punto en vivo se dibuja aparte (dataKey "live"), sin unir.
-        [pairDef.key]: isLivePoint ? null : toChart(d[key] as number),
-        live: isLivePoint ? toChart(d[key] as number) : null,
-      sma50: toChart(sma50[i]),
-      sma200: toChart(sma200[i]),
-      bbUpper2: toChart(bb[i]?.upper2 ?? null),
-      bbLower2: toChart(bb[i]?.lower2 ?? null),
-      bbUpper1: toChart(bb[i]?.upper1 ?? null),
-      bbLower1: toChart(bb[i]?.lower1 ?? null),
-      bbSma: toChart(bb[i]?.sma ?? null),
-      };
-    });
-
-    const firstUsedIdx = useLog && current > 0 ? Math.max(0, windowValues.findIndex(v => v > 0)) : 0;
-
-    return {
-      pairStats: { mean, current, zScore },
-      bollingerChartData: chartData,
-      isLogScale: isLogScale,
-      zWindow: {
-        values: zValues,
-        n: zValues.length,
-        startDate: windowDates[firstUsedIdx] ?? "",
-        endDate: windowDates[windowDates.length - 1] ?? "",
-        useLog: useLog && current > 0,
-      },
-      gap,
-    };
-  }, [filteredRatios, pairDef.key]);
-
-  // Compute per-pair date range AND filter chart data (BTC pairs start at 2010, not 1971)
-  const { pairDateRange: actualDateRange, visibleChartData, visibleXTicks } = useMemo(() => {
-    const startStr = `${pairDef.startYear}-01`;
-    const firstIdx = filteredRatios.findIndex(d => d.date >= startStr);
-    const startDate = firstIdx >= 0 ? filteredRatios[firstIdx].date : filteredRatios[0]?.date || "";
-    // Filter chart data to pair's actual date range
-    const chartFiltered = bollingerChartData.filter(d => d.date >= startStr);
-    const dates = chartFiltered.map(d => d.date);
-    // Fin del rango = fecha del último punto realmente graficado (sale de los datos, no del reloj)
-    const endDate = dates.length > 0 ? dates[dates.length - 1] : startDate;
-    const ticks = dates.length <= 24
-      ? dates.filter((_, i) => i % 3 === 0)
-      : dates.filter((_, i) => i % 12 === 0);
-    return {
-      pairDateRange: startDate ? formatDateRange(startDate, endDate) : ratioDateRange,
-      visibleChartData: chartFiltered,
-      visibleXTicks: ticks,
-    };
-  }, [filteredRatios, pairDef.startYear, ratioDateRange, bollingerChartData]);
-
-  const formatDate = (d: string) => d.length <= 4 ? d : d.split("-")[0];
-  const getColorValue = (colorKey: string): string => {
-    return COLORS[colorKey as keyof typeof COLORS] || COLORS.cyan;
-  };
-  const pairColor = getColorValue(pairDef.color);
-  const narrative = generateNarrative(pairDef.pair, pairStats.zScore);
-
-  // Explicación en lenguaje llano con percentil EMPÍRICO: fracción de las
-  // observaciones de la misma ventana del z-score que quedan por debajo (o por
-  // encima) del valor actual. No se asume normalidad. Cortes = Z_EXTENDED.
-  const [pairA, pairB] = pairDef.pair.split(" / ");
-  const pct = computeEmpiricalPercentile(zWindow.values, pairStats.current);
-  const pctBelow = Math.round(pct.below * 100);
-  const pctAbove = Math.round(pct.above * 100);
-  const zExplanation = pairStats.zScore >= Z_EXTENDED
-    ? `${pairA} está más caro vs ${pairB} que en el ${pctBelow}% de los últimos ${zWindow.n} meses`
-    : pairStats.zScore <= -Z_EXTENDED
-    ? `${pairA} está más barato vs ${pairB} que en el ${pctAbove}% de los últimos ${zWindow.n} meses`
-    : `${pairA}/${pairB} cerca de su relación histórica · percentil empírico ${pctBelow} en los últimos ${zWindow.n} meses`;
-
-  return (
-    <ChartSection
-      title={`${pairDef.name}`}
-      subtitle={METRICAS_VERIFICADAS
-        ? `${actualDateRange} · Actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · z-score: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`
-        : `${actualDateRange} · Actual: ${formatRatio(pairStats.current)}`}
-      delay={3}
-    >
-      {/* Sin métricas verificadas: z-score, percentil y etiqueta no se publican */}
-      {!METRICAS_VERIFICADAS && (
-        <p className="text-[10px] sm:text-[11px] mb-4 leading-relaxed font-medium" style={{ color: "var(--accent-amber)" }}>
-          z-score · percentil · etiqueta — {NO_MEDIDO}
-        </p>
-      )}
-      {METRICAS_VERIFICADAS && (<>
-      {/* Z-score indicator bar */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--controls-bg)" }}>
-          <div className="relative h-full">
-            <div className="absolute inset-0 flex">
-              <div className="flex-1" style={{ background: "rgba(0, 255, 136, 0.15)" }} />
-              <div className="flex-1" style={{ background: "rgba(0, 255, 136, 0.05)" }} />
-              <div className="flex-1" style={{ background: "transparent" }} />
-              <div className="flex-1" style={{ background: "rgba(255, 51, 85, 0.05)" }} />
-              <div className="flex-1" style={{ background: "rgba(255, 51, 85, 0.15)" }} />
-            </div>
-            <div
-              className="absolute top-0 bottom-0 w-1 rounded-full"
-              style={{
-                background: pairStats.zScore >= Z_EXTENDED ? "var(--accent-red)" : pairStats.zScore <= -Z_EXTENDED ? "var(--accent-green)" : "var(--accent-cyan)",
-                left: `${Math.min(Math.max((pairStats.zScore + 3) / 6 * 100, 2), 98)}%`,
-                boxShadow: `0 0 6px ${pairStats.zScore >= Z_EXTENDED ? "var(--accent-red)" : pairStats.zScore <= -Z_EXTENDED ? "var(--accent-green)" : "var(--accent-cyan)"}`,
-              }}
-            />
-          </div>
-        </div>
-        <span className="text-[9px] tracking-wider uppercase whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
-          -3σ → +3σ
-        </span>
-      </div>
-
-      {/* Z-score explanation in plain language */}
-      <p className="text-[10px] sm:text-[11px] mb-4 leading-relaxed" style={{ color: pairStats.zScore >= Z_EXTENDED ? "var(--accent-red)" : pairStats.zScore <= -Z_EXTENDED ? "var(--accent-green)" : "var(--text-muted)" }}>
-        {pairStats.zScore >= 0 ? "+" : ""}{pairStats.zScore.toFixed(1)}σ = {zExplanation}
-      </p>
-
-      {/* Z-score methodology note */}
-      <p className="text-[9px] mb-4 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
-        z-score y percentil calculados sobre las últimas {zWindow.n} observaciones mensuales del rango mostrado ({formatDateLabel(zWindow.startDate)} → {formatDateLabel(zWindow.endDate)}), con media {zWindow.useLog ? "geométrica" : "aritmética"} y desviación estándar de esa ventana.
-      </p>
-      </>)}
-      {/* Hueco explícito entre el último mes de referencia y el punto en vivo */}
-      {gap && (
-        <p className="text-[9px] mb-4 leading-relaxed" style={{ color: "var(--accent-amber)" }}>
-          Último punto ({formatDateLabel(gap.last)}) con precios en vivo; sin datos entre {formatDateLabel(gap.missingFrom)} y {formatDateLabel(gap.missingTo)} ({gap.missingMonths} {gap.missingMonths === 1 ? "mes" : "meses"}).{" "}
-          {METRICAS_VERIFICADAS
-            ? "Ese punto queda fuera de las medias móviles, las bandas y la ventana del z-score: el z-score y el percentil comparan su valor contra la ventana anterior."
-            : "Ese punto queda fuera de las medias móviles."}
-        </p>
-      )}
-
-      {/* Ratio chart with Bollinger bands */}
-      <div className="h-[280px] sm:h-[360px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={visibleChartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              ticks={visibleXTicks}
-              tickFormatter={formatDate}
-              tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fill: "var(--text-muted)", fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v: number) => {
-                if (isLogScale) {
-                  // v is log10(ratio), convert back to real value for display
-                  const real = Math.pow(10, v);
-                  return formatRatio(real);
-                }
-                return v > 0 ? formatRatio(v) : "0";
-              }}
-            />
-            <Tooltip content={<RatioTooltip isLogScale={isLogScale} />} />
-            {/* Bollinger bands ±2σ / ±1σ — solo con métricas verificadas */}
-            {METRICAS_VERIFICADAS && (<>
-            <Line type="monotone" dataKey="bbUpper2" name="BB +2σ" stroke={COLORS.red} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
-            <Line type="monotone" dataKey="bbLower2" name="BB -2σ" stroke={COLORS.green} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
-            <Line type="monotone" dataKey="bbUpper1" name="BB +1σ" stroke={COLORS.red} strokeWidth={0.5} strokeDasharray="2 4" dot={false} connectNulls strokeOpacity={0.25} />
-            <Line type="monotone" dataKey="bbLower1" name="BB -1σ" stroke={COLORS.green} strokeWidth={0.5} strokeDasharray="2 4" dot={false} connectNulls strokeOpacity={0.25} />
-            </>)}
-            {/* SMA lines */}
-            <Line type="monotone" dataKey="sma50" name={`SMA ${SMA_SHORT}`} stroke={COLORS.amber} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
-            <Line type="monotone" dataKey="sma200" name={`SMA ${SMA_LONG}`} stroke={COLORS.muted} strokeWidth={1.5} dot={false} connectNulls />
-            {/* Main ratio line on top */}
-            <Line type="monotone" dataKey={pairDef.key} name={pairDef.pair} stroke={pairColor} strokeWidth={2} dot={false} connectNulls />
-            {/* Último punto en vivo, separado por un hueco: solo el punto, sin línea que lo una */}
-            {gap && (
-              <Line type="monotone" dataKey="live" name={`${pairDef.pair} (en vivo, ${formatDateLabel(gap.last)})`} stroke="none" strokeWidth={0} dot={{ r: 4, fill: pairColor, strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls={false} isAnimationActive={false} />
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex flex-wrap gap-4 mt-3 justify-center">
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-0.5 rounded" style={{ background: pairColor }} />
-          <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>Ratio</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-0.5 rounded" style={{ background: COLORS.amber, opacity: 0.8 }} />
-          <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>SMA {SMA_SHORT}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-0.5 rounded" style={{ background: COLORS.muted, opacity: 0.8 }} />
-          <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</span>
-        </div>
-        {METRICAS_VERIFICADAS && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-px rounded" style={{ background: COLORS.red, opacity: 0.4 }} />
-            <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>BB ±1σ/±2σ</span>
-          </div>
-        )}
-      </div>
-      {/* Interpolación declarada: la serie mensual es interpolación entre valores de
-          referencia (anuales; bianuales antes de 1995). Solo el último punto puede
-          provenir de precios en vivo; sin API, también es un valor de referencia. */}
-      <p className="text-[9px] mt-3 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
-        Serie mensual construida por interpolación entre valores de referencia (anuales o bianuales antes de 1995), sin datos mensuales reales; z-score y medias móviles se calculan sobre esa interpolación.{" "}
-        {dataStatus.origin === "fallback"
-          ? `En esta vista no hay precios en vivo: el último punto (${formatDateLabel(dataStatus.lastDate)}) también es un valor de referencia.`
-          : "Solo el último punto proviene de precios en vivo."}
-      </p>
-      {/* Narrative (señal descriptiva) — solo con métricas verificadas */}
-      {METRICAS_VERIFICADAS && (
-        <p className="text-[10px] sm:text-[11px] mt-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          {narrative}
-        </p>
-      )}
-    </ChartSection>
-  );
-}
-
-
-export default function Dashboard() {
+export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMes: string | null }) {
   const [range, setRange] = useState<TimeRange>("MAX");
   const COLORS = useThemeColors();
-  const { base, isUSD, levelMessage, level } = useCurrencyBase();
-  // La consulta a /api/market-data y el caché viven en DataStatusProvider,
-  // para que Header y Dashboard compartan la misma frescura real.
-  const { liveData, dataSource, status: dataStatus } = useDataStatus();
 
-  // Never show loading state — fallback data is always available immediately
-  const isLoading = false;
-  const isError = false;
+  const timestampLabel = ultimoMes ? `Último dato: ${formatDateLabel(ultimoMes)}` : "Sin pares publicados";
+  // En el orden de la portada; un par nuevo va al final.
+  const orden = (par: Par) => (PARES_DE_PORTADA.includes(par.par) ? PARES_DE_PORTADA.indexOf(par.par) : PARES_DE_PORTADA.length);
+  const publicados = pares
+    .filter((par): par is ParPublicado => par.publicado)
+    .sort((a, b) => orden(a) - orden(b));
 
-  // Strategy: ALWAYS use fallback (55 years of history) as the base.
-  // When live API data is available, update the last data point with
-  // fresh prices so the "current" values reflect real-time market data.
-  // This preserves the full 1971-2026 history while showing live prices.
-  const { sourceAssets, summaries, currentAssetPerformance } = useMemo(() => {
-    if (!liveData?.assetData || liveData.assetData.length === 0) {
-      return {
-        sourceAssets: fallbackAssetData,
-        summaries: fallbackSummaries,
-        currentAssetPerformance: fallbackAssetPerformance,
-      };
-    }
-
-    // Take the last live data point (most recent real prices)
-    const liveLast = liveData.assetData[liveData.assetData.length - 1];
-    const fallbackLast = fallbackAssetData[fallbackAssetData.length - 1];
-    const livePoint: AssetDataPoint = {
-      date: dataStatus.lastDate,
-      gold: liveLast.gold > 0 ? liveLast.gold : fallbackLast.gold,
-      silver: liveLast.silver > 0 ? liveLast.silver : fallbackLast.silver,
-      sp500: liveLast.sp500 > 0 ? liveLast.sp500 : fallbackLast.sp500,
-      nasdaq: liveLast.nasdaq > 0 ? liveLast.nasdaq : fallbackLast.nasdaq,
-      btc: liveLast.btc > 0 ? liveLast.btc : fallbackLast.btc,
-      m2Usd: liveLast.m2Usd && liveLast.m2Usd > 0 ? liveLast.m2Usd : fallbackLast.m2Usd,
-    };
-
-    // Si la fecha en vivo es posterior al último valor de referencia, el punto en
-    // vivo se AÑADE como punto aparte: no se rellenan los meses intermedios y el
-    // hueco se declara (findTrailingGap). Si es el mismo mes, reemplaza al último.
-    const updated = dataStatus.lastDate > fallbackLast.date
-      ? [...fallbackAssetData, livePoint]
-      : fallbackAssetData.map((d, i) => (i === fallbackAssetData.length - 1 ? livePoint : d));
-
-    // Recompute summaries with the updated last point
-    const recomputed = computeAllFromRawAssets(updated);
-    return {
-      sourceAssets: updated,
-      summaries: recomputed.summaries,
-      currentAssetPerformance: recomputed.assetPerformance,
-    };
-  }, [liveData, dataStatus.lastDate]);
-
-  const timestampLabel = longDataLabel(dataStatus);
-
-  const { filteredRatios, xTicks, ratioDateRange } = useMemo(() => {
-    const { ratios: r } = getFilteredData(range, sourceAssets);
-    const dates = r.map((x) => x.date);
-    const ticks = dates.length <= 24 ? dates.filter((_, i) => i % 3 === 0) : dates.filter((_, i) => i % 12 === 0);
-    const ratioRange = r.length > 0 ? formatDateRange(r[0].date, r[r.length - 1].date) : "";
-    return { filteredRatios: r, xTicks: ticks, ratioDateRange: ratioRange };
-  }, [range, sourceAssets]);
-
-  const keyMetrics = useMemo(() => {
-    return [
-      summaries.find((s) => s.pair === "BTC / Oro"),
-      summaries.find((s) => s.pair === "Oro / S&P 500"),
-      summaries.find((s) => s.pair === "BTC / S&P 500"),
-      summaries.find((s) => s.pair === "Nasdaq / S&P 500"),
-    ].filter(Boolean) as typeof summaries;
-  }, [summaries]);
+  // Gráfico si pares.csv publica el par; si no, tarjeta con su nombre y su estado.
+  const bloque = (clave: string) => {
+    const par = pares.find((candidato) => candidato.par === clave);
+    // Sin el par no hay nada que mostrar en su lugar: el build se detiene.
+    if (!par) throw new Error(`senales/data/series/pares.csv: no trae el par ${clave}, que la portada presenta`);
+    return par.publicado ? (
+      <RatioChart key={par.par} par={par} range={range} color={COLORS[COLOR_DEL_PAR[par.par] ?? "cyan"]} />
+    ) : (
+      <NoMedidoCard key={par.par} title={par.nombre} estado={par.estado} />
+    );
+  };
+  const otrosPares = pares.filter((par) => !PARES_DE_PORTADA.includes(par.par));
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 sm:space-y-12 relative z-10">
@@ -582,7 +185,7 @@ export default function Dashboard() {
                 2. Z-score y se&ntilde;ales de rotaci&oacute;n
               </div>
               <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                {NO_MEDIDO} Todo el historial que muestra el sitio es interpolaci&oacute;n entre valores de referencia; solo el &uacute;ltimo punto es observado. Sobre esa base, z-score, percentil, bandas y se&ntilde;ales no son defendibles y no se publican.
+                {NO_MEDIDO} Por ahora el sitio muestra solo el nivel mensual de cada ratio, sin interpolar. z-score, percentil, bandas y se&ntilde;ales usar&aacute;n &uacute;nicamente los meses aptos para m&eacute;tricas.
               </p>
             </div>
             )}
@@ -596,52 +199,32 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Controls + timestamp */}
+      {/* Controls + fecha del último dato, leída de los CSV */}
       <div className="flex flex-wrap items-center gap-3 fade-in-up fade-in-up-2">
         <TimeRangeSelector range={range} onChange={setRange} />
-        <span className="text-[10px] tabular-nums tracking-wider" style={{ color: "var(--text-muted)" }}>
-          {ratioDateRange}
-        </span>
         <span className="text-[10px] tabular-nums tracking-wider ml-auto flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
-          <span className={`w-1.5 h-1.5 rounded-full ${dataSource === "live" ? "pulse-dot" : ""}`} style={{ background: dataStatus.origin === "fallback" ? "var(--accent-amber)" : "var(--accent-green)" }} />
-          {timestampLabel}
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: ultimoMes ? "var(--accent-green)" : "var(--accent-amber)" }} />
+          {timestampLabel} · series mensuales le&iacute;das al construir el sitio
         </span>
       </div>
 
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-16 space-y-4 fade-in-up">
-          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--accent-green)", borderTopColor: "transparent" }} />
-          <p className="text-[11px] tracking-wider" style={{ color: "var(--text-muted)" }}>Cargando datos de mercado...</p>
+      {/* Último valor de cada par publicado */}
+      {publicados.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {publicados.map((par, i) => {
+            const ultimo = par.puntos[par.puntos.length - 1];
+            return (
+              <MetricCard
+                key={par.par}
+                label={par.nombre}
+                value={ultimo.valor}
+                detail={`${formatDateLabel(ultimo.mes)} · ${par.estado}`}
+                delay={i + 1}
+              />
+            );
+          })}
         </div>
       )}
-
-      {/* Error state */}
-      {isError && (
-        <div className="card-glass rounded-xl p-6 text-center space-y-3 fade-in-up" style={{ border: "1px solid var(--accent-red)" }}>
-          <p className="text-[11px] sm:text-xs" style={{ color: "var(--accent-red)" }}>
-            No se pudieron cargar los datos en tiempo real.
-          </p>
-          <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-            Mostrando datos de referencia. Intenta recargar la página.
-          </p>
-        </div>
-      )}
-
-      {/* Key metrics — 4 cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {keyMetrics.map((m, i) => (
-          <MetricCard
-            key={m.pair}
-            label={m.pair}
-            value={m.current}
-            zScore={m.zScore}
-            signal={m.signal}
-            signalType={m.signalType}
-            delay={i + 1}
-          />
-        ))}
-      </div>
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 1 — BTC/Oro: EL RATIO CENTRAL                 */}
@@ -655,7 +238,7 @@ export default function Dashboard() {
             ¿Cuánto market share le está sacando Bitcoin al oro como reserva de valor? Este es el ratio más importante del sitio. Cuando está bajo históricamente, el mercado duda del argumento del &ldquo;digital gold&rdquo;. Cuando está alto, el argumento está ganando.
           </p>
         </div>
-        <RatioChart pairDef={PAIR_DEFS[0]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
+        {bloque("btc_oro")}
 
         {/* Pull quote — shareable moment */}
         <div className="text-center py-6">
@@ -677,8 +260,8 @@ export default function Dashboard() {
             Oro/S&P 500 y BTC/S&P 500 juntos cuentan una historia: cuánto está apostando el mercado a la narrativa de escasez pura (oro y Bitcoin) vs la narrativa de crecimiento productivo (acciones). No es &ldquo;compra BTC&rdquo; o &ldquo;compra acciones&rdquo;. Es cuánto de cada uno, y cuándo cambia el peso.
           </p>
         </div>
-        <RatioChart pairDef={PAIR_DEFS[1]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
-        <RatioChart pairDef={PAIR_DEFS[2]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
+        {bloque("oro_sp500")}
+        {bloque("btc_sp500")}
       </div>
 
       {/* ═══════════════════════════════════════════════════════ */}
@@ -693,7 +276,7 @@ export default function Dashboard() {
             Dentro del capital productivo, el Nasdaq (growth/tech) vs el S&P 500 (quality/broad market) marca otro ciclo. Cuando el Nasdaq está muy caro relativo al S&P, los quality compounders como Visa, Mastercard, Costco y Berkshire están relativamente baratos.
           </p>
         </div>
-        <RatioChart pairDef={PAIR_DEFS[3]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
+        {bloque("nasdaq_sp500")}
       </div>
 
       {/* ═══════════════════════════════════════════════════════ */}
@@ -708,15 +291,30 @@ export default function Dashboard() {
             Oro/Plata mide el apetito por escasez pura (oro) vs escasez con utilidad industrial (plata). Cuando está por encima de 80, la plata históricamente está barata relativa al oro. Conecta con el argumento del Numerador: cuanto más inelástica la oferta, más captura el activo del debasement.
           </p>
         </div>
-        <RatioChart pairDef={PAIR_DEFS[4]} filteredRatios={filteredRatios} xTicks={xTicks} ratioDateRange={ratioDateRange} COLORS={COLORS} />
+        {bloque("oro_plata")}
       </div>
 
+      {/* Un par nuevo en pares.csv, todavía sin texto propio */}
+      {otrosPares.length > 0 && (
+        <div className="space-y-4">{otrosPares.map((par) => bloque(par.par))}</div>
+      )}
+
       {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 5 — Performance Table (Universe of Winners)    */}
+      {/* SECTION 5 — Tablas de CAGR y poder adquisitivo         */}
+      {/* Ocultas hasta tener series observadas para ellas       */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <CurrencySelector />
-      <CurrencyDepreciation />
-      <PerformanceTable data={currentAssetPerformance} colors={COLORS} />
+      {TABLAS_MEDIDAS ? (
+        <>
+          <CurrencySelector />
+          <CurrencyDepreciation />
+          <PerformanceTable data={assetPerformance} colors={COLORS} />
+        </>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+          <NoMedidoCard title="Poder adquisitivo global" estado={NO_MEDIDO_TABLAS} />
+          <NoMedidoCard title="CAGR histórico por activo" estado={NO_MEDIDO_TABLAS} />
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* DISCLAIMER NARRATIVO                                   */}
@@ -762,10 +360,12 @@ export default function Dashboard() {
         </div>
         <div className="space-y-1 pt-2">
           <p className="text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-            {timestampLabel}{dataSource === "live" ? " · la API se reconsulta cada hora" : ""}
+            {timestampLabel}
           </p>
           <p className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-            CoinGecko · FRED · Yahoo Finance · v5
+            <Link href="/fuentes" className="transition-opacity hover:opacity-80" style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+              Fuentes y metodolog&iacute;a
+            </Link>
           </p>
         </div>
       </div>
