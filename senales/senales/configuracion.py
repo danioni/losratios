@@ -214,6 +214,8 @@ DIR_SERIES_PRIVADO = DIR_PRIVADO / "series"
 
 # A-R0-14: texto con el que se publica un par que se calcula y no se muestra.
 NO_MEDIDO_PERMISO = "NO MEDIDO: pendiente de permiso del dueño del índice"
+# A-R0-14: y con el que se publica una serie cuyo gate todavía no cerró.
+NO_MEDIDO_SIN_VALIDACION = "NO MEDIDO: sin validación externa"
 
 ESTADO_DATO = "dato"
 ESTADO_ESTIMACION = "estimación"
@@ -294,13 +296,17 @@ class Contraste:
 
 
 @dataclass(frozen=True)
-class AnclaMensual:
-    """Un valor de referencia transcrito a mano, como el H.4.1 de S2."""
+class AnclaAnual:
+    """El precio promedio de un año según una segunda fuente, transcrito a mano.
+
+    Es el ancla del gate de oro y plata, como el H.4.1 lo es de S2: una cifra
+    leída de un documento publicado, con su cita, contra la que tiene que cerrar
+    el promedio de los doce meses de la serie. Ver A-R0-16.
+    """
 
     serie: str
-    mes: str
+    anio: int
     valor: float
-    tolerancia_pct: float
     fuente: str
     fuente_url: str
     fecha_lectura: date
@@ -505,18 +511,47 @@ CONTRASTE_BTC = Contraste(
 )
 CONTRASTES = (CONTRASTE_SP500, CONTRASTE_NASDAQ, CONTRASTE_BTC)
 
-# A-R0-16: el gate de oro y plata es un promedio mensual de LBMA transcrito a
-# mano, con su cita. NO ESTÁ TRANSCRITO: LBMA no publica promedios mensuales
-# fuera del portal con licencia. Mientras sea None, la salida dice "NO MEDIDO".
-# No inventar un valor acá. Las tolerancias sí están fijadas, antes de ver el
-# ancla, para que no se ajusten al resultado.
-TOLERANCIA_ANCLA_ORO_PCT = 0.5
-TOLERANCIA_ANCLA_PLATA_PCT = 1.0
-ANCLA_LBMA_ORO: AnclaMensual | None = None
-ANCLA_LBMA_PLATA: AnclaMensual | None = None
+# A-R0-16: el gate de oro y plata. El promedio de los doce meses del Pink Sheet
+# de un año tiene que cerrar contra el precio promedio anual que publica el USGS
+# en sus Mineral Commodity Summaries (dominio público).
+#
+# Las tolerancias se fijaron el 2026-10-04 ANTES de calcular el gate, y su
+# justificación está en A-R0-16: redondeo de las dos fuentes, el efecto de
+# promediar promedios mensuales, y un margen para la diferencia de cotización
+# (fixing de Londres contra Engelhard). No se cambian para que el gate cierre.
+TOLERANCIA_GATE_ORO_PCT = 0.5
+TOLERANCIA_GATE_PLATA_PCT = 1.0
+MINIMO_ANIOS_GATE = 3
 
-# Lo único que LBMA publica sin licencia y sirve de control: los extremos del
-# trimestre, de su informe trimestral.
+# Cifras transcritas a mano de la tabla "Salient Statistics—United States" de la
+# edición de febrero de 2026. La columna de 2025 está marcada como estimada (con
+# datos de enero a noviembre) y por eso no entra: solo años cerrados.
+_MCS_2026 = "U.S. Geological Survey, Mineral Commodity Summaries, February 2026"
+_MCS_2026_ORO = "https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-gold.pdf"
+_MCS_2026_PLATA = "https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-silver.pdf"
+_FILA_ORO = (
+    f"{_MCS_2026}, Gold, fila \"Price, dollars per troy ounce\" (Engelhard's "
+    "average gold price quotation for the year)"
+)
+_FILA_PLATA = (
+    f"{_MCS_2026}, Silver, fila \"Price, bullion, average, dollars per troy "
+    "ounce\" (Engelhard's industrial bullion quotations)"
+)
+_LEIDO = date(2026, 10, 4)
+
+ANCLAS_USGS = (
+    AnclaAnual("oro", 2021, 1801.0, _FILA_ORO, _MCS_2026_ORO, _LEIDO),
+    AnclaAnual("oro", 2022, 1802.0, _FILA_ORO, _MCS_2026_ORO, _LEIDO),
+    AnclaAnual("oro", 2023, 1945.0, _FILA_ORO, _MCS_2026_ORO, _LEIDO),
+    AnclaAnual("oro", 2024, 2388.0, _FILA_ORO, _MCS_2026_ORO, _LEIDO),
+    AnclaAnual("plata", 2021, 25.23, _FILA_PLATA, _MCS_2026_PLATA, _LEIDO),
+    AnclaAnual("plata", 2022, 21.88, _FILA_PLATA, _MCS_2026_PLATA, _LEIDO),
+    AnclaAnual("plata", 2023, 23.54, _FILA_PLATA, _MCS_2026_PLATA, _LEIDO),
+    AnclaAnual("plata", 2024, 28.37, _FILA_PLATA, _MCS_2026_PLATA, _LEIDO),
+)
+
+# Control adicional, más débil que el gate: los extremos del trimestre que LBMA
+# publica sin licencia, en su informe trimestral.
 _INFORME_LBMA_2026T2 = "https://www.lbma.org.uk/articles/lbma-precious-metals-market-report-q2-2026"
 BANDAS_LBMA = (
     BandaTrimestral(
@@ -586,7 +621,20 @@ COLUMNAS_SERIES_INFO = [
     "ultimo_mes",
     "meses",
 ]
-COLUMNAS_INTERNO = ["mes", "sp500", "nasdaq", "oro_sp500", "btc_sp500", "nasdaq_sp500"]
+# Todo lo que se calcula, se publique o no. Va fuera del repositorio.
+COLUMNAS_INTERNO = [
+    "mes",
+    "oro",
+    "plata",
+    "btc",
+    "sp500",
+    "nasdaq",
+    "oro_plata",
+    "btc_oro",
+    "oro_sp500",
+    "btc_sp500",
+    "nasdaq_sp500",
+]
 COLUMNAS_DESCARGAS = [
     "fecha_descarga",
     "fuente",

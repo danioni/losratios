@@ -9,12 +9,13 @@ Un comando hace todo:
     python -m senales.ratios
 
 descarga, deja constancia de cada descarga en el manifiesto, lleva cada serie a
-meses completos, calcula los pares, contrasta contra una segunda fuente, escribe
-las salidas y actualiza el changelog.
+meses completos, calcula los pares, valida cada serie contra una segunda fuente,
+escribe las salidas y actualiza el changelog.
 
-No todo lo que se calcula se publica. Las series y los pares que dependen de un
-índice cuyo dueño no dio permiso se calculan igual, quedan fuera del repositorio
-y se publican como NO MEDIDO (A-R0-14). Si un contraste no cierra, la corrida se
+No todo lo que se calcula se publica. Una serie se publica si su licencia lo
+permite sin interpretarla y si su validación externa cerró (A-R0-14). Lo demás
+se calcula igual, queda fuera del repositorio y se publica como NO MEDIDO, con
+el motivo. Si el contraste de BTC o de un índice no cierra, la corrida se
 detiene sin escribir ninguna serie.
 """
 
@@ -30,8 +31,7 @@ import pandas as pd
 
 from senales import bitacora, fuentes_precios
 from senales.configuracion import (
-    ANCLA_LBMA_ORO,
-    ANCLA_LBMA_PLATA,
+    ANCLAS_USGS,
     ARCHIVO_CHANGELOG,
     ARCHIVO_DESCARGAS,
     ARCHIVO_INTERNO,
@@ -62,18 +62,20 @@ from senales.configuracion import (
     ESTADO_DATO,
     ESTADO_ESTIMACION,
     FORMATO_RATIOS,
+    MINIMO_ANIOS_GATE,
     NASDAQ_FECHA_BASE,
     NASDAQ_VALOR_BASE,
     NO_MEDIDO_PERMISO,
+    NO_MEDIDO_SIN_VALIDACION,
     ORO_DEFINICION_ANTES,
     ORO_DEFINICION_DESPUES,
     ORO_QUIEBRE_DEFINICION,
     PARES,
     SERIES_PRECIO,
-    TOLERANCIA_ANCLA_ORO_PCT,
-    TOLERANCIA_ANCLA_PLATA_PCT,
+    TOLERANCIA_GATE_ORO_PCT,
+    TOLERANCIA_GATE_PLATA_PCT,
     VENTANA_CONTRASTE_NASDAQ_ANIOS,
-    AnclaMensual,
+    AnclaAnual,
     BandaTrimestral,
     Contraste,
     Par,
@@ -87,6 +89,10 @@ CODIGO_ERROR_FUENTE = 1
 CODIGO_VALIDACION_FALLIDA = 2
 
 SERIES_POR_CLAVE: dict[str, SeriePrecio] = {serie.clave: serie for serie in SERIES_PRECIO}
+
+# Los metales se validan con el gate anual (A-R0-16); el resto, con un contraste
+# mensual (A-R0-12).
+TOLERANCIAS_GATE = {"oro": TOLERANCIA_GATE_ORO_PCT, "plata": TOLERANCIA_GATE_PLATA_PCT}
 
 
 def _mes(valor) -> str:
@@ -211,17 +217,44 @@ def verificar_base_nasdaq(diaria: pd.Series) -> None:
         )
 
 
-# --- Pares y regla de publicación (A-R0-14) -----------------------------------
+# --- Regla de publicación (A-R0-14) -------------------------------------------
+#
+# Una serie se publica si pasa dos filtros: la licencia y la validación. En todo
+# lo que sigue, `validadas` es el conjunto de claves de las series cuya
+# validación externa cerró en esta corrida.
 
 
-def par_publicable(par: Par) -> bool:
-    return SERIES_POR_CLAVE[par.numerador].publicable and SERIES_POR_CLAVE[par.denominador].publicable
+def serie_publicada(serie: SeriePrecio, validadas: set[str]) -> bool:
+    return serie.publicable and serie.clave in validadas
 
 
-def estado_del_par(par: Par) -> str:
-    if not par_publicable(par):
+def estado_de_serie(serie: SeriePrecio, validadas: set[str]) -> str:
+    if not serie.publicable:
         return NO_MEDIDO_PERMISO
+    if serie.clave not in validadas:
+        return NO_MEDIDO_SIN_VALIDACION
+    return serie.estado
+
+
+def par_publicado(par: Par, validadas: set[str]) -> bool:
+    return all(
+        serie_publicada(SERIES_POR_CLAVE[lado], validadas)
+        for lado in (par.numerador, par.denominador)
+    )
+
+
+def estado_del_par(par: Par, validadas: set[str]) -> str:
+    """Un par no es más firme que su lado más débil.
+
+    Si a un lado le falta el permiso, el par espera el permiso. Si le falta la
+    validación, el par no tiene validación. Si un lado es una estimación, el par
+    lo es.
+    """
     lados = (SERIES_POR_CLAVE[par.numerador], SERIES_POR_CLAVE[par.denominador])
+    if not all(lado.publicable for lado in lados):
+        return NO_MEDIDO_PERMISO
+    if not all(lado.clave in validadas for lado in lados):
+        return NO_MEDIDO_SIN_VALIDACION
     if any(lado.estado == ESTADO_ESTIMACION for lado in lados):
         return ESTADO_ESTIMACION
     return ESTADO_DATO
@@ -236,10 +269,18 @@ def calcular_pares(precios: pd.DataFrame) -> pd.DataFrame:
     return pares
 
 
-def tabla_precios(precios: pd.DataFrame) -> pd.DataFrame:
-    """Las series que se publican, con lo que hay que decir junto a cada una."""
-    publicables = [serie.clave for serie in SERIES_PRECIO if serie.publicable]
-    visibles = precios.loc[precios[publicables].notna().any(axis=1), publicables]
+def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+    """Las series que se publican, con lo que hay que decir junto a cada una.
+
+    Las columnas son siempre las mismas. La de una serie que no se publica queda
+    vacía: el motivo está en series.csv.
+    """
+    claves = ("oro", "plata", "btc")
+    visibles = precios.loc[:, list(claves)].copy()
+    for clave in claves:
+        if not serie_publicada(SERIES_POR_CLAVE[clave], validadas):
+            visibles[clave] = float("nan")
+    visibles = visibles.loc[visibles.notna().any(axis=1)]
     quiebre = pd.Timestamp(ORO_QUIEBRE_DEFINICION + "-01")
 
     tabla = pd.DataFrame({"mes": [_mes(mes) for mes in visibles.index]})
@@ -258,11 +299,11 @@ def tabla_precios(precios: pd.DataFrame) -> pd.DataFrame:
     return tabla
 
 
-def tabla_ratios(pares: pd.DataFrame) -> pd.DataFrame:
-    """Los pares publicables, en formato largo. Los demás no tienen filas acá."""
+def tabla_ratios(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+    """Los pares que se publican, en formato largo. Los demás no tienen filas acá."""
     bloques = []
     for par in PARES:
-        if not par_publicable(par):
+        if not par_publicado(par, validadas):
             continue
         valores = pares[par.clave].dropna()
         bloques.append(
@@ -271,7 +312,7 @@ def tabla_ratios(pares: pd.DataFrame) -> pd.DataFrame:
                     "mes": [_mes(mes) for mes in valores.index],
                     "par": par.clave,
                     "valor": valores.to_numpy(),
-                    "estado": estado_del_par(par),
+                    "estado": estado_del_par(par, validadas),
                 }
             )
         )
@@ -280,11 +321,11 @@ def tabla_ratios(pares: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(bloques, ignore_index=True).sort_values(["mes", "par"], kind="stable")
 
 
-def tabla_pares(pares: pd.DataFrame) -> pd.DataFrame:
+def tabla_pares(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     """Los cinco pares, publicados o no, y hasta dónde llega cada uno.
 
-    Es donde un par sin permiso aparece: existe, tiene historia, y su estado
-    dice por qué no se muestra.
+    Es donde un par que no se muestra aparece: existe, tiene historia, y su
+    estado dice qué le falta.
     """
     filas = []
     for par in PARES:
@@ -293,8 +334,8 @@ def tabla_pares(pares: pd.DataFrame) -> pd.DataFrame:
             {
                 "par": par.clave,
                 "nombre": par.nombre,
-                "publicado": "sí" if par_publicable(par) else "no",
-                "estado": estado_del_par(par),
+                "publicado": "sí" if par_publicado(par, validadas) else "no",
+                "estado": estado_del_par(par, validadas),
                 "primer_mes": "" if valores.empty else _mes(valores.index[0]),
                 "ultimo_mes": "" if valores.empty else _mes(valores.index[-1]),
                 "meses": len(valores),
@@ -303,31 +344,13 @@ def tabla_pares(pares: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(filas, columns=COLUMNAS_PARES)
 
 
-def _validacion_de(serie: SeriePrecio) -> str:
-    """Con qué se valida una serie, dicho junto a ella."""
-    for contraste in CONTRASTES:
-        if contraste.serie == serie.clave:
-            return (
-                f"contraste mensual contra {contraste.fuente}, "
-                f"+/-{formatear(contraste.tolerancia_pct, 2)} % (A-R0-12)"
-            )
-    ancla = {"oro": ANCLA_LBMA_ORO, "plata": ANCLA_LBMA_PLATA}.get(serie.clave)
-    if ancla is not None:
-        return (
-            f"ancla de {ancla.mes} contra {ancla.fuente}, "
-            f"+/-{formatear(ancla.tolerancia_pct, 2)} % (A-R0-16)"
-        )
-    return (
-        "sin gate de nivel: no hay ancla de LBMA transcrita (A-R0-16); solo un "
-        "control de banda contra los extremos trimestrales que publica LBMA"
-    )
-
-
-def tabla_series(precios: pd.DataFrame) -> pd.DataFrame:
+def tabla_series(
+    precios: pd.DataFrame, validadas: set[str], validaciones: dict[str, str]
+) -> pd.DataFrame:
     """Las cinco series y lo que hay que decir junto a cada una.
 
     Es donde va la atribución que exigen las licencias, el estado de cada serie
-    y con qué se valida. Los valores de las que no se publican no están acá.
+    y con qué se validó. Los valores de las que no se publican no están acá.
     """
     filas = []
     for serie in SERIES_PRECIO:
@@ -336,13 +359,13 @@ def tabla_series(precios: pd.DataFrame) -> pd.DataFrame:
             {
                 "serie": serie.clave,
                 "nombre": serie.nombre,
-                "publicada": "sí" if serie.publicable else "no",
-                "estado": serie.estado,
+                "publicada": "sí" if serie_publicada(serie, validadas) else "no",
+                "estado": estado_de_serie(serie, validadas),
                 "unidad": serie.unidad,
                 "fuente": serie.descarga.descripcion,
                 "licencia": serie.descarga.licencia,
                 "atribucion": serie.descarga.atribucion,
-                "validacion": _validacion_de(serie),
+                "validacion": validaciones[serie.clave],
                 "supuestos": " ".join(serie.supuestos),
                 "primer_mes": "" if valores.empty else _mes(valores.index[0]),
                 "ultimo_mes": "" if valores.empty else _mes(valores.index[-1]),
@@ -353,18 +376,15 @@ def tabla_series(precios: pd.DataFrame) -> pd.DataFrame:
 
 
 def tabla_interna(precios: pd.DataFrame, pares: pd.DataFrame) -> pd.DataFrame:
-    """Lo que se calcula y no se publica. Va al directorio ignorado por git."""
-    columnas = [serie.clave for serie in SERIES_PRECIO if not serie.publicable]
-    columnas += [par.clave for par in PARES if not par_publicable(par)]
-    junta = precios.join(pares)[columnas]
-    junta = junta.loc[junta.notna().any(axis=1)]
+    """Todo lo que se calcula, se publique o no. Va al directorio ignorado por git."""
+    junta = precios.join(pares)
     tabla = pd.DataFrame({"mes": [_mes(mes) for mes in junta.index]})
-    for columna in columnas:
+    for columna in COLUMNAS_INTERNO[1:]:
         tabla[columna] = junta[columna].to_numpy()
     return tabla
 
 
-# --- Contrastes (A-R0-12) -----------------------------------------------------
+# --- Contrastes mensuales (A-R0-12) -------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -467,37 +487,91 @@ def obtener_referencias(fecha_descarga: date) -> dict[str, pd.Series]:
     }
 
 
-# --- Oro y plata: ancla y bandas (A-R0-16) ------------------------------------
+# --- Oro y plata: gate anual y bandas (A-R0-16) -------------------------------
 
 
-def verificar_ancla(
-    mensual: pd.Series, ancla: AnclaMensual | None, nombre: str, tolerancia_pct: float
-) -> tuple[bool, str]:
-    """El gate de nivel de un metal, contra un valor transcrito a mano."""
-    if ancla is None:
-        return True, (
-            f"NO MEDIDO (A-R0-16) - {nombre}: no hay ancla de LBMA transcrita; la serie "
-            f"se publica sin gate de nivel. Tolerancia ya fijada: +/-{formatear(tolerancia_pct, 2)} %"
+@dataclass(frozen=True)
+class ResultadoGateAnual:
+    """El promedio de doce meses de un metal contra el precio anual del USGS."""
+
+    serie: str
+    tolerancia_pct: float
+    anios: int
+    cerrados: int
+    lineas: list[str]
+
+    @property
+    def ok(self) -> bool:
+        """Cierra si hay años suficientes y cerraron todos, no la mayoría."""
+        return self.anios >= MINIMO_ANIOS_GATE and self.cerrados == self.anios
+
+    def resumen(self) -> str:
+        nombre = SERIES_POR_CLAVE[self.serie].nombre
+        if self.anios < MINIMO_ANIOS_GATE:
+            return (
+                f"FALLA - {nombre}: el gate anual tiene {self.anios} años y necesita "
+                f"al menos {MINIMO_ANIOS_GATE}"
+            )
+        return (
+            f"{'OK' if self.ok else 'FALLA'} - {nombre}: gate anual contra el USGS, "
+            f"{self.cerrados} de {self.anios} años dentro de "
+            f"+/-{formatear(self.tolerancia_pct, 2)} %"
         )
-    mes = pd.Timestamp(ancla.mes + "-01")
-    if mes not in mensual.index or pd.isna(mensual[mes]):
-        return False, f"FALLA - {nombre}: el mes del ancla, {ancla.mes}, no está en la serie"
-    diferencia = (mensual[mes] / ancla.valor - 1.0) * 100.0
-    ok = abs(diferencia) <= ancla.tolerancia_pct
-    return ok, (
-        f"{'OK' if ok else 'FALLA'} - {nombre} {ancla.mes}: {formatear(mensual[mes], 4)} contra "
-        f"{formatear(ancla.valor, 4)} de {ancla.fuente}, diferencia {formatear(diferencia, 3)} %, "
-        f"tolerancia +/-{formatear(ancla.tolerancia_pct, 2)} %"
-    )
+
+    def validacion(self) -> str:
+        """El texto que acompaña a la serie en series.csv."""
+        return (
+            f"gate anual contra el precio promedio del USGS (Mineral Commodity "
+            f"Summaries), +/-{formatear(self.tolerancia_pct, 2)} % (A-R0-16): "
+            + (
+                f"cerró en {self.cerrados} de {self.anios} años"
+                if self.ok
+                else f"NO cerró ({self.cerrados} de {self.anios} años)"
+            )
+        )
+
+
+def gate_anual(
+    mensual: pd.Series, anclas: tuple[AnclaAnual, ...], serie: str, tolerancia_pct: float
+) -> ResultadoGateAnual:
+    """Promedio de los doce meses de cada año contra el valor anual transcrito.
+
+    Un año al que le falta un mes no se promedia: cuenta como no cerrado.
+    """
+    nombre = SERIES_POR_CLAVE[serie].nombre
+    propias = [ancla for ancla in anclas if ancla.serie == serie]
+    cerrados, lineas = 0, []
+    for ancla in sorted(propias, key=lambda a: a.anio):
+        del_anio = mensual[mensual.index.year == ancla.anio].dropna()
+        if len(del_anio) != 12:
+            lineas.append(
+                f"FALLA - {nombre} {ancla.anio}: la serie tiene {len(del_anio)} de 12 meses"
+            )
+            continue
+        promedio = float(del_anio.mean())
+        diferencia = (promedio / ancla.valor - 1.0) * 100.0
+        dentro = abs(diferencia) <= tolerancia_pct
+        cerrados += dentro
+        lineas.append(
+            f"{'OK' if dentro else 'FALLA'} - {nombre} {ancla.anio}: promedio de los 12 meses "
+            f"{formatear(promedio, 4)} contra {formatear(ancla.valor, 2)} del USGS, "
+            f"diferencia {formatear(diferencia, 3)} %, "
+            f"tolerancia +/-{formatear(tolerancia_pct, 2)} %"
+        )
+    return ResultadoGateAnual(serie, tolerancia_pct, len(propias), cerrados, lineas)
 
 
 def verificar_bandas(
     precios: pd.DataFrame, bandas: tuple[BandaTrimestral, ...]
-) -> tuple[bool, list[str]]:
-    """Un promedio mensual no puede caer fuera de los extremos de su trimestre."""
-    todo_ok, lineas = True, []
+) -> tuple[dict[str, bool], list[str]]:
+    """Un promedio mensual no puede caer fuera de los extremos de su trimestre.
+
+    Devuelve, por serie, si todas sus bandas con dato cerraron, y el detalle.
+    """
+    resultado, lineas = {}, []
     for banda in bandas:
         nombre = SERIES_POR_CLAVE[banda.serie].nombre
+        resultado.setdefault(banda.serie, True)
         for etiqueta in banda.meses:
             mes = pd.Timestamp(etiqueta + "-01")
             valor = precios[banda.serie].get(mes)
@@ -505,13 +579,13 @@ def verificar_bandas(
                 lineas.append(f"sin dato - {nombre} {etiqueta}: el mes no está en la serie")
                 continue
             dentro = banda.minimo <= valor <= banda.maximo
-            todo_ok = todo_ok and dentro
+            resultado[banda.serie] = resultado[banda.serie] and dentro
             lineas.append(
                 f"{'OK' if dentro else 'FALLA'} - {nombre} {etiqueta}: {formatear(valor, 2)} "
                 f"{'dentro' if dentro else 'FUERA'} de [{formatear(banda.minimo, 2)}, "
                 f"{formatear(banda.maximo, 2)}] ({banda.fuente})"
             )
-    return todo_ok, lineas
+    return resultado, lineas
 
 
 # --- Changelog ----------------------------------------------------------------
@@ -579,6 +653,35 @@ def _con_fecha(tabla: pd.DataFrame) -> pd.DataFrame:
     copia = tabla.copy()
     copia["fecha"] = pd.to_datetime(copia["mes"] + "-01")
     return copia
+
+
+def _tiene_valores(tabla: pd.DataFrame | None, columna: str) -> bool:
+    return tabla is not None and columna in tabla.columns and bool(tabla[columna].notna().any())
+
+
+def _columnas_comparables(
+    previa: pd.DataFrame | None,
+    nueva: pd.DataFrame | None,
+    columnas: list[str],
+    hay_corrida_previa: bool,
+) -> tuple[list[str], list[str]]:
+    """Separa las columnas que se pueden comparar fila por fila de las que cambiaron
+    de estado: una serie que empieza o deja de publicarse no es una revisión de
+    cada uno de sus meses, es un solo hecho, y se anota como tal.
+    """
+    if not hay_corrida_previa:
+        return columnas, []
+    comparables, cambios = [], []
+    for columna in columnas:
+        antes, ahora = _tiene_valores(previa, columna), _tiene_valores(nueva, columna)
+        if antes == ahora:
+            comparables.append(columna)
+        else:
+            cambios.append(
+                f"{columna}: {'dejó de publicarse' if antes else 'empezó a publicarse'} "
+                "en esta corrida"
+            )
+    return comparables, cambios
 
 
 def _ancho(largo: pd.DataFrame | None) -> pd.DataFrame | None:
@@ -662,6 +765,13 @@ def construir_precios(fuentes: Fuentes) -> tuple[pd.DataFrame, dict[str, list[st
     return precios, descartados
 
 
+def _validacion_de_contraste(contraste: Contraste) -> str:
+    return (
+        f"contraste mensual contra {contraste.fuente}, "
+        f"+/-{formatear(contraste.tolerancia_pct, 2)} % (A-R0-12): cerró"
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     analizador = argparse.ArgumentParser(
         prog="python -m senales.ratios",
@@ -688,42 +798,28 @@ def main(argv: list[str] | None = None) -> int:
 
     pares = calcular_pares(precios)
 
+    # --- Validación -----------------------------------------------------------
+    contrastes = [
+        contrastar(precios[contraste.serie], referencias[contraste.serie], contraste)
+        for contraste in CONTRASTES
+    ]
+    gates = {
+        metal: gate_anual(precios[metal], ANCLAS_USGS, metal, TOLERANCIAS_GATE[metal])
+        for metal in ("oro", "plata")
+    }
+    bandas_ok, lineas_bandas = verificar_bandas(precios, BANDAS_LBMA)
+
     lineas_descargas = [registro.linea() for registro in fuentes.registros]
-    lineas_series = [
-        f"{serie.nombre}: {_mes(precios[serie.clave].first_valid_index())} a "
-        f"{_mes(precios[serie.clave].last_valid_index())}, "
-        f"{precios[serie.clave].notna().sum()} meses, "
-        f"{'se publica' if serie.publicable else 'se calcula y no se publica'} "
-        f"({serie.descarga.licencia}; {', '.join(serie.supuestos)})"
-        for serie in SERIES_PRECIO
-    ]
-    lineas_descartados = [
-        f"{SERIES_POR_CLAVE[clave].nombre} | {motivo}"
-        for clave, motivos in descartados.items()
-        for motivo in motivos
-    ]
+    lineas_contrastes = [resultado.resumen() for resultado in contrastes]
+    lineas_metales = []
+    for metal in ("oro", "plata"):
+        lineas_metales.append(gates[metal].resumen())
+        lineas_metales.extend(gates[metal].lineas)
+    lineas_metales.extend(lineas_bandas)
 
     print("Descargas")
     for linea in lineas_descargas:
         print(f"  {linea}")
-    print("Series")
-    for linea in lineas_series:
-        print(f"  {linea}")
-
-    contrastes = [
-        contrastar(precios[contraste.serie], referencias[contraste.serie], contraste)
-        for contraste in (CONTRASTE_SP500, CONTRASTE_NASDAQ, CONTRASTE_BTC)
-    ]
-    ancla_oro_ok, linea_ancla_oro = verificar_ancla(
-        precios["oro"], ANCLA_LBMA_ORO, "Oro", TOLERANCIA_ANCLA_ORO_PCT
-    )
-    ancla_plata_ok, linea_ancla_plata = verificar_ancla(
-        precios["plata"], ANCLA_LBMA_PLATA, "Plata", TOLERANCIA_ANCLA_PLATA_PCT
-    )
-    bandas_ok, lineas_bandas = verificar_bandas(precios, BANDAS_LBMA)
-    lineas_contrastes = [resultado.resumen() for resultado in contrastes]
-    lineas_metales = [linea_ancla_oro, linea_ancla_plata] + lineas_bandas
-
     print("Contrastes")
     for linea in lineas_contrastes:
         print(f"  {linea}")
@@ -731,7 +827,7 @@ def main(argv: list[str] | None = None) -> int:
     for linea in lineas_metales:
         print(f"  {linea}")
 
-    if not (all(r.ok for r in contrastes) and ancla_oro_ok and ancla_plata_ok and bandas_ok):
+    if not all(resultado.ok for resultado in contrastes):
         print("", file=sys.stderr)
         print(
             "La corrida se detiene: un contraste no cerró dentro de su tolerancia. No se "
@@ -748,24 +844,68 @@ def main(argv: list[str] | None = None) -> int:
         )
         return CODIGO_VALIDACION_FALLIDA
 
-    publicada_precios = tabla_precios(precios)
-    publicada_ratios = tabla_ratios(pares)
-    publicada_pares = tabla_pares(pares)
+    # Los contrastes cerraron, o la corrida ya se habría detenido. Un metal queda
+    # validado si cerró su gate anual y ninguna de sus bandas falló.
+    validadas = {contraste.serie for contraste in CONTRASTES}
+    validadas |= {
+        metal for metal in ("oro", "plata") if gates[metal].ok and bandas_ok.get(metal, True)
+    }
+    validaciones = {c.serie: _validacion_de_contraste(c) for c in CONTRASTES}
+    validaciones.update({metal: gates[metal].validacion() for metal in ("oro", "plata")})
+
+    sin_validar = [m for m in ("oro", "plata") if m not in validadas]
+    if sin_validar:
+        nombres = " y ".join(SERIES_POR_CLAVE[m].nombre.lower() for m in sin_validar)
+        print("", file=sys.stderr)
+        print(
+            f"El gate de {nombres} no cerró. La corrida sigue, pero esas series y los pares "
+            f"que las llevan se publican como \"{NO_MEDIDO_SIN_VALIDACION}\" (A-R0-14). "
+            "No ensanchar la tolerancia para que cierre (A-R0-16).",
+            file=sys.stderr,
+        )
+
+    # --- Salidas --------------------------------------------------------------
+    lineas_series = [
+        f"{serie.nombre}: {_mes(precios[serie.clave].first_valid_index())} a "
+        f"{_mes(precios[serie.clave].last_valid_index())}, "
+        f"{precios[serie.clave].notna().sum()} meses, "
+        + (
+            "se publica"
+            if serie_publicada(serie, validadas)
+            else f"se calcula y no se publica: {estado_de_serie(serie, validadas)}"
+        )
+        + f" ({serie.descarga.licencia}; {', '.join(serie.supuestos)})"
+        for serie in SERIES_PRECIO
+    ]
+    lineas_descartados = [
+        f"{SERIES_POR_CLAVE[clave].nombre} | {motivo}"
+        for clave, motivos in descartados.items()
+        for motivo in motivos
+    ]
+
+    publicada_precios = tabla_precios(precios, validadas)
+    publicada_ratios = tabla_ratios(pares, validadas)
+    publicada_pares = tabla_pares(pares, validadas)
     interna = tabla_interna(precios, pares)
 
     previa_precios = _leer_publicado(ARCHIVO_PRECIOS)
     previa_ratios = _leer_publicado(ARCHIVO_RATIOS)
     nueva_precios = _con_fecha(publicada_precios)
-    revisiones = bitacora.detectar_revisiones(
-        previa_precios, nueva_precios, ["oro_usd_oz", "plata_usd_oz", "btc_usd"], EPSILON_REVISION_PRECIOS
+    hay_corrida_previa = previa_precios is not None
+    comparables, cambios_de_estado = _columnas_comparables(
+        previa_precios, nueva_precios, ["oro_usd_oz", "plata_usd_oz", "btc_usd"], hay_corrida_previa
     )
-    nueva_ratios = _ancho(_con_fecha(publicada_ratios))
-    if nueva_ratios is not None:
+    revisiones = bitacora.detectar_revisiones(
+        previa_precios, nueva_precios, comparables, EPSILON_REVISION_PRECIOS
+    )
+    ancha_previa, ancha_nueva = _ancho(previa_ratios), _ancho(_con_fecha(publicada_ratios))
+    comparables, cambios = _columnas_comparables(
+        ancha_previa, ancha_nueva, [par.clave for par in PARES], hay_corrida_previa
+    )
+    cambios_de_estado += cambios
+    if ancha_nueva is not None:
         revisiones += bitacora.detectar_revisiones(
-            _ancho(previa_ratios),
-            nueva_ratios,
-            [par.clave for par in PARES if par_publicable(par)],
-            EPSILON_REVISION_RATIOS,
+            ancha_previa, ancha_nueva, comparables, EPSILON_REVISION_RATIOS
         )
     agregados = [_mes(f) for f in bitacora.filas_agregadas(previa_precios, nueva_precios)]
 
@@ -773,7 +913,10 @@ def main(argv: list[str] | None = None) -> int:
     escribir_csv_determinista(publicada_ratios, ARCHIVO_RATIOS, COLUMNAS_RATIOS, FORMATO_RATIOS)
     escribir_csv_determinista(publicada_pares, ARCHIVO_PARES, COLUMNAS_PARES, FORMATO_RATIOS)
     escribir_csv_determinista(
-        tabla_series(precios), ARCHIVO_SERIES_INFO, COLUMNAS_SERIES_INFO, FORMATO_RATIOS
+        tabla_series(precios, validadas, validaciones),
+        ARCHIVO_SERIES_INFO,
+        COLUMNAS_SERIES_INFO,
+        FORMATO_RATIOS,
     )
     escribir_csv_determinista(interna, ARCHIVO_INTERNO, COLUMNAS_INTERNO, FORMATO_RATIOS)
 
@@ -801,13 +944,16 @@ def main(argv: list[str] | None = None) -> int:
         descartados=lineas_descartados,
         pares=lineas_pares,
         agregados=agregados,
-        revisiones=[str(revision) for revision in revisiones],
+        revisiones=cambios_de_estado + [str(revision) for revision in revisiones],
         contrastes=lineas_contrastes,
         metales=lineas_metales,
         notas=notas,
     )
     cambio = bitacora.actualizar_changelog(ARCHIVO_CHANGELOG, entrada)
 
+    print("Series")
+    for linea in lineas_series:
+        print(f"  {linea}")
     print("Pares")
     for linea in lineas_pares:
         print(f"  {linea}")

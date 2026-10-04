@@ -1,0 +1,6 @@
+par,nombre,publicado,estado,primer_mes,ultimo_mes,meses
+oro_plata,Oro / Plata,sí,estimación,1960-01,2026-09,801
+btc_oro,BTC / Oro,sí,dato,2013-01,2026-09,165
+oro_sp500,Oro / S&P 500,no,NO MEDIDO: pendiente de permiso del dueño del índice,1960-01,2026-08,800
+btc_sp500,BTC / S&P 500,no,NO MEDIDO: pendiente de permiso del dueño del índice,2013-01,2026-08,164
+nasdaq_sp500,Nasdaq / S&P 500,no,NO MEDIDO: pendiente de permiso del dueño del índice,1971-03,2026-08,666

@@ -15,11 +15,13 @@ from senales.configuracion import (
     COLUMNAS_PRECIOS,
     DESCARGA_SHILLER,
     NO_MEDIDO_PERMISO,
+    NO_MEDIDO_SIN_VALIDACION,
 )
 from senales.fuentes_fred import ErrorDeFuente
 from senales.ratios import promedio_mensual
 from tests.datos_ratios import (
     ORO,
+    anclas_de_prueba,
     csv_fred,
     diaria_calendario,
     diaria_habil,
@@ -114,6 +116,9 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
         monkeypatch.setattr(ratios, nombre, ruta)
     monkeypatch.setattr(fuentes_precios, "filas_de_xls", lambda ruta, hoja: filas_shiller(SHILLER))
     monkeypatch.setattr(ratios, "obtener_referencias", _referencias())
+    # Las anclas reales del USGS son de 2021 a 2024; los datos de prueba, de 2023 a
+    # 2026. Acá el gate cierra contra anclas hechas para estos datos.
+    monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba())
 
     def prohibido(*args, **kwargs):
         raise AssertionError("ningún test sale a la red")
@@ -292,7 +297,8 @@ def test_cada_serie_lleva_su_atribucion_su_estado_y_con_que_se_valida(entorno):
     assert "CC BY-NC 4.0" in tabla.loc["btc", "atribucion"]
     assert tabla.loc["plata", "estado"] == "estimación"
     for metal in ("oro", "plata"):
-        assert tabla.loc[metal, "validacion"].startswith("sin gate de nivel")
+        assert "gate anual contra el precio promedio del USGS" in tabla.loc[metal, "validacion"]
+        assert "cerró en 3 de 3 años" in tabla.loc[metal, "validacion"]
     assert "Bitstamp" in tabla.loc["btc", "validacion"]
 
 
@@ -313,3 +319,74 @@ def test_el_changelog_no_trae_ningun_nivel_de_los_indices(entorno):
     for columna in ("sp500", "nasdaq"):
         for valor in interno[columna].dropna():
             assert f"{valor:.4f}" not in texto
+
+
+# --- A-R0-14 y A-R0-16: sin validación externa no se publica -----------------
+
+
+def _publicos(entorno) -> dict[str, pd.DataFrame]:
+    return {
+        nombre: pd.read_csv(entorno["series"] / f"{nombre}.csv", keep_default_na=False)
+        for nombre in ("precios_mensuales", "ratios", "pares", "series")
+    }
+
+
+def test_si_el_gate_del_oro_no_cierra_el_oro_y_sus_pares_salen_como_no_medido(entorno, monkeypatch, capsys):
+    """El oro se aparta 2 % de su ancla: no hay validación, y no hay publicación."""
+    monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba(factor_oro=1.02))
+    assert _correr() == 0, "la corrida sigue: BTC y los índices tienen su propio contraste"
+    tablas = _publicos(entorno)
+
+    precios = tablas["precios_mensuales"]
+    assert set(precios["oro_usd_oz"]) == {""} and set(precios["oro_definicion"]) == {""}
+    assert (precios["plata_usd_oz"] != "").any(), "la plata cerró su gate y se publica"
+
+    assert tablas["ratios"].empty, "los dos pares publicables llevan oro"
+    pares = tablas["pares"].set_index("par")
+    assert pares.loc["oro_plata", "estado"] == NO_MEDIDO_SIN_VALIDACION
+    assert pares.loc["btc_oro", "estado"] == NO_MEDIDO_SIN_VALIDACION
+    assert pares.loc["oro_sp500", "estado"] == NO_MEDIDO_PERMISO
+    assert set(pares["publicado"]) == {"no"}
+
+    series = tablas["series"].set_index("serie")
+    assert series.loc["oro", "estado"] == NO_MEDIDO_SIN_VALIDACION
+    assert "NO cerró (0 de 3 años)" in series.loc["oro", "validacion"]
+    assert series.loc["plata", "publicada"] == "sí"
+
+    assert "El gate de oro no cerró" in capsys.readouterr().err
+    # Se calcula igual: el oro y sus pares están en la tabla interna.
+    interno = pd.read_csv(entorno["series_privado"] / "ratios_internos.csv")
+    assert interno["oro"].notna().any() and interno["btc_oro"].notna().any()
+
+
+def test_si_no_cierra_ningun_gate_solo_se_publica_btc(entorno, monkeypatch):
+    monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba(factor_oro=1.02, factor_plata=0.97))
+    assert _correr() == 0
+    tablas = _publicos(entorno)
+    precios = tablas["precios_mensuales"]
+    assert set(precios["oro_usd_oz"]) == {""} and set(precios["plata_usd_oz"]) == {""}
+    assert (precios["btc_usd"] != "").all()
+    assert tablas["ratios"].empty
+    assert dict(zip(tablas["series"]["serie"], tablas["series"]["publicada"])) == {
+        "oro": "no", "plata": "no", "btc": "sí", "sp500": "no", "nasdaq": "no",
+    }
+
+
+def test_sin_anclas_no_hay_gate_y_no_hay_publicacion(entorno, monkeypatch):
+    """Sin un caso de validación externa, un metal no se publica."""
+    monkeypatch.setattr(ratios, "ANCLAS_USGS", ())
+    assert _correr() == 0
+    series = _publicos(entorno)["series"].set_index("serie")
+    assert series.loc["oro", "estado"] == NO_MEDIDO_SIN_VALIDACION
+    assert series.loc["plata", "estado"] == NO_MEDIDO_SIN_VALIDACION
+
+
+def test_un_gate_que_deja_de_cerrar_se_anota_como_un_solo_hecho(entorno, monkeypatch):
+    """Si el oro se publicó ayer y hoy no cierra, el changelog lo dice en una línea."""
+    assert _correr() == 0
+    monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba(factor_oro=1.02))
+    assert _correr() == 0
+    texto = (entorno["series"] / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "oro_usd_oz: dejó de publicarse en esta corrida" in texto
+    assert "oro_plata: dejó de publicarse en esta corrida" in texto
+    assert texto.count(" | oro_usd_oz: ") == 0, "no una revisión por cada mes"

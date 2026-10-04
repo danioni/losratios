@@ -14,12 +14,33 @@ import pandas as pd
 
 from senales.configuracion import PINK_SHEET_DESCRIPCION_ORO, PINK_SHEET_DESCRIPCION_PLATA
 
-# Valores del segundo trimestre de 2026 dentro de las bandas de LBMA que están
-# en configuracion.py, para que el control de bandas cierre con datos de prueba.
-ORO = {"2026-03": 4800.0, "2026-04": 4700.0, "2026-05": 4600.0, "2026-06": 4200.0,
-       "2026-07": 4100.0, "2026-08": 4400.0, "2026-09": 4300.0}
-PLATA = {"2026-03": 78.0, "2026-04": 76.0, "2026-05": 78.0, "2026-06": 67.0,
-         "2026-07": 59.0, "2026-08": 65.0, "2026-09": 64.5}
+from senales.configuracion import AnclaAnual
+
+# Tres años completos y planos, para que el gate anual tenga contra qué cerrar,
+# y un 2026 con el segundo trimestre dentro de las bandas de LBMA que están en
+# configuracion.py.
+ORO_ANUAL = {2023: 4100.0, 2024: 4200.0, 2025: 4300.0}
+PLATA_ANUAL = {2023: 60.0, 2024: 62.0, 2025: 64.0}
+_ORO_2026 = {"2026-01": 4750.0, "2026-02": 4780.0, "2026-03": 4800.0, "2026-04": 4700.0,
+             "2026-05": 4600.0, "2026-06": 4200.0, "2026-07": 4100.0, "2026-08": 4400.0,
+             "2026-09": 4300.0}
+_PLATA_2026 = {"2026-01": 80.0, "2026-02": 79.0, "2026-03": 78.0, "2026-04": 76.0,
+               "2026-05": 78.0, "2026-06": 67.0, "2026-07": 59.0, "2026-08": 65.0,
+               "2026-09": 64.5}
+ORO = {f"{a}-{m:02d}": v for a, v in ORO_ANUAL.items() for m in range(1, 13)} | _ORO_2026
+PLATA = {f"{a}-{m:02d}": v for a, v in PLATA_ANUAL.items() for m in range(1, 13)} | _PLATA_2026
+
+
+def anclas_de_prueba(factor_oro: float = 1.0, factor_plata: float = 1.0) -> tuple[AnclaAnual, ...]:
+    """Anclas anuales que coinciden con los datos de prueba, o que se apartan un factor."""
+    from datetime import date
+
+    def ancla(serie: str, anio: int, valor: float) -> AnclaAnual:
+        return AnclaAnual(serie, anio, valor, "ancla de prueba", "https://ejemplo.invalid/", date(2026, 10, 4))
+
+    return tuple(ancla("oro", a, v * factor_oro) for a, v in ORO_ANUAL.items()) + tuple(
+        ancla("plata", a, v * factor_plata) for a, v in PLATA_ANUAL.items()
+    )
 
 
 def filas_pink_sheet(

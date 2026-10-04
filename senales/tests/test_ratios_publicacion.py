@@ -1,4 +1,4 @@
-"""Qué se publica y qué no (A-R0-14), y los contrastes que hacen de gate (A-R0-12)."""
+"""Qué se publica y qué no (A-R0-14), y los gates que lo deciden (A-R0-12, A-R0-16)."""
 
 from __future__ import annotations
 
@@ -9,31 +9,35 @@ import pytest
 
 from senales import bitacora, configuracion, ratios
 from senales.configuracion import (
-    ANCLA_LBMA_ORO,
-    ANCLA_LBMA_PLATA,
+    ANCLAS_USGS,
     BANDAS_LBMA,
     COLUMNAS_INTERNO,
     COLUMNAS_PRECIOS,
     CONTRASTE_BTC,
     CONTRASTE_NASDAQ,
     CONTRASTE_SP500,
+    MINIMO_ANIOS_GATE,
     NO_MEDIDO_PERMISO,
+    NO_MEDIDO_SIN_VALIDACION,
     PARES,
     SERIES_PRECIO,
-    AnclaMensual,
+    AnclaAnual,
 )
 from senales.ratios import (
     EntradaRatios,
     calcular_pares,
     contrastar,
+    estado_de_serie,
     estado_del_par,
-    par_publicable,
+    gate_anual,
+    par_publicado,
     promedio_mensual,
+    serie_publicada,
     tabla_interna,
     tabla_pares,
     tabla_precios,
     tabla_ratios,
-    verificar_ancla,
+    tabla_series,
     verificar_bandas,
 )
 from tests.datos_ratios import diaria_habil
@@ -41,6 +45,11 @@ from tests.datos_ratios import diaria_habil
 MESES = pd.DatetimeIndex(
     [pd.Timestamp(m + "-01") for m in ("2025-04", "2025-05", "2025-06", "2025-07")], name="mes"
 )
+
+# Todas las series con su validación cerrada, y los dos metales sin ella.
+TODAS = {"oro", "plata", "btc", "sp500", "nasdaq"}
+SIN_METALES = {"btc", "sp500", "nasdaq"}
+PARES_POR_CLAVE = {par.clave: par for par in PARES}
 
 
 @pytest.fixture
@@ -57,31 +66,57 @@ def precios() -> pd.DataFrame:
     )
 
 
-# --- Regla de publicación ----------------------------------------------------
+# --- Regla de publicación: licencia y validación -----------------------------
 
 
-def test_se_publican_oro_plata_y_btc_y_no_los_indices():
+def test_por_licencia_se_pueden_publicar_oro_plata_y_btc_y_no_los_indices():
     publicables = {serie.clave for serie in SERIES_PRECIO if serie.publicable}
     assert publicables == {"oro", "plata", "btc"}
 
 
-def test_los_tres_pares_con_indices_no_se_publican():
-    publicados = {par.clave for par in PARES if par_publicable(par)}
+def test_con_todo_validado_se_publican_dos_pares_y_tres_esperan_permiso():
+    publicados = {par.clave for par in PARES if par_publicado(par, TODAS)}
     assert publicados == {"oro_plata", "btc_oro"}
-
-
-def test_el_texto_de_no_medido_es_el_acordado():
-    assert NO_MEDIDO_PERMISO == "NO MEDIDO: pendiente de permiso del dueño del índice"
     for par in PARES:
         if "sp500" in (par.numerador, par.denominador):
-            assert estado_del_par(par) == NO_MEDIDO_PERMISO
+            assert estado_del_par(par, TODAS) == NO_MEDIDO_PERMISO
+
+
+def test_los_textos_de_no_medido_son_los_acordados():
+    assert NO_MEDIDO_PERMISO == "NO MEDIDO: pendiente de permiso del dueño del índice"
+    assert NO_MEDIDO_SIN_VALIDACION == "NO MEDIDO: sin validación externa"
+
+
+def test_ninguna_serie_se_publica_sin_validacion_externa():
+    """La regla del README: sin caso de validación, no hay publicación."""
+    por_clave = {serie.clave: serie for serie in SERIES_PRECIO}
+    assert not serie_publicada(por_clave["oro"], SIN_METALES)
+    assert estado_de_serie(por_clave["oro"], SIN_METALES) == NO_MEDIDO_SIN_VALIDACION
+    assert serie_publicada(por_clave["btc"], SIN_METALES)
+    # Ni con la validación cerrada se publica una serie sin permiso.
+    assert not serie_publicada(por_clave["sp500"], TODAS)
+    assert estado_de_serie(por_clave["sp500"], TODAS) == NO_MEDIDO_PERMISO
+
+
+def test_sin_el_oro_validado_no_se_publica_ningun_par():
+    """Oro/Plata y BTC/Oro llevan oro: si el oro no tiene gate, ninguno sale."""
+    assert {par.clave for par in PARES if par_publicado(par, SIN_METALES)} == set()
+    assert estado_del_par(PARES_POR_CLAVE["oro_plata"], SIN_METALES) == NO_MEDIDO_SIN_VALIDACION
+    assert estado_del_par(PARES_POR_CLAVE["btc_oro"], SIN_METALES) == NO_MEDIDO_SIN_VALIDACION
+    # Al que además le falta el permiso, lo que se dice es el permiso.
+    assert estado_del_par(PARES_POR_CLAVE["oro_sp500"], SIN_METALES) == NO_MEDIDO_PERMISO
+
+
+def test_con_el_oro_validado_y_la_plata_no_solo_sale_btc_oro():
+    validadas = SIN_METALES | {"oro"}
+    assert {par.clave for par in PARES if par_publicado(par, validadas)} == {"btc_oro"}
+    assert estado_del_par(PARES_POR_CLAVE["oro_plata"], validadas) == NO_MEDIDO_SIN_VALIDACION
 
 
 def test_oro_plata_hereda_que_la_plata_es_una_estimacion():
     """A-R0-8: un ratio no es más firme que su lado más débil."""
-    estados = {par.clave: estado_del_par(par) for par in PARES}
-    assert estados["oro_plata"] == "estimación"
-    assert estados["btc_oro"] == "dato"
+    assert estado_del_par(PARES_POR_CLAVE["oro_plata"], TODAS) == "estimación"
+    assert estado_del_par(PARES_POR_CLAVE["btc_oro"], TODAS) == "dato"
 
 
 def test_btc_se_usa_desde_2013_y_las_demas_series_desde_que_existen():
@@ -103,48 +138,80 @@ def test_un_par_al_que_le_falta_un_lado_queda_vacio(precios):
 
 
 def test_los_ratios_publicados_no_traen_ningun_par_con_indices(precios):
-    tabla = tabla_ratios(calcular_pares(precios))
+    tabla = tabla_ratios(calcular_pares(precios), TODAS)
     assert set(tabla["par"]) == {"oro_plata", "btc_oro"}
     assert set(tabla["estado"]) == {"estimación", "dato"}
     assert tabla["valor"].notna().all()
     assert len(tabla) == 4 + 3
 
 
+def test_sin_validacion_los_ratios_publicados_quedan_vacios(precios):
+    tabla = tabla_ratios(calcular_pares(precios), SIN_METALES)
+    assert tabla.empty
+    assert list(tabla.columns) == ["mes", "par", "valor", "estado"]
+
+
 def test_los_precios_publicados_no_traen_ninguna_columna_de_indices(precios):
-    tabla = tabla_precios(precios)
+    tabla = tabla_precios(precios, TODAS)
     assert list(tabla.columns) == COLUMNAS_PRECIOS
     assert not any("sp500" in columna or "nasdaq" in columna for columna in tabla.columns)
 
 
-def test_la_tabla_de_pares_muestra_los_cinco_y_dice_cuales_no_se_miden(precios):
-    tabla = tabla_pares(calcular_pares(precios)).set_index("par")
+def test_sin_validacion_las_columnas_de_los_metales_quedan_vacias(precios):
+    """Las columnas son las mismas; lo que no se publica no tiene valores."""
+    tabla = tabla_precios(precios, SIN_METALES)
+    assert list(tabla.columns) == COLUMNAS_PRECIOS
+    assert tabla["oro_usd_oz"].isna().all() and tabla["plata_usd_oz"].isna().all()
+    assert set(tabla["oro_definicion"]) == {""} and set(tabla["plata_estado"]) == {""}
+    assert tabla["btc_usd"].notna().all()
+    assert len(tabla) == 3  # solo los meses en que BTC tiene dato
+
+
+def test_la_tabla_de_pares_muestra_los_cinco_y_dice_que_le_falta_a_cada_uno(precios):
+    tabla = tabla_pares(calcular_pares(precios), SIN_METALES).set_index("par")
     assert len(tabla) == 5
     assert tabla.loc["oro_sp500", "estado"] == NO_MEDIDO_PERMISO
-    assert tabla.loc["oro_sp500", "publicado"] == "no"
-    # El par existe y tiene historia: lo que falta es el permiso, no el cálculo.
+    assert tabla.loc["oro_plata", "estado"] == NO_MEDIDO_SIN_VALIDACION
+    assert set(tabla["publicado"]) == {"no"}
+    # El par existe y tiene historia: lo que falta no es el cálculo.
     assert tabla.loc["oro_sp500", "meses"] == 4
     assert tabla.loc["btc_oro", "ultimo_mes"] == "2025-06"
 
 
-def test_lo_que_no_se_publica_va_a_la_tabla_interna(precios):
+def test_la_tabla_de_series_dice_estado_y_validacion_de_cada_una(precios):
+    validaciones = {clave: f"validación de {clave}" for clave in TODAS}
+    tabla = tabla_series(precios, SIN_METALES, validaciones).set_index("serie")
+    assert dict(tabla["publicada"]) == {
+        "oro": "no", "plata": "no", "btc": "sí", "sp500": "no", "nasdaq": "no",
+    }
+    assert tabla.loc["oro", "estado"] == NO_MEDIDO_SIN_VALIDACION
+    assert tabla.loc["nasdaq", "estado"] == NO_MEDIDO_PERMISO
+    assert tabla.loc["btc", "estado"] == "dato"
+    assert tabla.loc["plata", "validacion"] == "validación de plata"
+    assert "The World Bank" in tabla.loc["oro", "atribucion"]
+
+
+def test_todo_lo_calculado_va_a_la_tabla_interna(precios):
     tabla = tabla_interna(precios, calcular_pares(precios))
     assert list(tabla.columns) == COLUMNAS_INTERNO
     assert tabla.loc[0, "sp500"] == 5400.0
+    assert tabla.loc[0, "oro"] == 3200.0
+    assert tabla.loc[0, "oro_plata"] == pytest.approx(100.0)
 
 
 def test_el_quiebre_del_oro_va_declarado_fila_por_fila(precios):
     """A-R0-7: junio de 2025 es el primer mes del oro 'spot'."""
-    tabla = tabla_precios(precios).set_index("mes")
+    tabla = tabla_precios(precios, TODAS).set_index("mes")
     assert tabla.loc["2025-05", "oro_definicion"] == "fixing de la tarde de Londres"
     assert tabla.loc["2025-06", "oro_definicion"] == "spot"
 
 
 def test_la_plata_lleva_su_estado_a_la_vista(precios):
-    tabla = tabla_precios(precios)
+    tabla = tabla_precios(precios, TODAS)
     assert set(tabla["plata_estado"]) == {"estimación"}
 
 
-# --- Contrastes --------------------------------------------------------------
+# --- Contrastes mensuales ----------------------------------------------------
 
 
 def _mensual(valores: list[float], primer_mes: str = "2025-01") -> pd.Series:
@@ -197,52 +264,117 @@ def test_un_cierre_de_fin_de_mes_no_pasa_por_promedio_mensual():
     assert not resultado.ok
 
 
+def test_el_resumen_de_un_indice_no_trae_ningun_nivel():
+    """A-R0-12: fecha del peor mes, diferencia, mediana y n. Ni un valor del índice."""
+    serie = _mensual([5400.25, 5800.5, 6000.75])
+    for contraste in (CONTRASTE_SP500, CONTRASTE_NASDAQ):
+        resumen = contrastar(serie, serie * 1.0004, contraste).resumen()
+        assert "3 meses" in resumen and "mediana" in resumen and "2025-0" in resumen
+        for nivel in ("5400", "5800", "6000", "5402", "5802", "6003"):
+            assert nivel not in resumen
+
+
+def test_el_resumen_de_btc_si_trae_los_dos_valores():
+    serie = _mensual([90000.0, 100000.0], "2025-01")
+    resumen = contrastar(serie, serie * 1.01, CONTRASTE_BTC).resumen()
+    assert "90000.0000 contra 90900.0000" in resumen
+
+
 def test_las_tolerancias_son_las_que_se_fijaron():
-    """A-R0-12. Cambiarlas es cambiar un supuesto, no arreglar una corrida."""
+    """A-R0-12 y A-R0-16. Cambiarlas es cambiar un supuesto, no arreglar una corrida."""
     assert CONTRASTE_SP500.tolerancia_pct == 0.5
     assert CONTRASTE_NASDAQ.tolerancia_pct == 0.1
     assert CONTRASTE_BTC.tolerancia_pct == 2.0
-    assert configuracion.TOLERANCIA_ANCLA_ORO_PCT == 0.5
-    assert configuracion.TOLERANCIA_ANCLA_PLATA_PCT == 1.0
+    assert configuracion.TOLERANCIA_GATE_ORO_PCT == 0.5
+    assert configuracion.TOLERANCIA_GATE_PLATA_PCT == 1.0
+    assert MINIMO_ANIOS_GATE == 3
 
 
-# --- Oro y plata -------------------------------------------------------------
+# --- Oro y plata: gate anual contra el USGS ----------------------------------
 
 
-def test_no_hay_ancla_de_lbma_inventada():
-    """A-R0-16: el campo vacío es el dato. No poner un valor para llenarlo."""
-    assert ANCLA_LBMA_ORO is None
-    assert ANCLA_LBMA_PLATA is None
+def _anual(valores_por_anio: dict[int, float]) -> pd.Series:
+    """Doce meses planos por año."""
+    indice = pd.DatetimeIndex(
+        [pd.Timestamp(year=a, month=m, day=1) for a in valores_por_anio for m in range(1, 13)]
+    )
+    return pd.Series([v for v in valores_por_anio.values() for _ in range(12)], index=indice)
 
 
-def test_sin_ancla_el_metal_se_reporta_como_no_medido(precios):
-    ok, linea = verificar_ancla(precios["oro"], None, "Oro", 0.5)
-    assert ok
-    assert linea.startswith("NO MEDIDO (A-R0-16)")
-    assert "0.50 %" in linea
-
-
-def _ancla(valor: float, mes: str = "2025-05") -> AnclaMensual:
-    return AnclaMensual(
-        serie="oro",
-        mes=mes,
-        valor=valor,
-        tolerancia_pct=0.5,
-        fuente="un promedio de prueba",
-        fuente_url="https://ejemplo.invalid/",
-        fecha_lectura=date(2026, 10, 4),
+def _anclas(valores_por_anio: dict[int, float], serie: str = "oro") -> tuple[AnclaAnual, ...]:
+    return tuple(
+        AnclaAnual(serie, anio, valor, "de prueba", "https://ejemplo.invalid/", date(2026, 10, 4))
+        for anio, valor in valores_por_anio.items()
     )
 
 
-def test_con_ancla_el_metal_tiene_gate(precios):
-    assert verificar_ancla(precios["oro"], _ancla(3310.0), "Oro", 0.5)[0]
-    ok, linea = verificar_ancla(precios["oro"], _ancla(3400.0), "Oro", 0.5)
-    assert not ok and linea.startswith("FALLA")
+def test_las_anclas_del_usgs_declaran_de_donde_salen():
+    """Como el H.4.1: una cifra sin procedencia no se puede auditar."""
+    for ancla in ANCLAS_USGS:
+        assert ancla.fuente_url.startswith("https://pubs.usgs.gov/periodicals/mcs2026/")
+        assert "Mineral Commodity Summaries, February 2026" in ancla.fuente
+        assert "Engelhard" in ancla.fuente
+        assert ancla.fecha_lectura == date(2026, 10, 4)
 
 
-def test_un_ancla_cuyo_mes_no_esta_en_la_serie_falla(precios):
-    ok, linea = verificar_ancla(precios["oro"], _ancla(3300.0, "1999-01"), "Oro", 0.5)
-    assert not ok and "no está en la serie" in linea
+def test_las_anclas_son_las_cifras_transcritas_y_solo_de_anios_cerrados():
+    oro = {a.anio: a.valor for a in ANCLAS_USGS if a.serie == "oro"}
+    plata = {a.anio: a.valor for a in ANCLAS_USGS if a.serie == "plata"}
+    assert oro == {2021: 1801.0, 2022: 1802.0, 2023: 1945.0, 2024: 2388.0}
+    assert plata == {2021: 25.23, 2022: 21.88, 2023: 23.54, 2024: 28.37}
+    # El 2025 de esa edición está estimado con datos de enero a noviembre.
+    assert 2025 not in oro and 2025 not in plata
+    assert len(oro) >= MINIMO_ANIOS_GATE and len(plata) >= MINIMO_ANIOS_GATE
+
+
+def test_el_gate_anual_cierra_cuando_cierran_todos_los_anios():
+    mensual = _anual({2022: 1800.0, 2023: 1940.0, 2024: 2390.0})
+    resultado = gate_anual(mensual, _anclas({2022: 1802.0, 2023: 1945.0, 2024: 2388.0}), "oro", 0.5)
+    assert resultado.ok
+    assert (resultado.anios, resultado.cerrados) == (3, 3)
+    assert all(linea.startswith("OK") for linea in resultado.lineas)
+    assert "cerró en 3 de 3 años" in resultado.validacion()
+
+
+def test_un_solo_anio_fuera_hace_fallar_el_gate():
+    """Tienen que cerrar todos, no la mayoría."""
+    mensual = _anual({2022: 1800.0, 2023: 1940.0, 2024: 2420.0})
+    resultado = gate_anual(mensual, _anclas({2022: 1802.0, 2023: 1945.0, 2024: 2388.0}), "oro", 0.5)
+    assert not resultado.ok
+    assert resultado.cerrados == 2
+    assert any(linea.startswith("FALLA") and "2024" in linea for linea in resultado.lineas)
+    assert "NO cerró" in resultado.validacion()
+
+
+def test_con_menos_de_tres_anios_no_hay_gate():
+    mensual = _anual({2023: 1945.0, 2024: 2388.0})
+    resultado = gate_anual(mensual, _anclas({2023: 1945.0, 2024: 2388.0}), "oro", 0.5)
+    assert not resultado.ok
+    assert "necesita al menos 3" in resultado.resumen()
+
+
+def test_un_anio_al_que_le_falta_un_mes_no_se_promedia():
+    mensual = _anual({2022: 1802.0, 2023: 1945.0, 2024: 2388.0}).drop(pd.Timestamp("2023-07-01"))
+    resultado = gate_anual(mensual, _anclas({2022: 1802.0, 2023: 1945.0, 2024: 2388.0}), "oro", 0.5)
+    assert not resultado.ok
+    assert any("11 de 12 meses" in linea for linea in resultado.lineas)
+
+
+def test_el_gate_usa_el_promedio_de_los_doce_meses():
+    indice = pd.DatetimeIndex([pd.Timestamp(year=a, month=m, day=1) for a in (2022, 2023, 2024) for m in range(1, 13)])
+    # Cada año sube de 100 a 111: el promedio es 105.5, y diciembre, 111.
+    mensual = pd.Series([100.0 + m for _ in range(3) for m in range(12)], index=indice)
+    cierra = gate_anual(mensual, _anclas({2022: 105.5, 2023: 105.5, 2024: 105.5}), "oro", 0.5)
+    no_cierra = gate_anual(mensual, _anclas({2022: 111.0, 2023: 111.0, 2024: 111.0}), "oro", 0.5)
+    assert cierra.ok and not no_cierra.ok
+
+
+def test_el_gate_de_un_metal_no_mira_las_anclas_del_otro():
+    mensual = _anual({2022: 21.9, 2023: 23.5, 2024: 28.4})
+    anclas = _anclas({2022: 1802.0, 2023: 1945.0, 2024: 2388.0}, "oro") + _anclas(
+        {2022: 21.88, 2023: 23.54, 2024: 28.37}, "plata"
+    )
+    assert gate_anual(mensual, anclas, "plata", 1.0).ok
 
 
 def test_las_bandas_de_lbma_declaran_de_donde_salen():
@@ -255,17 +387,17 @@ def test_las_bandas_de_lbma_declaran_de_donde_salen():
 def test_un_promedio_fuera_de_los_extremos_de_su_trimestre_falla():
     indice = pd.DatetimeIndex([pd.Timestamp(m + "-01") for m in ("2026-04", "2026-05", "2026-06")])
     dentro = pd.DataFrame({"oro": [4700.0, 4600.0, 4200.0], "plata": [76.0, 78.0, 67.0]}, index=indice)
-    assert verificar_bandas(dentro, BANDAS_LBMA)[0]
+    assert verificar_bandas(dentro, BANDAS_LBMA)[0] == {"oro": True, "plata": True}
     fuera = dentro.copy()
     fuera.loc[indice[2], "oro"] = 3900.0
-    ok, lineas = verificar_bandas(fuera, BANDAS_LBMA)
-    assert not ok
+    resultado, lineas = verificar_bandas(fuera, BANDAS_LBMA)
+    assert resultado == {"oro": False, "plata": True}
     assert any("FUERA" in linea and "2026-06" in linea for linea in lineas)
 
 
 def test_una_banda_sin_dato_no_aprueba_ni_reprueba(precios):
-    ok, lineas = verificar_bandas(precios, BANDAS_LBMA)
-    assert ok
+    resultado, lineas = verificar_bandas(precios, BANDAS_LBMA)
+    assert resultado == {"oro": True, "plata": True}
     assert all(linea.startswith("sin dato") for linea in lineas)
 
 
@@ -282,7 +414,7 @@ def _entrada(fecha: date, nota: str = "corrida de prueba") -> EntradaRatios:
         agregados=["2026-09"],
         revisiones=[],
         contrastes=["OK - BTC"],
-        metales=["NO MEDIDO (A-R0-16) - Oro"],
+        metales=["OK - Oro: gate anual contra el USGS"],
         notas=[nota],
     )
 
@@ -314,3 +446,15 @@ def test_dos_corridas_de_ratios_el_mismo_dia_dejan_una_sola_entrada(tmp_path):
     texto = ruta.read_text(encoding="utf-8")
     assert texto.count("## 2026-10-04 · ratios") == 1
     assert "segunda" in texto and "primera" not in texto
+
+
+def test_una_serie_que_deja_de_publicarse_es_un_hecho_y_no_ochocientas_revisiones():
+    previa = pd.DataFrame({"fecha": MESES, "oro_usd_oz": [1.0, 2.0, 3.0, 4.0], "btc_usd": [5.0, 6.0, 7.0, 8.0]})
+    nueva = previa.assign(oro_usd_oz=float("nan"))
+    comparables, cambios = ratios._columnas_comparables(previa, nueva, ["oro_usd_oz", "btc_usd"], True)
+    assert comparables == ["btc_usd"]
+    assert cambios == ["oro_usd_oz: dejó de publicarse en esta corrida"]
+    _, vuelta = ratios._columnas_comparables(nueva, previa, ["oro_usd_oz", "btc_usd"], True)
+    assert vuelta == ["oro_usd_oz: empezó a publicarse en esta corrida"]
+    # En la primera corrida no hay nada con qué comparar.
+    assert ratios._columnas_comparables(None, previa, ["oro_usd_oz"], False) == (["oro_usd_oz"], [])
