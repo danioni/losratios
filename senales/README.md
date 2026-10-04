@@ -273,9 +273,9 @@ fuente · `2` un contraste no cerró.
 
 | Archivo | Qué contiene |
 | --- | --- |
-| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). |
-| `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, estado`. |
-| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes. Acá es donde un par sin permiso dice NO MEDIDO. |
+| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). Los dos metales llevan su error máximo por redondeo (A-R0-17). |
+| `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, error_redondeo_pct, apto_metricas, estado`. |
+| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes, y desde qué mes es apto para métricas. Acá es donde un par sin permiso dice NO MEDIDO. |
 | `data/series/series.csv` | Las cinco series: fuente, licencia, **atribución**, estado y con qué se valida cada una. Sin valores. |
 | `data/series/descargas_ratios.csv` | El manifiesto: de cada descarga, la URL, la fecha, los bytes y el SHA-256. |
 | `data/raw/pink_sheet_<fecha>.xlsx`, `data/raw/coin_metrics_btc_<fecha>.json` | Los crudos cuya licencia permite redistribuirlos (CC BY y CC BY-NC). |
@@ -333,9 +333,13 @@ dividendos (A-R0-13).
 **El oro no es una sola serie.** Cambia de definición en junio de 2025, y que los
 dos tramos sean comparables es un supuesto (A-R0-7).
 
-**El Pink Sheet viene redondeado**, el oro al dólar y la plata a un decimal. Con
-la plata por debajo de 5 USD, el ratio Oro/Plata carga más de 1 % de error de
-redondeo; pasa en 304 de los 801 meses, el último en julio de 2003 (A-R0-9).
+**No todos los meses publicados sirven para una métrica.** El Pink Sheet viene
+redondeado, el oro al dólar y la plata a un decimal, y el error máximo de cada
+ratio va publicado fila por fila. Un percentil o una tendencia solo pueden usar
+los meses marcados como aptos, que son los del tramo final con error de hasta
+0.5 %: **Oro/Plata desde 2009-02** (212 de 801 meses) y **BTC/Oro desde 2013-01**
+(todos). En 1960 el error de Oro/Plata llega a 7 %. Los meses anteriores se
+publican con su error a la vista y no son evidencia de nada (A-R0-9, A-R0-17).
 
 **El gate de oro y plata valida cuatro años, no toda la historia.** Dice que
 entre 2021 y 2024 el nivel anual del Pink Sheet es el de una cotización
@@ -388,8 +392,8 @@ TQQQ) van como módulos hermanos de `liquidez_neta.py`, no dentro de él:
 
 ## Supuestos
 
-Treinta decisiones sostienen estos números —catorce de S2 y dieciséis de la fase
-R— y ninguna es obvia. Están todas en **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas
+Treinta y una decisiones sostienen estos números —catorce de S2 y diecisiete de
+la fase R— y ninguna es obvia. Están todas en **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas
 y con estado (dato / estimación / supuesto / no medido).
 
 Las tres de S2 que más cambian el resultado:
@@ -409,3 +413,4 @@ Y de la fase R, las tres que conviene leer antes que las demás:
 - **A-R0-14** — solo se publica lo que la licencia permite y una segunda fuente valida; los pares con índices quedan como NO MEDIDO.
 - **A-R0-1** — toda serie es un promedio mensual de cierres diarios, y solo de meses completos.
 - **A-R0-16** — el gate de oro y plata es anual, contra el USGS, y valida 2021 a 2024.
+- **A-R0-17** — las métricas sobre un ratio solo usan los meses con error de redondeo de hasta 0.5 %.

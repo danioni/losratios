@@ -390,3 +390,20 @@ def test_un_gate_que_deja_de_cerrar_se_anota_como_un_solo_hecho(entorno, monkeyp
     assert "oro_usd_oz: dejó de publicarse en esta corrida" in texto
     assert "oro_plata: dejó de publicarse en esta corrida" in texto
     assert texto.count(" | oro_usd_oz: ") == 0, "no una revisión por cada mes"
+
+
+def test_lo_publicado_lleva_el_error_por_redondeo_y_la_marca_de_apto(entorno):
+    """A-R0-17."""
+    _correr()
+    precios = pd.read_csv(entorno["series"] / "precios_mensuales.csv")
+    assert (precios["oro_error_redondeo_pct"].dropna() > 0).all()
+    assert (precios["plata_error_redondeo_pct"].dropna() > 0).all()
+    largos = pd.read_csv(entorno["series"] / "ratios.csv")
+    assert set(largos["apto_metricas"]) <= {"sí", "no"}
+    oro_plata = largos[largos["par"] == "oro_plata"]
+    btc_oro = largos[largos["par"] == "btc_oro"]
+    # Oro/Plata suma dos errores; BTC/Oro, solo el del oro.
+    assert oro_plata["error_redondeo_pct"].min() > btc_oro["error_redondeo_pct"].max()
+    pares = pd.read_csv(entorno["series"] / "pares.csv", keep_default_na=False).set_index("par")
+    assert pares.loc["oro_plata", "apto_desde"] == "2023-01"
+    assert int(pares.loc["oro_plata", "meses_aptos"]) == len(oro_plata)

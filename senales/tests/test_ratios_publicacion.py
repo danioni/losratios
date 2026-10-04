@@ -16,17 +16,26 @@ from senales.configuracion import (
     CONTRASTE_BTC,
     CONTRASTE_NASDAQ,
     CONTRASTE_SP500,
+    COLUMNAS_RATIOS,
     MINIMO_ANIOS_GATE,
     NO_MEDIDO_PERMISO,
     NO_MEDIDO_SIN_VALIDACION,
     PARES,
+    SERIE_BTC,
+    SERIE_ORO,
+    SERIE_PLATA,
     SERIES_PRECIO,
+    UMBRAL_ERROR_REDONDEO_PCT,
     AnclaAnual,
 )
+from senales.fuentes_fred import ErrorDeFuente
 from senales.ratios import (
     EntradaRatios,
+    apto_desde,
     calcular_pares,
     contrastar,
+    error_redondeo_pct,
+    errores_de_pares,
     estado_de_serie,
     estado_del_par,
     gate_anual,
@@ -39,6 +48,7 @@ from senales.ratios import (
     tabla_ratios,
     tabla_series,
     verificar_bandas,
+    verificar_redondeo,
 )
 from tests.datos_ratios import diaria_habil
 
@@ -138,7 +148,7 @@ def test_un_par_al_que_le_falta_un_lado_queda_vacio(precios):
 
 
 def test_los_ratios_publicados_no_traen_ningun_par_con_indices(precios):
-    tabla = tabla_ratios(calcular_pares(precios), TODAS)
+    tabla = tabla_ratios(calcular_pares(precios), errores_de_pares(precios), TODAS)
     assert set(tabla["par"]) == {"oro_plata", "btc_oro"}
     assert set(tabla["estado"]) == {"estimación", "dato"}
     assert tabla["valor"].notna().all()
@@ -146,9 +156,9 @@ def test_los_ratios_publicados_no_traen_ningun_par_con_indices(precios):
 
 
 def test_sin_validacion_los_ratios_publicados_quedan_vacios(precios):
-    tabla = tabla_ratios(calcular_pares(precios), SIN_METALES)
+    tabla = tabla_ratios(calcular_pares(precios), errores_de_pares(precios), SIN_METALES)
     assert tabla.empty
-    assert list(tabla.columns) == ["mes", "par", "valor", "estado"]
+    assert list(tabla.columns) == COLUMNAS_RATIOS
 
 
 def test_los_precios_publicados_no_traen_ninguna_columna_de_indices(precios):
@@ -168,7 +178,7 @@ def test_sin_validacion_las_columnas_de_los_metales_quedan_vacias(precios):
 
 
 def test_la_tabla_de_pares_muestra_los_cinco_y_dice_que_le_falta_a_cada_uno(precios):
-    tabla = tabla_pares(calcular_pares(precios), SIN_METALES).set_index("par")
+    tabla = tabla_pares(calcular_pares(precios), errores_de_pares(precios), SIN_METALES).set_index("par")
     assert len(tabla) == 5
     assert tabla.loc["oro_sp500", "estado"] == NO_MEDIDO_PERMISO
     assert tabla.loc["oro_plata", "estado"] == NO_MEDIDO_SIN_VALIDACION
@@ -458,3 +468,99 @@ def test_una_serie_que_deja_de_publicarse_es_un_hecho_y_no_ochocientas_revisione
     assert vuelta == ["oro_usd_oz: empezó a publicarse en esta corrida"]
     # En la primera corrida no hay nada con qué comparar.
     assert ratios._columnas_comparables(None, previa, ["oro_usd_oz"], False) == (["oro_usd_oz"], [])
+
+
+# --- A-R0-17: error máximo por redondeo --------------------------------------
+
+
+def test_el_error_de_cada_metal_es_medio_paso_de_redondeo_sobre_el_valor():
+    """0.5/oro y 0.05/plata, en porcentaje."""
+    serie = _mensual([35.0, 1592.0, 4319.0])
+    assert list(error_redondeo_pct(serie, SERIE_ORO)) == pytest.approx(
+        [0.5 / 35.0 * 100, 0.5 / 1592.0 * 100, 0.5 / 4319.0 * 100]
+    )
+    plata = _mensual([0.9, 4.2, 64.6])
+    assert list(error_redondeo_pct(plata, SERIE_PLATA)) == pytest.approx(
+        [0.05 / 0.9 * 100, 0.05 / 4.2 * 100, 0.05 / 64.6 * 100]
+    )
+
+
+def test_una_fuente_que_no_redondea_no_aporta_error():
+    assert SERIE_BTC.medio_paso_redondeo is None
+    assert list(error_redondeo_pct(_mensual([15.6, 80473.08]), SERIE_BTC)) == [0.0, 0.0]
+
+
+def test_el_error_del_ratio_es_la_suma_de_los_de_sus_dos_lados(precios):
+    errores = errores_de_pares(precios)
+    mes = MESES[0]  # oro 3200, plata 32
+    assert errores.loc[mes, "oro_plata"] == pytest.approx(0.5 / 3200 * 100 + 0.05 / 32 * 100)
+    # BTC no redondea: el error de BTC/Oro es solo el del oro.
+    assert errores.loc[mes, "btc_oro"] == pytest.approx(0.5 / 3200 * 100)
+    assert errores.loc[mes, "oro_sp500"] == pytest.approx(0.5 / 3200 * 100)
+    assert errores.loc[mes, "nasdaq_sp500"] == 0.0
+
+
+def test_el_umbral_para_metricas_es_el_que_se_fijo():
+    """A-R0-17. Es un supuesto: cambiarlo cambia qué meses entran a un percentil."""
+    assert UMBRAL_ERROR_REDONDEO_PCT == 0.5
+
+
+def _con_plata(valores: list[float]) -> pd.DataFrame:
+    indice = pd.date_range("2008-07-01", periods=len(valores), freq="MS", name="mes")
+    n = len(valores)
+    return pd.DataFrame(
+        {"oro": [900.0] * n, "plata": valores, "btc": [float("nan")] * n,
+         "sp500": [1000.0] * n, "nasdaq": [2000.0] * n},
+        index=indice,
+    )
+
+
+def test_cada_fila_del_ratio_dice_su_error_y_si_es_apta_para_metricas():
+    # Con el oro a 900 (0.056 %), la plata tiene que estar a 11.3 o más para que
+    # la suma no pase de 0.5 %.
+    precios = _con_plata([18.0, 9.9, 11.2, 11.3, 12.0])
+    tabla = tabla_ratios(calcular_pares(precios), errores_de_pares(precios), TODAS)
+    oro_plata = tabla[tabla["par"] == "oro_plata"].set_index("mes")
+    # Julio cumple el umbral, pero queda antes de la interrupción: no es apto.
+    assert list(oro_plata["apto_metricas"]) == ["no", "no", "no", "sí", "sí"]
+    assert oro_plata.loc["2008-07", "error_redondeo_pct"] < UMBRAL_ERROR_REDONDEO_PCT
+    assert oro_plata.loc["2008-08", "error_redondeo_pct"] == pytest.approx(0.5606, abs=1e-4)
+    # Un mes no apto se publica igual, con su valor y su error a la vista.
+    assert oro_plata.loc["2008-08", "valor"] == pytest.approx(900.0 / 9.9)
+
+
+def test_apto_desde_es_el_primer_mes_del_tramo_final_sin_interrupcion():
+    precios = _con_plata([18.0, 9.9, 11.2, 11.3, 12.0])
+    errores = errores_de_pares(precios)
+    assert apto_desde(errores["oro_plata"]) == "2008-10"
+    tabla = tabla_pares(calcular_pares(precios), errores, TODAS).set_index("par")
+    assert tabla.loc["oro_plata", "apto_desde"] == "2008-10"
+    # Dos meses aptos. Julio cumple el umbral, pero queda antes de la interrupción:
+    # elegir meses sueltos por el precio de la plata sesgaría cualquier percentil.
+    assert tabla.loc["oro_plata", "meses_aptos"] == 2
+    assert tabla.loc["oro_sp500", "apto_desde"] == "2008-07"
+
+
+def test_si_el_ultimo_mes_no_es_apto_no_hay_tramo_final():
+    errores = errores_de_pares(_con_plata([18.0, 12.0, 9.0]))
+    assert apto_desde(errores["oro_plata"]) == ""
+    assert not ratios.meses_aptos(errores["oro_plata"]).any()
+
+
+def test_los_precios_publicados_llevan_el_error_de_cada_metal(precios):
+    tabla = tabla_precios(precios, TODAS).set_index("mes")
+    assert tabla.loc["2025-04", "oro_error_redondeo_pct"] == pytest.approx(0.0156, abs=1e-4)
+    assert tabla.loc["2025-04", "plata_error_redondeo_pct"] == pytest.approx(0.1563, abs=1e-4)
+    sin = tabla_precios(precios, SIN_METALES)
+    assert sin["oro_error_redondeo_pct"].isna().all() and sin["plata_error_redondeo_pct"].isna().all()
+
+
+def test_si_la_fuente_cambia_de_precision_la_corrida_se_detiene():
+    """El error que se publica sale del paso de redondeo: si cambia, deja de ser cierto."""
+    verificar_redondeo(_mensual([35.0, 1592.0]), SERIE_ORO)
+    verificar_redondeo(_mensual([0.9, 14.9, 64.6]), SERIE_PLATA)
+    verificar_redondeo(_mensual([15.618, 80473.0792]), SERIE_BTC)
+    with pytest.raises(ErrorDeFuente, match="cambió la precisión"):
+        verificar_redondeo(_mensual([35.0, 1591.93]), SERIE_ORO)
+    with pytest.raises(ErrorDeFuente, match="cambió la precisión"):
+        verificar_redondeo(_mensual([14.9, 14.884]), SERIE_PLATA)

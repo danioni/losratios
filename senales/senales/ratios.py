@@ -74,6 +74,7 @@ from senales.configuracion import (
     SERIES_PRECIO,
     TOLERANCIA_GATE_ORO_PCT,
     TOLERANCIA_GATE_PLATA_PCT,
+    UMBRAL_ERROR_REDONDEO_PCT,
     VENTANA_CONTRASTE_NASDAQ_ANIOS,
     AnclaAnual,
     BandaTrimestral,
@@ -206,6 +207,80 @@ def verificar_banda(mensual: pd.Series, serie: SeriePrecio) -> None:
         )
 
 
+def verificar_redondeo(mensual: pd.Series, serie: SeriePrecio) -> None:
+    """La precisión de una fuente que redondea se comprueba, no se asume.
+
+    El error por redondeo que se publica junto a cada valor (A-R0-17) sale del
+    paso con que la fuente redondea. Si la fuente cambia de precisión, ese error
+    deja de ser cierto, y la corrida se detiene en vez de publicar una cota falsa.
+    """
+    if serie.medio_paso_redondeo is None:
+        return
+    paso = 2.0 * serie.medio_paso_redondeo
+    cociente = mensual / paso
+    fuera = mensual[(cociente - cociente.round()).abs() > 1e-6]
+    if not fuera.empty:
+        muestra = ", ".join(f"{_mes(m)}={v!r}" for m, v in fuera.head(3).items())
+        raise ErrorDeFuente(
+            f"{serie.nombre}: {len(fuera)} valores no son múltiplos de {paso} ({muestra}). La "
+            "fuente cambió la precisión con que publica la serie: el error por redondeo "
+            "declarado ya no vale. Releer la fuente y actualizar configuracion.py y "
+            "SUPUESTOS.md (A-R0-9, A-R0-17)."
+        )
+
+
+def error_redondeo_pct(mensual: pd.Series, serie: SeriePrecio) -> pd.Series:
+    """Error máximo de cada valor por el redondeo de la fuente, en porcentaje.
+
+    Es medio paso de redondeo sobre el valor: 0.5/oro y 0.05/plata. Una fuente
+    que no redondea no aporta error.
+    """
+    if serie.medio_paso_redondeo is None:
+        return mensual * 0.0
+    return serie.medio_paso_redondeo / mensual * 100.0
+
+
+def errores_de_pares(precios: pd.DataFrame) -> pd.DataFrame:
+    """Error máximo de cada ratio por redondeo: la suma de los de sus dos lados.
+
+    Es la cota de primer orden del error relativo de un cociente.
+    """
+    errores = pd.DataFrame(index=precios.index)
+    for par in PARES:
+        errores[par.clave] = sum(
+            error_redondeo_pct(precios[lado], SERIES_POR_CLAVE[lado])
+            for lado in (par.numerador, par.denominador)
+        )
+    return errores
+
+
+def apto_desde(error: pd.Series) -> str:
+    """Primer mes del tramo final en que el ratio es apto para métricas sin
+    interrupción. Vacío si el último mes no lo es.
+    """
+    error = error.dropna()
+    no_aptos = error[error > UMBRAL_ERROR_REDONDEO_PCT]
+    if error.empty or (not no_aptos.empty and no_aptos.index[-1] == error.index[-1]):
+        return ""
+    if no_aptos.empty:
+        return _mes(error.index[0])
+    return _mes(error.index[error.index > no_aptos.index[-1]][0])
+
+
+def meses_aptos(error: pd.Series) -> pd.Series:
+    """Qué meses de un ratio entran a una métrica (A-R0-17).
+
+    Los del tramo final sin interrupción, no todos los que cumplen el umbral de
+    a uno. Un mes suelto que lo cumple antes de ese tramo queda afuera: lo cumple
+    porque el metal estaba caro ese mes, y elegir los meses por el nivel del
+    precio sesga cualquier percentil que se calcule con ellos.
+    """
+    desde = apto_desde(error)
+    if not desde:
+        return pd.Series(False, index=error.index)
+    return pd.Series(error.index >= pd.Timestamp(desde + "-01"), index=error.index)
+
+
 def verificar_base_nasdaq(diaria: pd.Series) -> None:
     """El Nasdaq Composite vale 100 el 5 de febrero de 1971: es su unidad."""
     base = pd.Timestamp(NASDAQ_FECHA_BASE)
@@ -269,6 +344,10 @@ def calcular_pares(precios: pd.DataFrame) -> pd.DataFrame:
     return pares
 
 
+def _redondear(valores: pd.Series, decimales: int = 4):
+    return valores.round(decimales).to_numpy()
+
+
 def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     """Las series que se publican, con lo que hay que decir junto a cada una.
 
@@ -285,12 +364,19 @@ def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
 
     tabla = pd.DataFrame({"mes": [_mes(mes) for mes in visibles.index]})
     tabla["oro_usd_oz"] = visibles["oro"].to_numpy()
+    # A-R0-17: el error máximo por redondeo va junto a cada valor.
+    tabla["oro_error_redondeo_pct"] = _redondear(
+        error_redondeo_pct(visibles["oro"], SERIES_POR_CLAVE["oro"])
+    )
     # A-R0-7: el quiebre de definición del oro va declarado fila por fila.
     tabla["oro_definicion"] = [
         "" if pd.isna(valor) else (ORO_DEFINICION_ANTES if mes < quiebre else ORO_DEFINICION_DESPUES)
         for mes, valor in visibles["oro"].items()
     ]
     tabla["plata_usd_oz"] = visibles["plata"].to_numpy()
+    tabla["plata_error_redondeo_pct"] = _redondear(
+        error_redondeo_pct(visibles["plata"], SERIES_POR_CLAVE["plata"])
+    )
     # A-R0-8: la plata es una estimación, y se ve.
     tabla["plata_estado"] = [
         "" if pd.isna(valor) else SERIES_POR_CLAVE["plata"].estado for valor in visibles["plata"]
@@ -299,19 +385,28 @@ def tabla_precios(precios: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     return tabla
 
 
-def tabla_ratios(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
-    """Los pares que se publican, en formato largo. Los demás no tienen filas acá."""
+def tabla_ratios(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+    """Los pares que se publican, en formato largo. Los demás no tienen filas acá.
+
+    Cada fila lleva el error máximo del ratio por redondeo y si el mes es apto
+    para métricas (A-R0-17). Un mes no apto se publica igual, con su error a la
+    vista; lo que no puede es entrar a un percentil, a una tendencia ni a la
+    evidencia de nada.
+    """
     bloques = []
     for par in PARES:
         if not par_publicado(par, validadas):
             continue
         valores = pares[par.clave].dropna()
+        error = errores.loc[valores.index, par.clave]
         bloques.append(
             pd.DataFrame(
                 {
                     "mes": [_mes(mes) for mes in valores.index],
                     "par": par.clave,
                     "valor": valores.to_numpy(),
+                    "error_redondeo_pct": _redondear(error),
+                    "apto_metricas": ["sí" if apto else "no" for apto in meses_aptos(error)],
                     "estado": estado_del_par(par, validadas),
                 }
             )
@@ -321,7 +416,7 @@ def tabla_ratios(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     return pd.concat(bloques, ignore_index=True).sort_values(["mes", "par"], kind="stable")
 
 
-def tabla_pares(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+def tabla_pares(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     """Los cinco pares, publicados o no, y hasta dónde llega cada uno.
 
     Es donde un par que no se muestra aparece: existe, tiene historia, y su
@@ -330,6 +425,7 @@ def tabla_pares(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
     filas = []
     for par in PARES:
         valores = pares[par.clave].dropna()
+        error = errores.loc[valores.index, par.clave]
         filas.append(
             {
                 "par": par.clave,
@@ -339,6 +435,9 @@ def tabla_pares(pares: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
                 "primer_mes": "" if valores.empty else _mes(valores.index[0]),
                 "ultimo_mes": "" if valores.empty else _mes(valores.index[-1]),
                 "meses": len(valores),
+                # A-R0-17: desde qué mes el par es apto para métricas sin interrupción.
+                "apto_desde": apto_desde(error),
+                "meses_aptos": int(meses_aptos(error).sum()),
             }
         )
     return pd.DataFrame(filas, columns=COLUMNAS_PARES)
@@ -758,6 +857,7 @@ def construir_precios(fuentes: Fuentes) -> tuple[pd.DataFrame, dict[str, list[st
         mensual, fuera = mensuales[serie.clave]
         mensual, antes = desde_el_mes(mensual, serie)
         verificar_banda(mensual, serie)
+        verificar_redondeo(mensual, serie)
         columnas[serie.clave] = mensual
         descartados[serie.clave] = fuera + antes
     precios = pd.DataFrame(columnas).sort_index()
@@ -797,6 +897,7 @@ def main(argv: list[str] | None = None) -> int:
         return CODIGO_ERROR_FUENTE
 
     pares = calcular_pares(precios)
+    errores = errores_de_pares(precios)
 
     # --- Validación -----------------------------------------------------------
     contrastes = [
@@ -884,8 +985,8 @@ def main(argv: list[str] | None = None) -> int:
     ]
 
     publicada_precios = tabla_precios(precios, validadas)
-    publicada_ratios = tabla_ratios(pares, validadas)
-    publicada_pares = tabla_pares(pares, validadas)
+    publicada_ratios = tabla_ratios(pares, errores, validadas)
+    publicada_pares = tabla_pares(pares, errores, validadas)
     interna = tabla_interna(precios, pares)
 
     previa_precios = _leer_publicado(ARCHIVO_PRECIOS)
@@ -923,6 +1024,13 @@ def main(argv: list[str] | None = None) -> int:
     lineas_pares = [
         f"{fila.nombre}: {fila.estado}"
         + (f", {fila.primer_mes} a {fila.ultimo_mes}, {fila.meses} meses" if fila.meses else "")
+        + (
+            f"; apto para métricas desde {fila.apto_desde or 'ningún mes'} "
+            f"({fila.meses_aptos} meses con error de redondeo <= "
+            f"{formatear(UMBRAL_ERROR_REDONDEO_PCT, 1)} %, A-R0-17)"
+            if fila.publicado == "sí"
+            else ""
+        )
         for fila in publicada_pares.itertuples()
     ]
     notas = [

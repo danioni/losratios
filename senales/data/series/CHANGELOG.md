@@ -11,6 +11,14 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-04 · A-R0-17 · Supuesto nuevo: las métricas sobre un ratio solo usan
+  los meses con error máximo por redondeo de hasta 0.5 %.** `precios_mensuales.csv`
+  y `ratios.csv` publican ese error fila por fila (0.5/oro, 0.05/plata, y la suma
+  para el ratio), y `ratios.csv` marca qué meses son aptos. Oro/Plata es apto
+  desde 2009-02, 212 de 801 meses; BTC/Oro, desde 2013-01, los 165. Los meses
+  anteriores se siguen publicando. Los valores de las series no cambian: se
+  agregan columnas.
+
 - **2026-10-04 · A-R0-16 · El gate de oro y plata pasa de un ancla mensual de
   LBMA, que no se pudo transcribir, a un gate anual contra el USGS; de no medido a
   dato.** El promedio de los doce meses del Pink Sheet contra el precio promedio
@@ -144,8 +152,8 @@ cita.
   - NASDAQCOM: https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQCOM, sha256 5f40c787ab892665ed1239b0ccad0eda45b3c725ef09a66d3c0026c25e56de04, actualizada el 2026-10-03
   - coin_metrics_btc: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD&frequency=1d&page_size=10000, sha256 b1acbe3f13bf639f3f4f508a03bd722908c50ffd3e315ac0337b410669027e8a
 - Series, en meses completos:
-  - Oro: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-7, A-R0-9)
-  - Plata: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-8, A-R0-9)
+  - Oro: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-7, A-R0-9, A-R0-17)
+  - Plata: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-8, A-R0-9, A-R0-17)
   - BTC: 2013-01 a 2026-09, 165 meses, se publica (CC BY-NC 4.0; A-R0-4, A-R0-5, A-R0-10)
   - S&P 500: 1871-01 a 2026-08, 1868 meses, se calcula y no se publica: NO MEDIDO: pendiente de permiso del dueño del índice (sin licencia declarada; A-R0-2, A-R0-11, A-R0-13)
   - Nasdaq Composite: 1971-03 a 2026-09, 667 meses, se calcula y no se publica: NO MEDIDO: pendiente de permiso del dueño del índice (Copyrighted: Pre-Approval Required; uso educativo no comercial; A-R0-3, A-R0-13)
@@ -157,8 +165,8 @@ cita.
   - Nasdaq Composite | 1971-02: la serie empieza el 1971-02-05, con el mes empezado
   - Nasdaq Composite | 2026-10: mes en curso (la última observación es del 2026-10-02)
 - Pares:
-  - Oro / Plata: estimación, 1960-01 a 2026-09, 801 meses
-  - BTC / Oro: dato, 2013-01 a 2026-09, 165 meses
+  - Oro / Plata: estimación, 1960-01 a 2026-09, 801 meses; apto para métricas desde 2009-02 (212 meses con error de redondeo <= 0.5 %, A-R0-17)
+  - BTC / Oro: dato, 2013-01 a 2026-09, 165 meses; apto para métricas desde 2013-01 (165 meses con error de redondeo <= 0.5 %, A-R0-17)
   - Oro / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 1960-01 a 2026-08, 800 meses
   - BTC / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 2013-01 a 2026-08, 164 meses
   - Nasdaq / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 1971-03 a 2026-08, 666 meses

@@ -602,7 +602,8 @@ atrás no lo es. Con la plata a 0.9 USD, en 1960, el redondeo pesa 5.6 %; con la
 plata por debajo de 5 USD pesa más de 1 %, y eso pasa en 304 de los 801 meses, el
 último en julio de 2003. El ratio Oro/Plata hereda ese error entero.
 
-No se corrige ni se suaviza. Se declara junto al par.
+No se corrige ni se suaviza. El error máximo va publicado fila por fila, y decide
+qué meses pueden entrar a una métrica: A-R0-17.
 
 ---
 
@@ -863,3 +864,67 @@ Dos cosas que el resultado muestra y que no cambian el gate:
   el nivel anual del Pink Sheet es el de una cotización independiente. No dice
   nada de 1960, ni de los meses posteriores al quiebre de junio de 2025
   (A-R0-7), que el USGS todavía no publica sin estimar.
+
+---
+
+## A-R0-17 · Las métricas sobre un ratio solo usan los meses con error de redondeo de hasta 0.5 %
+
+**Estado: dato el error; supuesto el umbral y la regla.**
+
+El Pink Sheet publica el oro sin decimales y la plata con uno (A-R0-9). El error
+máximo de cada valor es medio paso de redondeo sobre el valor:
+
+```
+error del oro   = 0.5  / oro   × 100
+error de la plata = 0.05 / plata × 100
+error del ratio = suma de los errores de sus dos lados
+```
+
+La suma es la cota de primer orden del error relativo de un cociente. BTC no
+aporta: Coin Metrics no redondea. El error va publicado junto a cada valor, en
+`precios_mensuales.csv` y en `ratios.csv`.
+
+**El umbral.** Una métrica calculada sobre un ratio —un percentil, una
+tendencia, cualquier cosa que se presente como evidencia— solo usa los meses en
+que el error máximo del ratio no pasa de **0.5 %**. El número es una convención:
+con 1 % entrarían más meses y con 0.25 %, menos.
+
+**La regla.** Entran los meses del tramo final sin interrupción, no todos los
+que cumplen el umbral de a uno. Los meses anteriores a ese tramo **se publican,
+con su error a la vista**, y quedan fuera de percentiles, tendencias y
+evidencia. En `ratios.csv` es la columna `apto_metricas`; en `pares.csv`, la
+columna `apto_desde`.
+
+Al 2026-10-04:
+
+| Par | Apto desde | Meses aptos | Error del último mes | Error máximo |
+| --- | --- | --- | --- | --- |
+| Oro / Plata | **2009-02** | 212 de 801 | 0.089 % | 6.98 % (1960-01) |
+| BTC / Oro | **2013-01** | 165 de 165 | 0.012 % | 0.047 % (2015-12) |
+
+En Oro/Plata manda la plata: con el oro por encima de 900 USD, el ratio cumple
+el umbral cuando la plata vale unos 11.2 USD o más. Enero de 2009 queda afuera
+por 0.0007 puntos (0.5007 %).
+
+**Por qué el tramo final y no cada mes que cumple.** Hay 44 meses anteriores a
+febrero de 2009 que cumplen el umbral de a uno: de octubre de 1979 a febrero de
+1981, febrero de 1983, y varios entre abril de 2006 y septiembre de 2008. Lo
+cumplen porque la plata estaba cara, y cuando la plata está cara el ratio
+Oro/Plata está bajo. Meterlos en un percentil sería elegir meses por el valor de
+lo que se mide: entrarían los mínimos de 1980 y no los meses de alrededor. No
+se usan.
+
+**La precisión se comprueba, no se asume.** En cada corrida el script verifica
+que todos los valores del oro sean enteros y los de la plata, múltiplos de 0.1.
+Si el Banco Mundial cambia la precisión con que publica, el error declarado deja
+de ser cierto y la corrida se detiene.
+
+**Lo que este error no es.** Es la cota del redondeo y nada más. No cubre el
+cambio de definición del oro (A-R0-7), ni que la convención de la plata sea una
+estimación (A-R0-8), ni la diferencia de horas entre cierres (A-R0-6).
+
+**Lo que lo cambiaría.** El Banco Mundial publicó esta misma serie sin redondear
+hasta su edición de enero de 2025, y ese archivo sigue disponible. Con él, el
+error por redondeo desaparece hasta diciembre de 2024 y Oro/Plata sería apto
+desde mucho antes. Está propuesto en `FUENTES.md`, sección 5.5, y no está
+implementado.

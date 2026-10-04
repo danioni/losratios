@@ -265,6 +265,9 @@ class SeriePrecio:
     banda_plausible: tuple[float, float]  # control de orden de magnitud
     supuestos: tuple[str, ...]
     desde: str | None = None  # primer mes que se usa, "AAAA-MM"
+    # A-R0-9: medio paso del redondeo con que la fuente publica la serie, en su
+    # unidad. Es el error máximo de cada valor. None si la fuente no redondea.
+    medio_paso_redondeo: float | None = None
 
     @property
     def publicable(self) -> bool:
@@ -424,7 +427,8 @@ SERIE_ORO = SeriePrecio(
     unidad="USD por onza troy",
     estado=ESTADO_DATO,
     banda_plausible=(30.0, 50_000.0),
-    supuestos=("A-R0-7", "A-R0-9"),
+    supuestos=("A-R0-7", "A-R0-9", "A-R0-17"),
+    medio_paso_redondeo=0.5,  # el Pink Sheet publica el oro al dólar entero
 )
 
 SERIE_PLATA = SeriePrecio(
@@ -435,7 +439,8 @@ SERIE_PLATA = SeriePrecio(
     # A-R0-8: que la serie sea un promedio mensual se infiere, no está escrito.
     estado=ESTADO_ESTIMACION,
     banda_plausible=(0.5, 1_000.0),
-    supuestos=("A-R0-8", "A-R0-9"),
+    supuestos=("A-R0-8", "A-R0-9", "A-R0-17"),
+    medio_paso_redondeo=0.05,  # y la plata, a un decimal
 )
 
 SERIE_BTC = SeriePrecio(
@@ -580,6 +585,12 @@ BANDAS_LBMA = (
     ),
 )
 
+# A-R0-17: una métrica calculada sobre un ratio —percentiles, tendencias,
+# evidencia— solo usa los meses en que el error máximo por redondeo del ratio
+# no pasa de este umbral, en porcentaje. Los demás meses se publican con su
+# error a la vista y marcados como no aptos. El umbral es un supuesto.
+UMBRAL_ERROR_REDONDEO_PCT = 0.5
+
 # Diferencia mínima para contar un cambio entre corridas como revisión de la
 # fuente y no como redondeo del CSV.
 EPSILON_REVISION_PRECIOS = 0.0005
@@ -599,13 +610,25 @@ ARCHIVO_INTERNO = DIR_SERIES_PRIVADO / "ratios_internos.csv"
 COLUMNAS_PRECIOS = [
     "mes",
     "oro_usd_oz",
+    "oro_error_redondeo_pct",
     "oro_definicion",
     "plata_usd_oz",
+    "plata_error_redondeo_pct",
     "plata_estado",
     "btc_usd",
 ]
-COLUMNAS_RATIOS = ["mes", "par", "valor", "estado"]
-COLUMNAS_PARES = ["par", "nombre", "publicado", "estado", "primer_mes", "ultimo_mes", "meses"]
+COLUMNAS_RATIOS = ["mes", "par", "valor", "error_redondeo_pct", "apto_metricas", "estado"]
+COLUMNAS_PARES = [
+    "par",
+    "nombre",
+    "publicado",
+    "estado",
+    "primer_mes",
+    "ultimo_mes",
+    "meses",
+    "apto_desde",
+    "meses_aptos",
+]
 COLUMNAS_SERIES_INFO = [
     "serie",
     "nombre",

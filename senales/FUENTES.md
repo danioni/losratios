@@ -522,6 +522,57 @@ diciembre de 2025 (Banco Mundial 62.3, FMI 64.73).
 No apareció ninguna fuente diaria de plata que se pueda publicar. La única
 fuente (a) es mensual.
 
+### 5.5 Propuesta, sin implementar: la edición sin redondear del Pink Sheet
+
+El Pink Sheet actual redondea el oro al dólar y la plata a un decimal, y eso
+deja a Oro/Plata fuera de las métricas antes de febrero de 2009 (A-R0-17). El
+propio Banco Mundial publicó la misma serie **sin redondear** hasta enero de
+2025, y ese archivo sigue respondiendo.
+
+- URL:
+  `https://thedocs.worldbank.org/en/doc/5d903e848db1d1b83e0ec8f744e55570-0350012021/related/CMO-Historical-Data-Monthly.xlsx`.
+  Es la dirección que el archivo tenía en ediciones anteriores; la página
+  actual no la enlaza. Leída el 2026-10-04.
+- Edición: "Updated on January 03, 2025" (cabecera `Last-Modified` del mismo
+  día). 765.246 bytes, sha256
+  `bd89b83eeceadaecb803018c104f76b316d2df3fae28ef7afde48021100c7e11`.
+- Cobertura: 780 meses, de `1960M01` a `2024M12`.
+- Precisión: sin redondear. Plata: 0.9137 (1960M01), 4.1925 (1975M01), 9.8652
+  (2008M11), 14.884 (2020M03). Oro: 35.27, 176.27, 760.863 y 1591.93 en esos
+  mismos meses.
+- **Es la misma serie.** Redondear esta edición reproduce la actual en los 780
+  meses de la plata y en 775 de los 780 del oro. Los cinco que no coinciden
+  terminan exactamente en ,5 (por ejemplo 1848.5 en mayo de 2022, que la edición
+  actual publica como 1849): es el criterio de redondeo, y ninguno queda a más
+  de medio paso.
+- Convención: la descripción de la plata es la misma que hoy. La del oro es la
+  anterior al cambio de junio de 2025: *"Gold (UK), 99.5% fine, London
+  afternoon fixing, average of daily rates"*.
+- Licencia: la del Pink Sheet, CC BY 4.0, clase (a). Es el mismo editor y el
+  mismo conjunto de datos.
+
+**Qué resolvería.** El error por redondeo de los dos metales desaparece hasta
+diciembre de 2024. Oro/Plata dejaría de estar limitado por el redondeo desde
+1960; los demás límites siguen (el oro fijo en 35 hasta 1967, la convención de
+la plata como estimación).
+
+**Lo que hay que decidir antes de implementarla.**
+
+1. **Es una edición congelada.** No recibe las revisiones que el Banco Mundial
+   haga después de enero de 2025. Habría que versionar ese crudo —CC BY lo
+   permite— y no depender de que la URL siga respondiendo.
+2. **El empalme.** La serie quedaría con dos tramos: sin redondear hasta
+   2024-12 y redondeada desde 2025-01, con su error a la vista. La regla del
+   empalme es un supuesto nuevo.
+3. **Cuál manda donde las dos tienen dato.** Hoy coinciden salvo por el
+   redondeo; si el Banco Mundial revisa un mes viejo, dejarían de coincidir.
+4. **Preguntarle al Banco Mundial** si publica la serie sin redondear en algún
+   lugar vigente. Ya está entre las preguntas de la sección 10.3.
+
+**Otra candidata, más débil.** La serie `PSILVER` del FMI (4.7) también viene
+sin redondear, pero arranca en 1980, no es del mismo editor, y sus términos
+prohíben la descarga masiva automatizada.
+
 ---
 
 ## 6. BTC
@@ -1042,6 +1093,7 @@ Están en `SUPUESTOS.md`. Índice:
 | A-R0-14 | Se publica lo que la licencia permite y una segunda fuente valida | supuesto |
 | A-R0-15 | Un crudo entra al repositorio solo si su licencia permite redistribuirlo | supuesto |
 | A-R0-16 | Gate anual de oro y plata contra el USGS; cerró el 2026-10-04 | supuesto la regla; dato el resultado |
+| A-R0-17 | Las métricas solo usan meses con error de redondeo del ratio de hasta 0.5 % | dato el error; supuesto el umbral |
 
 ---
 
@@ -1059,9 +1111,11 @@ Están en `SUPUESTOS.md`. Índice:
 6. **La plata después de junio de 2025.** Se aparta más del FMI que antes (4.7)
    y el Banco Mundial no declara ningún cambio. Es una de las preguntas de la
    sección 10.3.
-7. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
+7. **La edición sin redondear del Pink Sheet** (5.5). Está propuesta y no
+   implementada. Sin ella, Oro/Plata es apto para métricas desde 2009-02.
+8. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
    y no tiene decisión.
-8. **No leído:** los ZIP históricos de Kraken, los términos de datos de
+9. **No leído:** los ZIP históricos de Kraken, los términos de datos de
    Kraken, los términos del Bundesbank, la exportación de S&P DJI, y la
    documentación técnica del FMI (se leyó la descripción de cada serie en la
    planilla).
