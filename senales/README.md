@@ -225,8 +225,8 @@ de fin de mes es el error de A-S2-13 con otro nombre.
 
 | Serie | Fuente | Qué cierre diario | Quién promedia |
 | --- | --- | --- | --- |
-| Oro | Banco Mundial, Pink Sheet | Fixing de la tarde de Londres hasta 2025-05; "spot" desde 2025-06 (A-R0-7) | El Banco Mundial |
-| Plata | Banco Mundial, Pink Sheet | No se pudo establecer: la serie es una **estimación** (A-R0-8) | El Banco Mundial |
+| Oro | Banco Mundial, Pink Sheet, dos ediciones empalmadas (A-R0-19) | Fixing de la tarde de Londres hasta 2025-05; "spot" desde 2025-06 (A-R0-7) | El Banco Mundial |
+| Plata | Banco Mundial, Pink Sheet, dos ediciones empalmadas (A-R0-19) | No se pudo establecer: la serie es una **estimación** (A-R0-8) | El Banco Mundial |
 | BTC | Coin Metrics community, `PriceUSD` | Fixing de las 00:00 UTC, todos los días calendario (A-R0-5) | Este script |
 | S&P 500 | Shiller, `ie_data.xls` | Cierre de las 16:00 de Nueva York | Shiller |
 | Nasdaq Composite | FRED `NASDAQCOM` | Cierre de las 16:00 de Nueva York | Este script |
@@ -267,18 +267,19 @@ Requiere salida a `worldbank.org`, `shillerdata.com`, `fred.stlouisfed.org`,
 corrida del día reutiliza las descargas y deja las series idénticas byte a byte.
 
 Códigos de salida, los mismos que S2: `0` todo bien · `1` problema con una
-fuente · `2` un contraste no cerró.
+fuente · `2` un contraste, o el control del empalme, no cerró.
 
 ### Salidas
 
 | Archivo | Qué contiene |
 | --- | --- |
-| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). Los dos metales llevan su error máximo por redondeo (A-R0-17). |
+| `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). Los dos metales llevan su error máximo por redondeo (A-R0-17) y de qué edición del Pink Sheet sale cada mes (A-R0-19). |
 | `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, error_redondeo_pct, apto_metricas, estado`. |
 | `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes, y desde qué mes es apto para métricas. Acá es donde un par sin permiso dice NO MEDIDO. |
 | `data/series/series.csv` | Las cinco series: fuente, licencia, **atribución**, estado y con qué se valida cada una. Sin valores. |
 | `data/series/descargas_ratios.csv` | El manifiesto: de cada descarga, la URL, la fecha, los bytes y el SHA-256. |
 | `data/raw/pink_sheet_<fecha>.xlsx`, `data/raw/coin_metrics_btc_<fecha>.json` | Los crudos cuya licencia permite redistribuirlos (CC BY y CC BY-NC). |
+| `data/raw/pink_sheet_edicion_2025-01-03.xlsx` | La edición del Pink Sheet del 3 de enero de 2025, la última sin redondear. Una sola copia, con nombre fijo: no se vuelve a descargar (A-R0-19). |
 | `data/raw/ATRIBUCION.md` | Atribución y licencia de esos crudos. |
 | `data/privado/` | **Fuera del repositorio.** Los crudos de Shiller y de FRED `NASDAQCOM`, y `ratios_internos.csv`, con todo lo que se calcula, se publique o no. |
 
@@ -318,7 +319,17 @@ la de Engelhard, no del fixing de Londres. Las ocho cifras, 2021 a 2024, están
 transcritas a mano en `configuracion.py` con su cita, como el ancla del H.4.1.
 Las tolerancias se fijaron antes de calcular el gate y su justificación está en
 A-R0-16. Cerró el 2026-10-04: cuatro años de cuatro en los dos metales, con una
-diferencia máxima de 0.116 % en el oro y de 0.559 % en la plata.
+diferencia máxima de 0.120 % en el oro y de 0.601 % en la plata.
+
+**El empalme del oro y la plata** (A-R0-19). Las dos series salen de dos
+ediciones del Pink Sheet: la del 3 de enero de 2025, sin redondear, hasta
+2024-12, y la vigente, redondeada, desde 2025-01. En cada corrida, redondear la
+primera tiene que reproducir la segunda en todos los meses que comparten. Los
+que quedan exactamente a medio paso de redondeo se aceptan y se listan en el
+changelog. Si un mes no coincide, el Banco Mundial revisó un dato viejo: la
+corrida se detiene y no escribe ninguna serie. La edición de 2025 está
+versionada en `data/raw/` y se identifica por su SHA-256; el pipeline no depende
+de que su URL siga respondiendo.
 
 Hay dos controles más sobre los metales. Los promedios del segundo trimestre de
 2026 tienen que caer entre el mínimo y el máximo que LBMA publicó para ese
@@ -333,13 +344,20 @@ dividendos (A-R0-13).
 **El oro no es una sola serie.** Cambia de definición en junio de 2025, y que los
 dos tramos sean comparables es un supuesto (A-R0-7).
 
-**No todos los meses publicados sirven para una métrica.** El Pink Sheet viene
-redondeado, el oro al dólar y la plata a un decimal, y el error máximo de cada
-ratio va publicado fila por fila. Un percentil o una tendencia solo pueden usar
-los meses marcados como aptos, que son los del tramo final con error de hasta
-0.5 %: **Oro/Plata desde 2009-02** (212 de 801 meses) y **BTC/Oro desde 2013-01**
-(todos). En 1960 el error de Oro/Plata llega a 7 %. Los meses anteriores se
-publican con su error a la vista y no son evidencia de nada (A-R0-9, A-R0-17).
+**No todos los meses publicados sirven para una métrica.** Cada valor del oro y
+de la plata tiene un error máximo por el redondeo con que la fuente lo publica,
+y el de cada ratio va fila por fila. Un percentil o una tendencia solo pueden
+usar los meses marcados como aptos, que son los del tramo final sin
+interrupción con error de hasta 0.5 %: **Oro/Plata desde 1968-04** (702 de 801
+meses) y **BTC/Oro desde 2013-01** (todos). Lo que corta en 1968 son dos meses,
+febrero y marzo, que la fuente publica al dólar, con 1.4 % de error. Los meses
+anteriores se publican con su error a la vista y no son evidencia de nada
+(A-R0-17).
+
+**El oro y la plata tienen dos tramos de precisión.** Hasta 2024-12 vienen sin
+redondear; desde 2025-01, el oro al dólar y la plata a un decimal. El tramo
+viejo sale de una edición congelada, que no recibe las revisiones que el Banco
+Mundial haga después (A-R0-9, A-R0-19).
 
 **El gate de oro y plata valida cuatro años, no toda la historia.** Dice que
 entre 2021 y 2024 el nivel anual del Pink Sheet es el de una cotización
@@ -392,7 +410,7 @@ TQQQ) van como módulos hermanos de `liquidez_neta.py`, no dentro de él:
 
 ## Supuestos
 
-Treinta y dos decisiones sostienen estos números —catorce de S2 y dieciocho de
+Treinta y tres decisiones sostienen estos números —catorce de S2 y diecinueve de
 la fase R— y ninguna es obvia. Están todas en **[SUPUESTOS.md](SUPUESTOS.md)**, numeradas
 y con estado (dato / estimación / supuesto / no medido).
 
@@ -408,9 +426,10 @@ Y dos que conviene leer antes de confiar en un número publicado:
 - **A-S2-9** — las unidades no se pueden verificar contra los metadatos de FRED; la causa está identificada y la solución, pendiente.
 - **A-S2-14** — el gate verifica cada componente contra el release, no solo el total.
 
-Y de la fase R, las tres que conviene leer antes que las demás:
+Y de la fase R, las que conviene leer antes que las demás:
 
 - **A-R0-14** — solo se publica lo que la licencia permite y una segunda fuente valida; los pares con índices quedan como NO MEDIDO.
 - **A-R0-1** — toda serie es un promedio mensual de cierres diarios, y solo de meses completos.
 - **A-R0-16** — el gate de oro y plata es anual, contra el USGS, y valida 2021 a 2024.
 - **A-R0-17** — las métricas sobre un ratio solo usan los meses con error de redondeo de hasta 0.5 %.
+- **A-R0-19** — el oro y la plata se empalman: edición sin redondear del Pink Sheet hasta 2024-12, edición vigente después.

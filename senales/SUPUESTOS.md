@@ -579,31 +579,40 @@ estimación y no dato.
 
 Hay una segunda evidencia, también indirecta. La serie mensual de plata del FMI,
 que declara ser el precio de LBMA, coincide con la del Pink Sheet con una
-diferencia mediana de 0.35 % en 560 meses (1980-01 a 2026-08), que es del orden
-del redondeo a un decimal. No es pareja en el tiempo: la mediana es de 0.21 %
-entre 2021 y 2024 y sube a 0.63 % desde junio de 2025, con un mes a 3.76 %
-(diciembre de 2025). El Banco Mundial no declara ningún cambio en la plata en
-esa fecha; el del oro sí está declarado (A-R0-7).
+diferencia mediana de 0.10 % en 560 meses (1980-01 a 2026-08). No es pareja en
+el tiempo: la mediana es de 0.08 % hasta 2020, de 0.23 % entre 2021 y 2024, y
+sube a 0.63 % desde junio de 2025, con un mes a 3.76 % (diciembre de 2025). El
+Banco Mundial no declara ningún cambio en la plata en esa fecha; el del oro sí
+está declarado (A-R0-7).
+
+Esos números son con la serie empalmada (A-R0-19). Con la serie redondeada, que
+es como se midió primero, la mediana de los 560 meses era de 0.35 %: casi toda
+esa diferencia era el redondeo a un decimal.
 
 Pasa a **dato** cuando el Banco Mundial confirme la convención por escrito
 (`FUENTES.md`, sección 10.3).
 
 ---
 
-## A-R0-9 · El Pink Sheet viene redondeado
+## A-R0-9 · La edición vigente del Pink Sheet viene redondeada
 
 **Estado: dato.**
 
-El archivo trae el oro redondeado al dólar entero y la plata a un decimal, en
-las 801 filas. El redondeo pesa ±0.5 USD en el oro y ±0.05 USD en la plata.
+La edición vigente trae el oro redondeado al dólar entero y la plata a un
+decimal, en todas sus filas. El redondeo pesa ±0.5 USD en el oro y ±0.05 USD en
+la plata.
 
-Hoy es despreciable: 0.01 % con el oro a 4319 y 0.08 % con la plata a 64.6. Hacia
-atrás no lo es. Con la plata a 0.9 USD, en 1960, el redondeo pesa 5.6 %; con la
-plata por debajo de 5 USD pesa más de 1 %, y eso pasa en 304 de los 801 meses, el
-último en julio de 2003. El ratio Oro/Plata hereda ese error entero.
+No siempre fue así. Hasta su edición del 3 de enero de 2025 el Banco Mundial
+publicaba la misma serie sin redondear, y por eso el redondeo ya no alcanza a
+toda la historia: de 1960-01 a 2024-12 el oro y la plata salen de esa edición
+(A-R0-19). El redondeo de la vigente solo pesa desde 2025-01, donde es chico:
+0.02 % en el oro y hasta 0.16 % en la plata.
 
-No se corrige ni se suaviza. El error máximo va publicado fila por fila, y decide
-qué meses pueden entrar a una métrica: A-R0-17.
+Con la serie entera redondeada, que es como se publicó primero, el error llegaba
+a 5.6 % en la plata de 1960 y a 7 % en el ratio Oro/Plata.
+
+No se corrige ni se suaviza. El error máximo de cada valor va publicado fila por
+fila, y decide qué meses pueden entrar a una métrica: A-R0-17.
 
 ---
 
@@ -746,7 +755,8 @@ Dice dos cosas ciertas: que el par existe, y que falta algo para mostrarlo.
 
 | Fuente | Licencia | Dónde vive el crudo |
 | --- | --- | --- |
-| Pink Sheet | CC BY 4.0 | `data/raw/`, versionado |
+| Pink Sheet, edición vigente | CC BY 4.0 | `data/raw/`, versionado, uno por descarga |
+| Pink Sheet, edición del 3 de enero de 2025 | CC BY 4.0 | `data/raw/`, versionado, una sola copia con nombre fijo (A-R0-19) |
 | Coin Metrics | CC BY-NC 4.0 | `data/raw/`, versionado |
 | Shiller | Sin licencia declarada | `data/privado/`, ignorado por git |
 | FRED `NASDAQCOM` | Permiso previo del dueño | `data/privado/`, ignorado por git |
@@ -771,8 +781,9 @@ retira el archivo, la corrida vieja ya no se puede reconstruir desde el
 repositorio, solo verificar que el archivo cambió. A-S2-10 existe para evitar
 eso, y acá se acepta perderlo.
 
-Y hay un costo de tamaño para los dos que entran: el crudo de Coin Metrics pesa
-medio megabyte y trae la historia completa en cada descarga.
+Y hay un costo de tamaño para los que entran: el crudo de Coin Metrics pesa medio
+megabyte y trae la historia completa en cada descarga. La edición congelada del
+Pink Sheet pesa 765 KB, una sola vez.
 
 ---
 
@@ -843,23 +854,36 @@ tienen su propio contraste.
 
 **Estado: dato.** El gate cerró el 2026-10-04, con las tolerancias ya escritas.
 
-| Año | Oro: doce meses del Pink Sheet | Oro: USGS | Diferencia | Plata: doce meses | Plata: USGS | Diferencia |
-| --- | --- | --- | --- | --- | --- | --- |
-| 2021 | 1799.58 | 1801 | −0.079 % | 25.167 | 25.23 | −0.251 % |
-| 2022 | 1800.75 | 1802 | −0.069 % | 21.783 | 21.88 | −0.442 % |
-| 2023 | 1942.75 | 1945 | −0.116 % | 23.408 | 23.54 | −0.559 % |
-| 2024 | 2387.58 | 2388 | −0.017 % | 28.275 | 28.37 | −0.335 % |
+Se calculó dos veces ese día, y las dos están acá. La primera, con la serie
+redondeada de la edición vigente. La segunda, después del empalme con la edición
+sin redondear (A-R0-19), y es la que vale: los cuatro años del gate caen en el
+tramo sin redondear. **Las tolerancias no se tocaron entre una y otra.**
 
-Cuatro años de cuatro en los dos metales: el oro dentro de ±0.5 % y la plata
-dentro de ±1 %.
+| Año | Oro, doce meses | USGS | Diferencia | Antes del empalme | Plata, doce meses | USGS | Diferencia | Antes del empalme |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2021 | 1799.63 | 1801 | −0.076 % | −0.079 % | 25.165 | 25.23 | −0.259 % | −0.251 % |
+| 2022 | 1800.60 | 1802 | −0.078 % | −0.069 % | 21.794 | 21.88 | −0.391 % | −0.442 % |
+| 2023 | 1942.67 | 1945 | −0.120 % | −0.116 % | 23.399 | 23.54 | −0.601 % | −0.559 % |
+| 2024 | 2387.70 | 2388 | −0.012 % | −0.017 % | 28.269 | 28.37 | −0.355 % | −0.335 % |
 
-Dos cosas que el resultado muestra y que no cambian el gate:
+Cuatro años de cuatro en los dos metales, en las dos pasadas: el oro dentro de
+±0.5 % y la plata dentro de ±1 %.
+
+Cuatro cosas que el resultado muestra y que no cambian el gate:
 
 - **Las ocho diferencias tienen el mismo signo.** El Pink Sheet queda siempre por
-  debajo de Engelhard. No es ruido: es la diferencia de cotización para la que se
-  reservó el margen. En el oro usa menos de lo previsto. En la plata llega a
-  0.56 %, por encima del margen de 0.48 % que quedaba después de lo acotado;
-  cierra porque el redondeo y el efecto del calendario no consumieron sus cotas.
+  debajo de Engelhard. Es la diferencia de cotización para la que se reservó el
+  margen, y está registrada como dato en A-R0-18.
+- **La plata usa más margen del que se le reservó.** La diferencia llega a
+  0.60 % en 2023, por encima del 0.48 % reservado para la diferencia de
+  cotización. Cierra dentro de ±1 % porque el redondeo y el efecto del
+  calendario no consumieron sus cotas.
+- **Un componente de la tolerancia ya no aplica en estos años.** Con la serie
+  empalmada, 2021 a 2024 vienen sin redondear, y el redondeo del Pink Sheet
+  (0.03 % en el oro, 0.23 % en la plata) deja de contar. La tolerancia no se
+  achica por eso: no se cambia después de ver el resultado, para ningún lado.
+  Pero sin ese componente quedarían ±0.47 % y ±0.77 %, y el gate cierra igual:
+  0.120 % y 0.601 %.
 - **El gate valida cuatro años, no toda la historia.** Dice que entre 2021 y 2024
   el nivel anual del Pink Sheet es el de una cotización independiente. No dice
   nada de 1960, ni de los meses posteriores al quiebre de junio de 2025
@@ -871,18 +895,25 @@ Dos cosas que el resultado muestra y que no cambian el gate:
 
 **Estado: dato el error; supuesto el umbral y la regla.**
 
-El Pink Sheet publica el oro sin decimales y la plata con uno (A-R0-9). El error
-máximo de cada valor es medio paso de redondeo sobre el valor:
+Cada valor del oro y de la plata tiene un error máximo por el redondeo con que
+la fuente lo publica: medio paso de redondeo sobre el valor.
 
 ```
-error del oro   = 0.5  / oro   × 100
-error de la plata = 0.05 / plata × 100
-error del ratio = suma de los errores de sus dos lados
+error de un valor = medio paso de redondeo / valor × 100
+error del ratio   = suma de los errores de sus dos lados
 ```
 
-La suma es la cota de primer orden del error relativo de un cociente. BTC no
-aporta: Coin Metrics no redondea. El error va publicado junto a cada valor, en
-`precios_mensuales.csv` y en `ratios.csv`.
+La suma es la cota de primer orden del error relativo de un cociente. El medio
+paso depende de qué edición del Pink Sheet se usó en ese mes (A-R0-19):
+
+- **Edición vigente, desde 2025-01.** Declara su precisión: 0.5 USD el oro y
+  0.05 USD la plata.
+- **Edición del 3 de enero de 2025, hasta 2024-12.** No declara ninguna y trae
+  cada mes con los decimales que tenga. El medio paso es el del último decimal
+  publicado de ese valor: 35.27 lleva 0.005 y 36 lleva 0.5.
+
+BTC no aporta: Coin Metrics no redondea. El error va publicado junto a cada
+valor, en `precios_mensuales.csv` y en `ratios.csv`.
 
 **El umbral.** Una métrica calculada sobre un ratio —un percentil, una
 tendencia, cualquier cosa que se presente como evidencia— solo usa los meses en
@@ -897,37 +928,38 @@ columna `apto_desde`.
 
 Al 2026-10-04:
 
-| Par | Apto desde | Meses aptos | Error del último mes | Error máximo |
+| Par | Apto desde | Meses aptos | Error máximo en el tramo apto | Error máximo |
 | --- | --- | --- | --- | --- |
-| Oro / Plata | **2009-02** | 212 de 801 | 0.089 % | 6.98 % (1960-01) |
-| BTC / Oro | **2013-01** | 165 de 165 | 0.012 % | 0.047 % (2015-12) |
+| Oro / Plata | **1968-04** | 702 de 801 | 0.31 % (1970-05) | 1.39 % (1968-02) |
+| BTC / Oro | **2013-01** | 165 de 165 | 0.02 % (2025-01) | 0.02 % (2025-01) |
 
-En Oro/Plata manda la plata: con el oro por encima de 900 USD, el ratio cumple
-el umbral cuando la plata vale unos 11.2 USD o más. Enero de 2009 queda afuera
-por 0.0007 puntos (0.5007 %).
+**Lo que corta en 1968 son dos meses.** La edición sin redondear publica el oro
+de febrero y de marzo de 1968 como 36 y 37, sin decimales: al dólar, con 1.4 %
+de error. Son los dos únicos meses de toda la serie que pasan el umbral. Los 97
+anteriores, de enero de 1960 a enero de 1968, lo cumplen de a uno y quedan
+afuera por la regla del tramo sin interrupción.
 
-**Por qué el tramo final y no cada mes que cumple.** Hay 44 meses anteriores a
-febrero de 2009 que cumplen el umbral de a uno: de octubre de 1979 a febrero de
-1981, febrero de 1983, y varios entre abril de 2006 y septiembre de 2008. Lo
-cumplen porque la plata estaba cara, y cuando la plata está cara el ratio
-Oro/Plata está bajo. Meterlos en un percentil sería elegir meses por el valor de
-lo que se mide: entrarían los mínimos de 1980 y no los meses de alrededor. No
-se usan.
+No se supone que 36 quiera decir 36.00. Diez de los 780 valores del oro de esa
+edición no traen decimales, y no hay forma de saber cuáles son un promedio que
+cayó justo en un entero y cuáles un dato publicado al dólar. A los diez se les
+asigna medio dólar de error. En ocho no pesa, porque el oro valía de 163 USD
+para arriba; en los dos de 1968, con el oro a 36 y 37, pasa el umbral.
+
+**Antes del empalme** el tramo apto de Oro/Plata empezaba en 2009-02, con 212
+meses: toda la serie estaba redondeada y la plata tenía que valer unos 11 USD
+para cumplir el umbral. Ahí la regla del tramo final importaba por otra razón:
+había 44 meses sueltos que cumplían el umbral porque la plata estaba cara, y
+usarlos habría sido elegir meses por el valor de lo que se mide.
 
 **La precisión se comprueba, no se asume.** En cada corrida el script verifica
-que todos los valores del oro sean enteros y los de la plata, múltiplos de 0.1.
-Si el Banco Mundial cambia la precisión con que publica, el error declarado deja
-de ser cierto y la corrida se detiene.
+que todos los valores de la edición vigente sean enteros en el oro y múltiplos
+de 0.1 en la plata. Si el Banco Mundial cambia la precisión con que publica, el
+error declarado deja de ser cierto y la corrida se detiene.
 
-**Lo que este error no es.** Es la cota del redondeo y nada más. No cubre el
-cambio de definición del oro (A-R0-7), ni que la convención de la plata sea una
-estimación (A-R0-8), ni la diferencia de horas entre cierres (A-R0-6).
-
-**Lo que lo cambiaría.** El Banco Mundial publicó esta misma serie sin redondear
-hasta su edición de enero de 2025, y ese archivo sigue disponible. Con él, el
-error por redondeo desaparece hasta diciembre de 2024 y Oro/Plata sería apto
-desde mucho antes. Está propuesto en `FUENTES.md`, sección 5.5, y no está
-implementado.
+**Lo que este error no es.** Es la cota del redondeo y nada más. Que un mes sea
+apto no quiere decir que la serie sea homogénea hasta ahí: no cubre el cambio de
+definición del oro (A-R0-7), ni que la convención de la plata sea una estimación
+(A-R0-8), ni la diferencia de horas entre cierres (A-R0-6).
 
 ---
 
@@ -942,11 +974,15 @@ por debajo:
 
 | Año | Oro | Plata |
 | --- | --- | --- |
-| 2021 | −0.079 % | −0.251 % |
-| 2022 | −0.069 % | −0.442 % |
-| 2023 | −0.116 % | −0.559 % |
-| 2024 | −0.017 % | −0.335 % |
-| Promedio | −0.070 % | −0.397 % |
+| 2021 | −0.076 % | −0.259 % |
+| 2022 | −0.078 % | −0.391 % |
+| 2023 | −0.120 % | −0.601 % |
+| 2024 | −0.012 % | −0.355 % |
+| Promedio | −0.072 % | −0.402 % |
+
+Son los números con la serie sin redondear (A-R0-19). Con la serie redondeada,
+que es como se observó primero, los promedios eran −0.070 % y −0.397 %: el
+redondeo no cambia el sesgo.
 
 Ocho de ocho con el mismo signo no es ruido de redondeo, que no tiene
 preferencia de lado. Es un sesgo.
@@ -955,19 +991,19 @@ preferencia de lado. Es un sesgo.
 Mundial. La serie del FMI, que declara ser el fixing de Londres y viene sin
 redondear, queda por debajo de Engelhard en los mismos ocho contrastes y por
 montos parecidos: de −0.03 % a −0.10 % en el oro y de −0.25 % a −0.60 % en la
-plata. Y el Pink Sheet y el FMI coinciden entre sí dentro de 0.04 % en el oro y
-de 0.17 % en la plata. Las dos series de Londres están juntas, y Engelhard está
-un poco más arriba que las dos.
+plata. Y el Pink Sheet y el FMI quedan entre sí a menos de 0.06 % en el oro y de
+0.16 % en la plata. Las dos series de Londres están juntas, y Engelhard está un
+poco más arriba que las dos.
 
 Que la cotización de un comerciante quede por encima de un fixing de mercado es
 esperable, y el margen de la tolerancia del gate estaba reservado para eso. Lo
-que no está medido es por qué el sesgo de la plata es más de cinco veces el del oro: no
-se leyó cómo forma Engelhard su cotización.
+que no está medido es por qué el sesgo de la plata es más de cinco veces el del
+oro: no se leyó cómo forma Engelhard su cotización.
 
 **Qué implica.**
 
 - **Para el gate, nada.** Cierra dentro de la tolerancia en los ocho. El sesgo
-  consume margen, sobre todo en la plata, donde llega a 0.56 % de un 1 %.
+  consume margen, sobre todo en la plata, donde llega a 0.60 % de un 1 %.
 - **Para leer el gate.** Una diferencia de signo contrario, o una que crezca,
   sería una señal más fuerte que una del mismo signo y tamaño parecido. Si un
   año futuro da positivo, conviene mirarlo aunque cierre.
@@ -975,3 +1011,81 @@ se leyó cómo forma Engelhard su cotización.
   Banco Mundial tal como vienen; no se les suma el sesgo para acercarlas a
   Engelhard. El gate dice que las dos cotizaciones describen el mismo precio
   dentro de la tolerancia, no que sean iguales.
+
+---
+
+## A-R0-19 · El oro y la plata se empalman: edición de enero de 2025 hasta 2024-12, edición vigente después
+
+**Estado: supuesto el empalme; dato lo que lo sostiene.**
+
+El oro y la plata salen de dos ediciones del mismo archivo del Banco Mundial:
+
+| Tramo | Edición | Precisión |
+| --- | --- | --- |
+| 1960-01 a 2024-12 | La del 3 de enero de 2025, congelada | Sin redondear |
+| Desde 2025-01 | La vigente, que se descarga en cada corrida | Oro al dólar, plata a un decimal |
+
+El corte no se eligió: diciembre de 2024 es el último mes que trae la edición
+congelada. `precios_mensuales.csv` dice, fila por fila, de cuál sale cada mes.
+
+**Por qué se pueden empalmar.** Porque son la misma serie, publicada con distinta
+precisión, y eso se comprueba en cada corrida: **redondear la edición congelada
+tiene que reproducir la vigente en todos los meses que tienen en común.** Un mes
+coincide si la congelada queda a no más de medio paso de redondeo de la vigente.
+El 2026-10-04 coincidieron los 780 meses del oro y los 780 de la plata.
+
+Los que quedan *exactamente* a medio paso —un valor terminado en ,5 justo— se
+aceptan y se listan en el changelog, porque ahí las dos formas de redondear son
+válidas. Son doce:
+
+- Oro, once: 1968-01, 1971-10, 1973-04, 1982-12, 1985-03, 1985-06, 1985-11,
+  2002-02, 2015-06, 2016-02 y 2022-05.
+- Plata, uno: 2015-09.
+
+**Si el control falla, la corrida se detiene** y no escribe ninguna serie. Un mes
+que no coincide quiere decir que el Banco Mundial revisó ese dato después de
+enero de 2025, y entonces la edición congelada ya no es la versión sin redondear
+de la vigente: es otra serie. No se corrige a mano. Hay que releer la fuente y
+decidir de nuevo de dónde sale ese tramo.
+
+**La edición congelada no depende de su URL.** El archivo está versionado en
+`data/raw/` con nombre fijo, y el pipeline usa esa copia, identificada por su
+SHA-256. No sale a buscarla. La dirección de la que se bajó es la que el archivo
+tenía en enero de 2025, y la página actual del Banco Mundial ya no la enlaza: si
+deja de responder, nada cambia. Solo si la copia falta el script la descarga, y
+la acepta únicamente si el hash es el esperado.
+
+**La precisión de la edición congelada no está declarada.** Trae cada mes con
+los decimales que tenga:
+
+| Decimales | Meses del oro | Meses de la plata |
+| --- | --- | --- |
+| Ninguno | 10 | 0 |
+| 1 | 80 | 1 |
+| 2 | 610 | 22 |
+| 3 | 73 | 217 |
+| 4 o 5 | 0 | 535 |
+| 10 u 11 | 7 | 5 |
+
+Por eso el error por redondeo de ese tramo no es cero: es media unidad del
+último decimal publicado de cada valor (A-R0-17). En casi todos los meses es
+despreciable. En dos no: febrero y marzo de 1968, que vienen sin decimales y con
+el oro a 36 y 37 USD.
+
+**Lo que el empalme cuesta.**
+
+- La edición congelada **no recibe revisiones**. Si el Banco Mundial corrige un
+  mes anterior a 2025, la serie publicada no lo sabe; lo que hay es el control,
+  que detiene la corrida.
+- Los dos tramos **no tienen la misma precisión**, y el salto está en enero de
+  2025. Va declarado en cada fila.
+- El archivo pesa 765 KB en el repositorio.
+
+**Lo que el empalme no arregla.** El cambio de definición del oro de junio de
+2025 (A-R0-7) cae entero en la edición vigente. Y la convención de la plata
+sigue siendo una estimación (A-R0-8): la edición congelada trae la misma
+descripción que la vigente.
+
+**Alternativa.** Usar solo la edición vigente, redondeada, para toda la historia.
+Es como se publicó primero. Con ella Oro/Plata es apto para métricas desde
+2009-02 en lugar de 1968-04.

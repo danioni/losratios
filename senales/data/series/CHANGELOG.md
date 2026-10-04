@@ -11,6 +11,44 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-04 · A-R0-19 · Supuesto nuevo: el oro y la plata se empalman.** Edición
+  del Pink Sheet del 3 de enero de 2025, sin redondear, para 1960-01 a 2024-12;
+  edición vigente desde 2025-01. **Los valores publicados de 1960-01 a 2024-12
+  cambian**: pasan de redondeados a sin redondear, hasta 1.4 % en el oro y 4.3 %
+  en la plata. En cada corrida, redondear la edición congelada tiene que
+  reproducir la vigente en todos los meses superpuestos; si no, la corrida se
+  detiene. La edición congelada está versionada en `data/raw/` y se identifica
+  por su SHA-256. `precios_mensuales.csv` gana la columna `pink_sheet_edicion`.
+
+- **2026-10-04 · A-R0-17 · El error por redondeo pasa a ser el de la edición usada
+  en cada mes, y Oro/Plata es apto para métricas desde 1968-04.** Eran 212 meses,
+  desde 2009-02; son 702 de 801. En la edición sin redondear el error es media
+  unidad del último decimal publicado de cada valor. Lo que corta en 1968 son
+  febrero y marzo, que vienen al dólar. BTC/Oro sigue apto desde 2013-01. El
+  umbral de 0.5 % y la regla del tramo final sin interrupción no cambian.
+
+- **2026-10-04 · A-R0-16 · El gate de oro y plata, recalculado con la serie
+  empalmada, sigue cerrando; las tolerancias no cambian.** Diferencia máxima de
+  0.120 % en el oro y de 0.601 % en la plata; con la serie redondeada eran
+  0.116 % y 0.559 %.
+
+- **2026-10-04 · A-R0-18 · El sesgo contra Engelhard, recalculado con la serie
+  empalmada.** En promedio, 0.072 % en el oro y 0.402 % en la plata; eran 0.070 %
+  y 0.397 %. Las ocho diferencias siguen con el mismo signo.
+
+- **2026-10-04 · A-R0-15 · Se versiona un tercer crudo: la edición del Pink Sheet
+  del 3 de enero de 2025.** CC BY 4.0, 765 KB, una sola copia con nombre fijo. Su
+  atribución queda en `data/raw/ATRIBUCION.md`.
+
+- **2026-10-04 · A-R0-9 · El redondeo del Pink Sheet deja de alcanzar a toda la
+  historia.** Pesa solo desde 2025-01, donde es de 0.02 % en el oro y de hasta
+  0.16 % en la plata. Con la serie entera redondeada llegaba a 5.6 % en la plata
+  de 1960.
+
+- **2026-10-04 · A-R0-8 · La coincidencia de la plata con el FMI, medida con la
+  serie empalmada.** Mediana de 0.10 % en 560 meses; con la serie redondeada era
+  de 0.35 %. La plata sigue siendo estimación.
+
 - **2026-10-04 · A-R0-18 · Dato nuevo: en los ocho contrastes anuales del gate, el
   Banco Mundial queda por debajo de Engelhard.** En promedio, 0.070 % en el oro y
   0.397 % en la plata. El FMI queda por debajo de Engelhard en los mismos ocho y

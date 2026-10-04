@@ -354,9 +354,12 @@ la primera pasada tuvo la misma causa.
 - Unidad y moneda: `($/troy oz)`.
 - **Precisión: el archivo trae el oro redondeado al dólar entero** (las 801
   celdas son enteros). El redondeo pesa ±0.5 USD: 1.4 % con el oro a 35,
-  0.03 % a 1592, 0.01 % a 4319.
-- Inicio real: **1960M01 = 35**. El valor es 35 hasta 1967M12; el primer mes
-  distinto es 1968M01.
+  0.03 % a 1592, 0.01 % a 4319. Por eso la serie publicada usa este archivo
+  solo desde 2025-01: hasta 2024-12 sale de la edición sin redondear (5.5,
+  A-R0-19).
+- Inicio real: **1960M01 = 35**. En este archivo el valor es 35 hasta 1967M12
+  y el primer mes distinto es 1968M01. Es efecto del redondeo: en la edición
+  sin redondear el oro va de 34.95 a 35.27 en esos años.
 - Clave / registro: no.
 - **Licencia: (a), CC BY 4.0.** La página del Pink Sheet enlaza, bajo "Using
   this Data", los términos de los conjuntos de datos del Banco Mundial y la
@@ -454,24 +457,32 @@ los dos metales.
   mano. Queda como referencia.
 
 Comparación de las tres fuentes sobre los años del gate. Es una lectura de un
-día, no un contraste del pipeline:
+día, no un contraste del pipeline. La columna del Banco Mundial es la serie
+empalmada (5.5), que en estos años viene sin redondear:
 
 | Año | Metal | Banco Mundial, doce meses | FMI, doce meses | USGS | BM contra FMI | BM contra USGS |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2021 | Oro | 1799.58 | 1799.77 | 1801 | −0.010 % | −0.079 % |
-| 2022 | Oro | 1800.75 | 1801.53 | 1802 | −0.043 % | −0.069 % |
-| 2023 | Oro | 1942.75 | 1943.07 | 1945 | −0.016 % | −0.116 % |
-| 2024 | Oro | 2387.58 | 2387.21 | 2388 | 0.016 % | −0.017 % |
-| 2021 | Plata | 25.167 | 25.166 | 25.23 | 0.003 % | −0.251 % |
-| 2022 | Plata | 21.783 | 21.771 | 21.88 | 0.057 % | −0.442 % |
-| 2023 | Plata | 23.408 | 23.398 | 23.54 | 0.042 % | −0.559 % |
-| 2024 | Plata | 28.275 | 28.226 | 28.37 | 0.174 % | −0.335 % |
+| 2021 | Oro | 1799.63 | 1799.77 | 1801 | −0.008 % | −0.076 % |
+| 2022 | Oro | 1800.60 | 1801.53 | 1802 | −0.051 % | −0.078 % |
+| 2023 | Oro | 1942.67 | 1943.07 | 1945 | −0.021 % | −0.120 % |
+| 2024 | Oro | 2387.70 | 2387.21 | 2388 | 0.021 % | −0.012 % |
+| 2021 | Plata | 25.165 | 25.166 | 25.23 | −0.006 % | −0.259 % |
+| 2022 | Plata | 21.794 | 21.771 | 21.88 | 0.108 % | −0.391 % |
+| 2023 | Plata | 23.399 | 23.398 | 23.54 | 0.001 % | −0.601 % |
+| 2024 | Plata | 28.269 | 28.226 | 28.37 | 0.153 % | −0.355 % |
 
-Mes a mes, el Pink Sheet y el FMI difieren en una mediana de 0.06 % en el oro y
-de 0.35 % en la plata (560 meses, 1980-01 a 2026-08). En la plata la diferencia
-es del orden del redondeo del Pink Sheet, y no es pareja: 0.21 % de mediana
-entre 2021 y 2024, 0.63 % desde junio de 2025, con un máximo de 3.76 % en
-diciembre de 2025 (Banco Mundial 62.3, FMI 64.73).
+Mes a mes, con la serie empalmada, el Pink Sheet y el FMI difieren en una
+mediana de 0.02 % en el oro y de 0.10 % en la plata (560 meses, 1980-01 a
+2026-08). Con la edición vigente redondeada, que es como se leyó primero, eran
+0.06 % y 0.35 %: casi toda la diferencia era el redondeo. En la plata no es
+pareja: 0.08 % de mediana hasta 2020, 0.23 % entre 2021 y 2024, y 0.63 % desde
+junio de 2025, con un máximo de 3.76 % en diciembre de 2025 (Banco Mundial
+62.3, FMI 64.73).
+
+Hay un mes del oro que no cierra: **marzo de 1985**, con 313.5 en el Pink Sheet
+y 303.94 en el FMI, a 3.1 %. Es el único del oro a más de 1.2 % en los 540
+meses que van de 1980 a 2024. No se estableció cuál de los dos está bien. No
+toca el gate, que cubre 2021 a 2024.
 
 ---
 
@@ -509,7 +520,8 @@ diciembre de 2025 (Banco Mundial 62.3, FMI 64.73).
 - **Precisión: redondeada a un decimal** (las 801 celdas). El redondeo pesa
   ±0.05 USD: 5.6 % con la plata a 0.9, 1.2 % a 4.2, 0.34 % a 14.9, 0.08 % a
   64.6. La plata está por debajo de 5 USD en 304 de los 801 meses; el último
-  es 2003M07.
+  es 2003M07. Como en el oro, la serie publicada usa este archivo solo desde
+  2025-01 (5.5, A-R0-19).
 - Inicio real: **1960M01 = 0.9**.
 - Muestra: **2026M08 = 65.4**, **2026M09 = 64.6**, **2020M03 = 14.9**.
 - Contraste (misma lectura manual que 4.5, con Yahoo `SI=F`): en 23 meses el
@@ -528,12 +540,12 @@ diciembre de 2025 (Banco Mundial 62.3, FMI 64.73).
 No apareció ninguna fuente diaria de plata que se pueda publicar. La única
 fuente (a) es mensual.
 
-### 5.5 Propuesta, sin implementar: la edición sin redondear del Pink Sheet
+### 5.5 La edición sin redondear del Pink Sheet — leída, (a)
 
-El Pink Sheet actual redondea el oro al dólar y la plata a un decimal, y eso
-deja a Oro/Plata fuera de las métricas antes de febrero de 2009 (A-R0-17). El
-propio Banco Mundial publicó la misma serie **sin redondear** hasta enero de
-2025, y ese archivo sigue respondiendo.
+El Pink Sheet vigente redondea el oro al dólar y la plata a un decimal. El
+propio Banco Mundial publicó la misma serie **sin redondear** hasta su edición
+del 3 de enero de 2025, y ese archivo sigue respondiendo. Primero fue una
+propuesta; **está implementada desde el 2026-10-04** (A-R0-19).
 
 - URL:
   `https://thedocs.worldbank.org/en/doc/5d903e848db1d1b83e0ec8f744e55570-0350012021/related/CMO-Historical-Data-Monthly.xlsx`.
@@ -543,37 +555,51 @@ propio Banco Mundial publicó la misma serie **sin redondear** hasta enero de
   día). 765.246 bytes, sha256
   `bd89b83eeceadaecb803018c104f76b316d2df3fae28ef7afde48021100c7e11`.
 - Cobertura: 780 meses, de `1960M01` a `2024M12`.
-- Precisión: sin redondear. Plata: 0.9137 (1960M01), 4.1925 (1975M01), 9.8652
-  (2008M11), 14.884 (2020M03). Oro: 35.27, 176.27, 760.863 y 1591.93 en esos
-  mismos meses.
-- **Es la misma serie.** Redondear esta edición reproduce la actual en los 780
-  meses de la plata y en 775 de los 780 del oro. Los cinco que no coinciden
-  terminan exactamente en ,5 (por ejemplo 1848.5 en mayo de 2022, que la edición
-  actual publica como 1849): es el criterio de redondeo, y ninguno queda a más
-  de medio paso.
+- Precisión: sin redondear, y **sin una precisión declarada**. Plata: 0.9137
+  (1960M01), 4.1925 (1975M01), 9.8652 (2008M11), 14.884 (2020M03). Oro: 35.27,
+  176.27, 760.863 y 1591.93 en esos mismos meses. Cada mes trae los decimales
+  que tenga: el oro, dos en 610 de los 780 meses, uno en 80 y ninguno en 10; la
+  plata, cuatro o cinco en 535 y tres en 217.
+- **Es la misma serie.** Redondear esta edición reproduce la vigente en los 780
+  meses del oro y en los 780 de la plata: ninguno queda a más de medio paso de
+  redondeo. Doce quedan exactamente a medio paso, once del oro y uno de la
+  plata: son valores terminados en ,5 justo, como 1848.5 en mayo de 2022, que
+  la edición vigente publica como 1849. Ahí las dos formas de redondear son
+  válidas.
 - Convención: la descripción de la plata es la misma que hoy. La del oro es la
   anterior al cambio de junio de 2025: *"Gold (UK), 99.5% fine, London
   afternoon fixing, average of daily rates"*.
 - Licencia: la del Pink Sheet, CC BY 4.0, clase (a). Es el mismo editor y el
   mismo conjunto de datos.
 
-**Qué resolvería.** El error por redondeo de los dos metales desaparece hasta
-diciembre de 2024. Oro/Plata dejaría de estar limitado por el redondeo desde
-1960; los demás límites siguen (el oro fijo en 35 hasta 1967, la convención de
-la plata como estimación).
+**Cómo se usa.**
 
-**Lo que hay que decidir antes de implementarla.**
+1. **El empalme.** Esta edición da 1960-01 a 2024-12; la vigente, desde
+   2025-01. `precios_mensuales.csv` dice de cuál sale cada mes.
+2. **La copia versionada es la que vale.** El archivo está en
+   `data/raw/pink_sheet_edicion_2025-01-03.xlsx` y el pipeline lo identifica por
+   su hash. No depende de que la URL siga respondiendo.
+3. **El control.** En cada corrida, redondear esta edición tiene que reproducir
+   la vigente en todos los meses que comparten; los que quedan exactamente a
+   medio paso se listan en el changelog. Si un mes no coincide, la corrida se
+   detiene: quiere decir que el Banco Mundial revisó un dato anterior a 2025.
+4. **El error por redondeo** de cada mes es el de la edición de la que sale. En
+   esta, media unidad del último decimal publicado de cada valor.
+
+**Qué resolvió.** Oro/Plata es apto para métricas desde 1968-04, 702 de 801
+meses; con la edición vigente sola lo era desde 2009-02 (A-R0-17). Lo que corta
+en 1968 son dos meses del oro, febrero y marzo, que esta edición trae sin
+decimales: 36 y 37.
+
+**Lo que no resuelve.**
 
 1. **Es una edición congelada.** No recibe las revisiones que el Banco Mundial
-   haga después de enero de 2025. Habría que versionar ese crudo —CC BY lo
-   permite— y no depender de que la URL siga respondiendo.
-2. **El empalme.** La serie quedaría con dos tramos: sin redondear hasta
-   2024-12 y redondeada desde 2025-01, con su error a la vista. La regla del
-   empalme es un supuesto nuevo.
-3. **Cuál manda donde las dos tienen dato.** Hoy coinciden salvo por el
-   redondeo; si el Banco Mundial revisa un mes viejo, dejarían de coincidir.
-4. **Preguntarle al Banco Mundial** si publica la serie sin redondear en algún
-   lugar vigente. Ya está entre las preguntas de la sección 10.3.
+   haga después de enero de 2025; lo que hay es el control, que las detecta.
+2. **Desde 2025-01 la serie sigue redondeada.** Preguntarle al Banco Mundial si
+   publica la serie sin redondear en algún lugar vigente sigue entre las
+   preguntas de la sección 10.3.
+3. **Los demás límites siguen:** el quiebre del oro de junio de 2025 y la
+   convención de la plata como estimación.
 
 **Otra candidata, más débil.** La serie `PSILVER` del FMI (4.7) también viene
 sin redondear, pero arranca en 1980, no es del mismo editor, y sus términos
@@ -791,7 +817,7 @@ aparece en `src/`.
 ## 9. Decisiones
 
 **Aprobadas el 2026-10-04, con condiciones.** Los supuestos que las sostienen
-están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-16; acá va la decisión y la
+están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-19; acá va la decisión y la
 evidencia.
 
 ### 9.1 Regla de publicación
@@ -822,8 +848,8 @@ externa"**.
 
 | Activo | Fuente | Clase | Supuesto | Convención | Historia |
 | --- | --- | --- | --- | --- | --- |
-| Oro | Banco Mundial, Pink Sheet | (a) | A-R0-7, A-R0-9 | Viene como promedio mensual de precios diarios | 1960-01 |
-| Plata | Banco Mundial, Pink Sheet | (a) | A-R0-8, A-R0-9 | Viene como precio mensual; que sea promedio es una **estimación** | 1960-01 |
+| Oro | Banco Mundial, Pink Sheet: edición de enero de 2025 hasta 2024-12, vigente después | (a) | A-R0-7, A-R0-9, A-R0-19 | Viene como promedio mensual de precios diarios | 1960-01 |
+| Plata | Banco Mundial, Pink Sheet: edición de enero de 2025 hasta 2024-12, vigente después | (a) | A-R0-8, A-R0-9, A-R0-19 | Viene como precio mensual; que sea promedio es una **estimación** | 1960-01 |
 | BTC | Coin Metrics community, `PriceUSD` | (b) | A-R0-4, A-R0-5, A-R0-10 | Se promedia desde el fixing diario, todos los días calendario | 2010-07; se publica desde 2013-01 |
 | Nasdaq Composite | FRED `NASDAQCOM` | (b) con reserva | A-R0-3 | Se promedia desde los cierres diarios | 1971-02 |
 | S&P 500 | Shiller, `ie_data.xls` | s/d | A-R0-2, A-R0-11 | Viene como promedio mensual de cierres diarios | 1871-01 |
@@ -854,7 +880,7 @@ vías leídas terminan en el permiso del dueño.
 
 **Oro**
 
-1. (a): **Banco Mundial, Pink Sheet** (4.5). Cláusula: *"provided to you under
+1. (a): **Banco Mundial, Pink Sheet** (4.5 y 5.5). Cláusula: *"provided to you under
    a Creative Commons Attribution 4.0 International License (CC BY 4.0)"*.
 2. (b): ninguna leída.
 3. (c), excluidas: LBMA / IBA (licencia); World Gold Council (uso personal y
@@ -863,7 +889,7 @@ vías leídas terminan en el permiso del dueño.
 
 **Plata**
 
-1. (a): **Banco Mundial, Pink Sheet** (5.3). Misma cláusula.
+1. (a): **Banco Mundial, Pink Sheet** (5.3 y 5.5). Misma cláusula.
 2. (b): ninguna leída.
 3. (c), excluidas: LBMA / IBA; Yahoo `SI=F`.
 
@@ -920,9 +946,9 @@ mensuales, y Shiller también.
 
 | Par | Primer mes posible | Lo que limita | Se publica |
 | --- | --- | --- | --- |
-| Oro / Plata | 1960-01 | El redondeo de la plata pesa más de 1 % mientras esté por debajo de 5 USD; hasta 2003-07 hay meses así (A-R0-9). | Sí |
+| Oro / Plata | 1960-01 | El oro de 1968-02 y de 1968-03 viene al dólar, con 1.4 % de error por redondeo: el par es apto para métricas desde 1968-04 (A-R0-17, A-R0-19). | Sí |
 | BTC / Oro | 2010-08 (primer mes completo de Coin Metrics) | Antes de 2013 las fuentes de BTC no coinciden (A-R0-10). | Sí, desde 2013-01 |
-| Oro / S&P 500 | 1960-01 | El oro vale 35 fijo hasta 1967-12. | NO MEDIDO |
+| Oro / S&P 500 | 1960-01 | El oro casi no se mueve hasta 1967-12: va de 34.95 a 35.27. | NO MEDIDO |
 | BTC / S&P 500 | 2010-08 | Como BTC / Oro. | NO MEDIDO |
 | Nasdaq / S&P 500 | 1971-03 | Primer mes completo del Nasdaq. | NO MEDIDO |
 
@@ -944,17 +970,18 @@ su caso de validación**.
 | S&P 500 | Shiller contra el promedio de los cierres diarios de FRED `SP500` (ventana de 10 años) | 119 meses, mediana 0.000 %, máxima 0.232 % | ±0.5 % por mes |
 | Nasdaq Composite | Promedio de FRED contra promedio de api.nasdaq.com (últimos 10 años) | 119 meses, mediana 0.000 %, máxima 0.027 % | ±0.1 % por mes |
 | BTC | Promedio de Coin Metrics contra promedio de cierres de Bitstamp | Desde 2013-01, 165 meses: mediana 0.044 %, máxima 1.332 % | ±2 % por mes |
-| Oro | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.116 % | ±0.5 % por año |
-| Plata | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.559 % | ±1 % por año |
+| Oro | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.120 % | ±0.5 % por año |
+| Plata | Promedio de los doce meses contra el precio anual del USGS | 4 años de 4, máxima 0.601 % | ±1 % por año |
+| Oro y plata, el empalme | Redondear la edición de enero de 2025 contra la edición vigente, mes a mes (5.5) | 780 meses de 780 en cada metal; 11 y 1 exactamente a medio paso | Medio paso de redondeo |
 
 **Las fuentes (c) se usan solo para contrastar.** El archivo no se guarda ni se
 publica (A-R0-12). En el changelog queda, por corrida, cuántos meses se
 compararon, la diferencia mediana y, del mes que más se aparta, la fecha y la
 diferencia. **Del S&P 500 y del Nasdaq no queda ningún nivel del índice.**
 
-Si el contraste de BTC o de un índice no cierra, la corrida se detiene. Si no
-cierra el gate de un metal, la corrida sigue y el metal y sus pares se publican
-como NO MEDIDO.
+Si el contraste de BTC o de un índice no cierra, la corrida se detiene. También
+si no cierra el control del empalme (A-R0-19). Si no cierra el gate de un
+metal, la corrida sigue y el metal y sus pares se publican como NO MEDIDO.
 
 **El gate de oro y plata** (A-R0-16). No hay una segunda fuente mensual abierta
 para los metales, así que el gate es anual: el promedio de los doce meses del
@@ -964,10 +991,15 @@ todos los años que la última edición trae sin estimar. Hoy son cuatro, 2021 a
 
 | Año | Oro, Pink Sheet | Oro, USGS | Diferencia | Plata, Pink Sheet | Plata, USGS | Diferencia |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2021 | 1799.58 | 1801 | −0.079 % | 25.167 | 25.23 | −0.251 % |
-| 2022 | 1800.75 | 1802 | −0.069 % | 21.783 | 21.88 | −0.442 % |
-| 2023 | 1942.75 | 1945 | −0.116 % | 23.408 | 23.54 | −0.559 % |
-| 2024 | 2387.58 | 2388 | −0.017 % | 28.275 | 28.37 | −0.335 % |
+| 2021 | 1799.63 | 1801 | −0.076 % | 25.165 | 25.23 | −0.259 % |
+| 2022 | 1800.60 | 1802 | −0.078 % | 21.794 | 21.88 | −0.391 % |
+| 2023 | 1942.67 | 1945 | −0.120 % | 23.399 | 23.54 | −0.601 % |
+| 2024 | 2387.70 | 2388 | −0.012 % | 28.269 | 28.37 | −0.355 % |
+
+Es el gate con la serie empalmada (5.5). Se había calculado antes, el mismo
+día, con la edición vigente redondeada: cerraba igual, con máximas de 0.116 %
+en el oro y de 0.559 % en la plata. **Las tolerancias no se tocaron entre un
+cálculo y otro.**
 
 Las tolerancias se fijaron antes de calcular el gate, y están justificadas en
 A-R0-16 componente por componente: redondeo de las dos fuentes, el efecto de
@@ -995,6 +1027,7 @@ trimestre de 2026 tienen que caer entre el mínimo y el máximo del trimestre
 | Fuente | Dónde vive el crudo | Qué se publica |
 | --- | --- | --- |
 | Con licencia que permite redistribuir: Pink Sheet (CC BY 4.0) y Coin Metrics (CC BY-NC 4.0) | En el repositorio, `data/raw/`, con su atribución y licencia en `data/raw/ATRIBUCION.md`. | El archivo, y su URL, fecha y SHA-256. |
+| La edición del Pink Sheet del 3 de enero de 2025 (CC BY 4.0) | En el repositorio, `data/raw/pink_sheet_edicion_2025-01-03.xlsx`: una sola copia, con nombre fijo. No se vuelve a descargar. | El archivo, y su URL, fecha y SHA-256. El hash esperado está además en `configuracion.py`. |
 | Sin esa licencia: Shiller (s/d) y FRED `NASDAQCOM` ((b) con reserva) | **Fuera del repositorio**, en `data/privado/`, ignorado por git. | URL, fecha y SHA-256 de cada descarga, y el código de transformación. |
 | De contraste, (c): FRED `SP500`, api.nasdaq.com, Bitstamp | En ningún lado. | Lo que dice 9.6: meses, mediana, y fecha y diferencia del peor mes. |
 | De contraste, transcrita a mano: USGS | En `configuracion.py`, ocho cifras con su cita. | Las cifras, y la diferencia de cada año. |
@@ -1092,7 +1125,7 @@ Están en `SUPUESTOS.md`. Índice:
 | A-R0-6 | Los cierres diarios no son simultáneos | supuesto |
 | A-R0-7 | El oro cambia de definición en junio de 2025 | dato; supuesto la continuidad |
 | A-R0-8 | La plata es un promedio mensual por inferencia | estimación |
-| A-R0-9 | El Pink Sheet viene redondeado | dato |
+| A-R0-9 | La edición vigente del Pink Sheet viene redondeada | dato |
 | A-R0-10 | Los pares con BTC se publican desde 2013-01 | supuesto |
 | A-R0-11 | La última fila de Shiller no es un mes completo; rezago | dato; supuesto la regla |
 | A-R0-12 | Las fuentes (c) solo contrastan; tolerancias; qué queda escrito | supuesto |
@@ -1102,6 +1135,7 @@ Están en `SUPUESTOS.md`. Índice:
 | A-R0-16 | Gate anual de oro y plata contra el USGS; cerró el 2026-10-04 | supuesto la regla; dato el resultado |
 | A-R0-17 | Las métricas solo usan meses con error de redondeo del ratio de hasta 0.5 % | dato el error; supuesto el umbral |
 | A-R0-18 | En los ocho contrastes anuales el Banco Mundial queda por debajo de Engelhard | dato |
+| A-R0-19 | El oro y la plata se empalman: edición de enero de 2025 hasta 2024-12, vigente después | supuesto el empalme; dato lo que lo sostiene |
 
 ---
 
@@ -1119,11 +1153,16 @@ Están en `SUPUESTOS.md`. Índice:
 6. **La plata después de junio de 2025.** Se aparta más del FMI que antes (4.7)
    y el Banco Mundial no declara ningún cambio. Es una de las preguntas de la
    sección 10.3.
-7. **La edición sin redondear del Pink Sheet** (5.5). Está propuesta y no
-   implementada. Sin ella, Oro/Plata es apto para métricas desde 2009-02.
-8. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
+7. **La edición sin redondear del Pink Sheet es una edición congelada** (5.5,
+   A-R0-19). No recibe revisiones. Si el Banco Mundial corrige un mes anterior
+   a 2025, el control del empalme detiene la corrida y hay que decidir de
+   nuevo de dónde sale ese tramo. Y desde 2025-01 la serie sigue redondeada.
+8. **El oro de marzo de 1985.** El Pink Sheet (313.5) y el FMI (303.94) quedan
+   a 3.1 % (4.7). No se estableció cuál está bien, y ninguna fuente abierta
+   leída lo decide.
+9. **Precio actual de BTC en el sitio.** Queda fuera de la convención mensual
    y no tiene decisión.
-9. **No leído:** los ZIP históricos de Kraken, los términos de datos de
+10. **No leído:** los ZIP históricos de Kraken, los términos de datos de
    Kraken, los términos del Bundesbank, la exportación de S&P DJI, y la
    documentación técnica del FMI (se leyó la descripción de cada serie en la
    planilla).
