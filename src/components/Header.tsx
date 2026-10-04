@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useDataStatus, shortDataLabel } from "./DataStatusContext";
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -106,6 +107,8 @@ function EcosystemBar() {
 }
 
 export default function Header() {
+  const { status } = useDataStatus();
+  const isFallback = status.origin === "fallback";
   return (
     <header
       className="relative"
@@ -159,13 +162,14 @@ export default function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="label-badge">
+          {/* Frescura real: fecha del último punto de la serie mostrada, no "Live" */}
+          <div className="label-badge" title={isFallback ? "Anclajes estáticos; la API no respondió" : "Último punto de la serie mostrada"}>
             <div
-              className="w-1.5 h-1.5 rounded-full pulse-dot"
-              style={{ background: "var(--accent-green)" }}
+              className={`w-1.5 h-1.5 rounded-full ${status.origin === "api" ? "pulse-dot" : ""}`}
+              style={{ background: isFallback ? "var(--accent-amber)" : "var(--accent-green)" }}
             />
-            <span className="text-[9px] sm:text-[10px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
-              Live
+            <span className="text-[9px] sm:text-[10px] tracking-wider uppercase whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+              {shortDataLabel(status)}
             </span>
           </div>
           <ThemeToggle />

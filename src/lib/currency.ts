@@ -308,7 +308,7 @@ export function convertCAGR(
 // ============================================================
 // Purchasing Power Depreciation Data — for the "Poder Adquisitivo Global" section
 // ============================================================
-const M2_ANNUAL = 0.07; // Global M2 expansion ~7%/year
+const M2_ANNUAL = 0.07; // Supuesto: expansión monetaria ~7% anual. No es un dato medido de M2 global ni una tasa de inflación.
 
 export interface CurrencyDepreciationRow {
   code: CurrencyCode;
@@ -318,7 +318,7 @@ export interface CurrencyDepreciationRow {
   firstYear: number | null;
   /** Annual depreciation vs USD (negative = losing value, positive = gaining) */
   annualDepVsUSD: number;
-  /** Annual global purchasing power change (dep + M2 debasement) */
+  /** Annual purchasing power change vs USD, adjusted by the ~7%/yr monetary-expansion assumption */
   annualGlobalLoss: number;
   level: 1 | 2 | 3 | 4;
 }
@@ -357,7 +357,7 @@ export function getCurrencyDepreciationData(): CurrencyDepreciationRow[] {
       continue;
     }
 
-    // USD: 0% vs itself, but loses to M2
+    // USD: 0% vs itself; "global" column applies only the ~7% assumption
     if (code === "USD") {
       rows.push({
         code, name, flag, country, firstYear: null, level,
@@ -398,7 +398,7 @@ export function getCurrencyDepreciationData(): CurrencyDepreciationRow[] {
     // Purchasing power change vs USD: how much a unit of this currency buys in USD each year
     // If FX rate doubles (growth=1.0), purchasing power halves: 1/2 - 1 = -50%
     const annualDep = (1 / (1 + annualFXGrowth) - 1) * 100;
-    // Global purchasing power: also account for USD losing to M2 expansion
+    // "Global": also adjust by the ~7%/yr monetary-expansion assumption (M2_ANNUAL)
     const annualGlobal = ((1 / (1 + annualFXGrowth)) * (1 / (1 + M2_ANNUAL)) - 1) * 100;
 
     rows.push({
