@@ -1,5 +1,7 @@
 "use client";
 
+import { METRICAS_VERIFICADAS, NO_MEDIDO } from "@/lib/data";
+
 const ECOSYSTEM_LINKS = [
   { label: "El Denominador", href: "https://eldenominador.com", desc: "Por qué el dinero se encoge" },
   { label: "El Numerador", href: "https://elnumerador.com", desc: "Por qué los activos se multiplican" },
@@ -70,6 +72,7 @@ export default function Footer() {
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>CAGR hist&oacute;rico</p>
               <p>El periodo de c&aacute;lculo var&iacute;a por activo seg&uacute;n disponibilidad de datos. BTC desde 2009, acciones individuales desde su IPO, Oro/Plata/S&amp;P/Nasdaq desde 1971. La columna &ldquo;Desde&rdquo; en la tabla muestra el a&ntilde;o de inicio de cada c&aacute;lculo.</p>
             </div>
+            {METRICAS_VERIFICADAS ? (<>
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Z-scores</p>
               <p>Calculados sobre la distribuci&oacute;n completa (full-sample) del ratio desde la fecha de inicio del par, no sobre una ventana rolling. Para ratios que abarcan &oacute;rdenes de magnitud (BTC/Oro, BTC/S&amp;P), se usa escala logar&iacute;tmica (media geom&eacute;trica y desviaci&oacute;n est&aacute;ndar en log-space).</p>
@@ -78,6 +81,12 @@ export default function Footer() {
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Se&ntilde;ales</p>
               <p>Las etiquetas (Neutral, Extendido/Comprimido, Extremo) usan cortes fijos: |z| &lt; 1, 1 &le; |z| &lt; 2 y |z| &ge; 2. Son descripciones estad&iacute;sticas de la distancia a la media hist&oacute;rica, no predicciones ni recomendaciones. Un z-score extremo indica que el ratio est&aacute; lejos de su media, no que vaya a revertir en un plazo determinado.</p>
             </div>
+            </>) : (
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Z-scores, percentiles, bandas y se&ntilde;ales</p>
+              <p>{NO_MEDIDO} Todo el historial mostrado es interpolaci&oacute;n entre valores de referencia y solo el &uacute;ltimo punto es observado; sobre esa base esas m&eacute;tricas no son defendibles. El c&oacute;digo de c&aacute;lculo se conserva (flag METRICAS_VERIFICADAS) y se reactivar&aacute; con series observadas.</p>
+            </div>
+            )}
           </div>
         </details>
 

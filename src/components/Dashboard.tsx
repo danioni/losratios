@@ -29,6 +29,8 @@ import {
   Z_EXTENDED,
   formatDateLabel,
   findTrailingGap,
+  METRICAS_VERIFICADAS,
+  NO_MEDIDO,
   type AssetDataPoint,
   type ClassRatioDataPoint,
 } from "@/lib/data";
@@ -206,7 +208,8 @@ function RatioChart({
     }
 
     const { sma50, sma200, isLogScale } = computeRatioSMAs(filteredRatios, key); // ya excluye el punto en vivo si hay hueco
-    const bb = computeBollingerBands(values, dates, Math.min(20, values.length), isLogScale);
+    // Bandas de Bollinger: solo con métricas verificadas (el cálculo se conserva).
+    const bb = METRICAS_VERIFICADAS ? computeBollingerBands(values, dates, Math.min(20, values.length), isLogScale) : [];
     const lastIdx = filteredRatios.length - 1;
 
     // For log-scale ratios, transform all values to log space for charting
@@ -295,9 +298,18 @@ function RatioChart({
   return (
     <ChartSection
       title={`${pairDef.name}`}
-      subtitle={`${actualDateRange} · Actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · z-score: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`}
+      subtitle={METRICAS_VERIFICADAS
+        ? `${actualDateRange} · Actual: ${formatRatio(pairStats.current)} · Media: ${formatRatio(pairStats.mean)} · z-score: ${pairStats.zScore >= 0 ? "+" : ""}${pairStats.zScore.toFixed(1)}σ`
+        : `${actualDateRange} · Actual: ${formatRatio(pairStats.current)}`}
       delay={3}
     >
+      {/* Sin métricas verificadas: z-score, percentil y etiqueta no se publican */}
+      {!METRICAS_VERIFICADAS && (
+        <p className="text-[10px] sm:text-[11px] mb-4 leading-relaxed font-medium" style={{ color: "var(--accent-amber)" }}>
+          z-score · percentil · etiqueta — {NO_MEDIDO}
+        </p>
+      )}
+      {METRICAS_VERIFICADAS && (<>
       {/* Z-score indicator bar */}
       <div className="mb-4 flex items-center gap-3">
         <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--controls-bg)" }}>
@@ -333,10 +345,14 @@ function RatioChart({
       <p className="text-[9px] mb-4 leading-relaxed italic" style={{ color: "var(--text-muted)", opacity: 0.7 }}>
         z-score y percentil calculados sobre las últimas {zWindow.n} observaciones mensuales del rango mostrado ({formatDateLabel(zWindow.startDate)} → {formatDateLabel(zWindow.endDate)}), con media {zWindow.useLog ? "geométrica" : "aritmética"} y desviación estándar de esa ventana.
       </p>
+      </>)}
       {/* Hueco explícito entre el último mes de referencia y el punto en vivo */}
       {gap && (
         <p className="text-[9px] mb-4 leading-relaxed" style={{ color: "var(--accent-amber)" }}>
-          Último punto ({formatDateLabel(gap.last)}) con precios en vivo; sin datos entre {formatDateLabel(gap.missingFrom)} y {formatDateLabel(gap.missingTo)} ({gap.missingMonths} {gap.missingMonths === 1 ? "mes" : "meses"}). Ese punto queda fuera de las medias móviles, las bandas y la ventana del z-score: el z-score y el percentil comparan su valor contra la ventana anterior.
+          Último punto ({formatDateLabel(gap.last)}) con precios en vivo; sin datos entre {formatDateLabel(gap.missingFrom)} y {formatDateLabel(gap.missingTo)} ({gap.missingMonths} {gap.missingMonths === 1 ? "mes" : "meses"}).{" "}
+          {METRICAS_VERIFICADAS
+            ? "Ese punto queda fuera de las medias móviles, las bandas y la ventana del z-score: el z-score y el percentil comparan su valor contra la ventana anterior."
+            : "Ese punto queda fuera de las medias móviles."}
         </p>
       )}
 
@@ -367,12 +383,13 @@ function RatioChart({
               }}
             />
             <Tooltip content={<RatioTooltip isLogScale={isLogScale} />} />
-            {/* Bollinger bands ±2σ */}
+            {/* Bollinger bands ±2σ / ±1σ — solo con métricas verificadas */}
+            {METRICAS_VERIFICADAS && (<>
             <Line type="monotone" dataKey="bbUpper2" name="BB +2σ" stroke={COLORS.red} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
             <Line type="monotone" dataKey="bbLower2" name="BB -2σ" stroke={COLORS.green} strokeWidth={0.8} strokeDasharray="3 4" dot={false} connectNulls strokeOpacity={0.4} />
-            {/* Bollinger bands ±1σ */}
             <Line type="monotone" dataKey="bbUpper1" name="BB +1σ" stroke={COLORS.red} strokeWidth={0.5} strokeDasharray="2 4" dot={false} connectNulls strokeOpacity={0.25} />
             <Line type="monotone" dataKey="bbLower1" name="BB -1σ" stroke={COLORS.green} strokeWidth={0.5} strokeDasharray="2 4" dot={false} connectNulls strokeOpacity={0.25} />
+            </>)}
             {/* SMA lines */}
             <Line type="monotone" dataKey="sma50" name={`SMA ${SMA_SHORT}`} stroke={COLORS.amber} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls />
             <Line type="monotone" dataKey="sma200" name={`SMA ${SMA_LONG}`} stroke={COLORS.muted} strokeWidth={1.5} dot={false} connectNulls />
@@ -398,10 +415,12 @@ function RatioChart({
           <div className="w-4 h-0.5 rounded" style={{ background: COLORS.muted, opacity: 0.8 }} />
           <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>SMA {SMA_LONG}</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-4 h-px rounded" style={{ background: COLORS.red, opacity: 0.4 }} />
-          <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>BB ±1σ/±2σ</span>
-        </div>
+        {METRICAS_VERIFICADAS && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-px rounded" style={{ background: COLORS.red, opacity: 0.4 }} />
+            <span className="text-[8px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>BB ±1σ/±2σ</span>
+          </div>
+        )}
       </div>
       {/* Interpolación declarada: la serie mensual es interpolación entre valores de
           referencia (anuales; bianuales antes de 1995). Solo el último punto puede
@@ -412,10 +431,12 @@ function RatioChart({
           ? `En esta vista no hay precios en vivo: el último punto (${formatDateLabel(dataStatus.lastDate)}) también es un valor de referencia.`
           : "Solo el último punto proviene de precios en vivo."}
       </p>
-      {/* Narrative */}
-      <p className="text-[10px] sm:text-[11px] mt-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-        {narrative}
-      </p>
+      {/* Narrative (señal descriptiva) — solo con métricas verificadas */}
+      {METRICAS_VERIFICADAS && (
+        <p className="text-[10px] sm:text-[11px] mt-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          {narrative}
+        </p>
+      )}
     </ChartSection>
   );
 }
@@ -538,6 +559,7 @@ export default function Dashboard() {
                 El numerador gana terreno vs el denominador. Si BTC/Oro sube, Bitcoin est&aacute; capturando m&aacute;s valor relativo al oro.
               </p>
             </div>
+            {METRICAS_VERIFICADAS ? (<>
             <div className="space-y-2">
               <div className="text-sm font-medium" style={{ color: "var(--accent-amber)" }}>
                 2. El z-score extremo
@@ -554,6 +576,16 @@ export default function Dashboard() {
                 Cuando un ratio est&aacute; barato hist&oacute;ricamente, puede ser oportunidad de acumular el numerador. Los ratios revelan lo que los precios en fiat ocultan.
               </p>
             </div>
+            </>) : (
+            <div className="space-y-2 sm:col-span-2">
+              <div className="text-sm font-medium" style={{ color: "var(--accent-amber)" }}>
+                2. Z-score y se&ntilde;ales de rotaci&oacute;n
+              </div>
+              <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                {NO_MEDIDO} Todo el historial que muestra el sitio es interpolaci&oacute;n entre valores de referencia; solo el &uacute;ltimo punto es observado. Sobre esa base, z-score, percentil, bandas y se&ntilde;ales no son defendibles y no se publican.
+              </p>
+            </div>
+            )}
           </div>
           <div className="divider-gradient mb-4" />
           <p className="text-[10px] sm:text-[11px] leading-relaxed italic" style={{ color: "var(--text-muted)" }}>

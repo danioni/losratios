@@ -1,6 +1,6 @@
 "use client";
 
-import { formatRatio } from "@/lib/data";
+import { formatRatio, METRICAS_VERIFICADAS, NO_MEDIDO } from "@/lib/data";
 
 interface MetricCardProps {
   label: string;
@@ -17,7 +17,8 @@ export default function MetricCard({ label, value, zScore, signal, signalType, d
     oversold: { color: "var(--accent-green)", bg: "var(--accent-green-bg)" },
     neutral: { color: "var(--text-muted)", bg: "var(--controls-bg)" },
   };
-  const { color, bg } = colorMap[signalType];
+  // Sin métricas verificadas: ni z-score ni etiqueta; solo el valor del ratio.
+  const { color, bg } = METRICAS_VERIFICADAS ? colorMap[signalType] : colorMap.neutral;
 
   return (
     <div
@@ -45,15 +46,23 @@ export default function MetricCard({ label, value, zScore, signal, signalType, d
         className="flex items-center gap-2 mt-3 pt-3"
         style={{ borderTop: "1px solid var(--border-subtle)" }}
       >
-        <span
-          className="text-xs font-medium tabular-nums px-1.5 py-0.5 rounded"
-          style={{ color, background: bg }}
-        >
-          {zScore >= 0 ? "+" : ""}{zScore.toFixed(1)}σ
-        </span>
-        <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-          {signal}
-        </span>
+        {METRICAS_VERIFICADAS ? (
+          <>
+            <span
+              className="text-xs font-medium tabular-nums px-1.5 py-0.5 rounded"
+              style={{ color, background: bg }}
+            >
+              {zScore >= 0 ? "+" : ""}{zScore.toFixed(1)}σ
+            </span>
+            <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+              {signal}
+            </span>
+          </>
+        ) : (
+          <span className="text-[10px] leading-snug" style={{ color: "var(--accent-amber)" }}>
+            {NO_MEDIDO}
+          </span>
+        )}
       </div>
     </div>
   );

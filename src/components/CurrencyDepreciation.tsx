@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getCurrencyDepreciationData, type CurrencyDepreciationRow } from "@/lib/currency";
+import { METRICAS_VERIFICADAS, NOTA_VALORES_REFERENCIA } from "@/lib/data";
 import { useCurrencyBase } from "./CurrencyContext";
 
 type SortKey = "annualGlobalLoss" | "annualDepVsUSD" | "code";
@@ -130,6 +131,11 @@ export default function CurrencyDepreciation() {
           &mdash; el d&oacute;lar incluido. Si tu moneda pierde X% por a&ntilde;o, tu
           inversi&oacute;n necesita rendir al menos X% solo para no retroceder.
         </p>
+        {!METRICAS_VERIFICADAS && (
+          <p className="text-[10px] sm:text-[11px] mt-2 leading-relaxed font-medium" style={{ color: "var(--accent-amber)" }}>
+            {NOTA_VALORES_REFERENCIA}
+          </p>
+        )}
       </div>
 
       <div className="card-glass card-accent-left rounded-xl p-4 sm:p-5">

@@ -92,6 +92,19 @@ const SMA_LONG = 200;  // meses — ventana para media y z-score
 const SMA_SHORT = 50;  // meses — media corta para cruces
 
 // ============================================================
+// MÉTRICAS NO DEFENDIBLES — FLAG
+// Todo el historial que muestra el sitio es interpolación entre valores de
+// referencia; solo el último punto es observado. Sobre esa base, z-score,
+// percentil, etiquetas (Neutral/Extendido/Extremo), bandas de Bollinger y
+// señales de rotación no se publican. El código de cálculo se conserva y se
+// reactiva cambiando este flag a true cuando haya series observadas.
+// ============================================================
+export const METRICAS_VERIFICADAS = false;
+export const NO_MEDIDO = "NO MEDIDO: se publicará con datos observados.";
+export const NOTA_VALORES_REFERENCIA =
+  "Calculado sobre valores de referencia sin procedencia verificada; se reemplaza cuando haya series observadas.";
+
+// ============================================================
 // HISTORICAL ANCHORS (1971-2026)
 // Starts at 1971: Nixon shock (fiat standard) + Nasdaq launch
 // Sources: Yahoo Finance, WGC, CoinGecko,
@@ -475,7 +488,12 @@ function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
       stdDev = stats.stdDev;
     }
 
-    const { signal, signalType, context } = getSignal(zScore, pair);
+    const computed = getSignal(zScore, pair);
+    // Sin métricas verificadas, la etiqueta y su contexto no se publican
+    // (el z-score numérico se conserva en el objeto para reactivar sin recalcular).
+    const { signal, signalType, context } = METRICAS_VERIFICADAS
+      ? computed
+      : { signal: NO_MEDIDO, signalType: "neutral" as const, context: NO_MEDIDO };
     return { name: `${pair}`, pair, current, mean, stdDev, zScore, signal, signalType, context };
   });
 }
@@ -484,6 +502,8 @@ function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
 // plantilla descriptiva de generateNarrative: sin "oportunidad" ni acciones.
 function buildRotationSignals(sums: RatioSummary[]): RotationSignal[] {
   const signals: RotationSignal[] = [];
+  // Sin métricas verificadas no se emite ninguna señal (el cálculo queda abajo).
+  if (!METRICAS_VERIFICADAS) return signals;
   for (const s of sums) {
     if (Math.abs(s.zScore) >= Z_EXTREME) {
       signals.push({

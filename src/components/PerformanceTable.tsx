@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AssetPerformance } from "@/lib/data";
-import { computeCAGR, getAnchorPrice } from "@/lib/data";
+import { computeCAGR, getAnchorPrice, METRICAS_VERIFICADAS, NOTA_VALORES_REFERENCIA } from "@/lib/data";
 import { convertCAGR, getFirstFXYear } from "@/lib/currency";
 import { useCurrencyBase } from "./CurrencyContext";
 
@@ -178,6 +178,11 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
             ? "Midiendo en oro. Si tu activo no supera 5,000 a\u00f1os de dinero duro, est\u00e1s perdiendo en t\u00e9rminos reales."
             : "Supuesto: expansi\u00f3n monetaria ~7% anual. Es una vara de referencia, no un dato medido de M2 global ni una tasa de inflaci\u00f3n. Los activos con CAGR por encima de esa vara entran al an\u00e1lisis; los que quedan por debajo se muestran como contexto."}
         </p>
+        {!METRICAS_VERIFICADAS && (
+          <p className="text-[10px] sm:text-[11px] mt-2 leading-relaxed font-medium" style={{ color: "var(--accent-amber)" }}>
+            {NOTA_VALORES_REFERENCIA}
+          </p>
+        )}
       </div>
 
       {/* Currency context note */}
@@ -233,7 +238,9 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                 <th className="text-right py-2 px-2 tracking-wider uppercase font-medium cursor-pointer" style={{ color: "var(--text-muted)" }} onClick={() => toggleSort("vsM2")}>
                   {vsLabel} {sortIcon("vsM2")}
                 </th>
-                <th className="text-center py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Universo</th>
+                {METRICAS_VERIFICADAS && (
+                  <th className="text-center py-2 px-2 tracking-wider uppercase font-medium" style={{ color: "var(--text-muted)" }}>Universo</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -290,17 +297,19 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                       {a.vsM2 >= 0 ? "+" : ""}{a.vsM2.toFixed(1)}%
                     </span>
                   </td>
-                  <td className="py-2.5 px-2 text-center">
-                    <span className="text-[10px]" style={{ color: "var(--accent-green)" }}>
-                      ✓
-                    </span>
-                  </td>
+                  {METRICAS_VERIFICADAS && (
+                    <td className="py-2.5 px-2 text-center">
+                      <span className="text-[10px]" style={{ color: "var(--accent-green)" }}>
+                        ✓
+                      </span>
+                    </td>
+                  )}
                 </tr>
               ))}
               {/* Separator */}
               {losers.length > 0 && (
                 <tr>
-                  <td colSpan={9} className="py-3 px-2">
+                  <td colSpan={METRICAS_VERIFICADAS ? 9 : 8} className="py-3 px-2">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
                       <span className="text-[9px] tracking-wider uppercase" style={{ color: "var(--text-muted)" }}>
@@ -343,11 +352,13 @@ export default function PerformanceTable({ data }: PerformanceTableProps) {
                       {a.vsM2.toFixed(1)}%
                     </span>
                   </td>
-                  <td className="py-2.5 px-2 text-center">
-                    <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
-                      {loserLabel}
-                    </span>
-                  </td>
+                  {METRICAS_VERIFICADAS && (
+                    <td className="py-2.5 px-2 text-center">
+                      <span className="text-[9px]" style={{ color: "var(--text-muted)" }}>
+                        {loserLabel}
+                      </span>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

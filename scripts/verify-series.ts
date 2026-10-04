@@ -12,6 +12,10 @@ import {
   monthsBetween,
   computeAllFromRawAssets,
   computeRatioSMAs,
+  METRICAS_VERIFICADAS,
+  NO_MEDIDO,
+  summaries,
+  rotationSignals,
   type AssetDataPoint,
 } from "../src/lib/data.ts";
 
@@ -98,6 +102,15 @@ const nextPoint: AssetDataPoint = { ...last, date: "2026-02", gold: last.gold * 
 const withNext = computeAllFromRawAssets([...assetData, nextPoint]);
 const nextGoldSp = withNext.summaries.find((s) => s.pair === "Oro / S&P 500")!;
 check("sin hueco: la media de la ventana sí cambia al añadir el mes siguiente", Math.abs(baseGoldSp.mean - nextGoldSp.mean) > 1e-9);
+
+console.log(`\n── Flag METRICAS_VERIFICADAS = ${METRICAS_VERIFICADAS} ──`);
+if (!METRICAS_VERIFICADAS) {
+  check("sin métricas verificadas: ninguna etiqueta publicada (todas NO MEDIDO)", summaries.every((s) => s.signal === NO_MEDIDO && s.context === NO_MEDIDO));
+  check("sin métricas verificadas: ninguna señal de rotación", rotationSignals.length === 0);
+  check("el z-score numérico se conserva en los datos para reactivar", summaries.every((s) => Number.isFinite(s.zScore)));
+} else {
+  check("métricas verificadas: las etiquetas se publican", summaries.every((s) => s.signal !== NO_MEDIDO));
+}
 
 console.log(failures === 0 ? "\nTodo OK" : `\n${failures} verificación(es) fallida(s)`);
 process.exit(failures === 0 ? 0 : 1);
