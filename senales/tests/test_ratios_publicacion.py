@@ -564,3 +564,26 @@ def test_si_la_fuente_cambia_de_precision_la_corrida_se_detiene():
         verificar_redondeo(_mensual([35.0, 1591.93]), SERIE_ORO)
     with pytest.raises(ErrorDeFuente, match="cambió la precisión"):
         verificar_redondeo(_mensual([14.9, 14.884]), SERIE_PLATA)
+
+
+def _revision(mes: str, columna: str, anterior: float, nuevo: float) -> bitacora.Revision:
+    return bitacora.Revision(pd.Timestamp(mes + "-01"), columna, anterior, nuevo)
+
+
+def test_pocas_revisiones_se_listan_una_por_una():
+    revisiones = [_revision("2026-08", "oro_usd_oz", 4400.0, 4410.0)]
+    assert ratios.resumir_revisiones(revisiones) == ["2026-08-01 | oro_usd_oz: 4400.000 -> 4410.000 (10.000)"]
+
+
+def test_un_cambio_masivo_se_resume_por_columna():
+    """Cambiar de edición de la fuente mueve cientos de meses: no es una línea por mes."""
+    meses = pd.date_range("1960-01-01", periods=60, freq="MS")
+    revisiones = [_revision(f"{m:%Y-%m}", "oro_usd_oz", 35.0, 35.2) for m in meses]
+    revisiones += [_revision(f"{m:%Y-%m}", "plata_usd_oz", 0.9, 0.91) for m in meses[:-1]]
+    revisiones.append(_revision("1964-12", "plata_usd_oz", 1.0, 1.3))
+    lineas = ratios.resumir_revisiones(revisiones)
+    assert len(lineas) == 3
+    assert lineas[0].startswith("oro_usd_oz: 60 meses cambiaron")
+    assert "plata_usd_oz: 60 meses cambiaron" in lineas[1]
+    assert "30.000 % en 1964-12 (1.0000 -> 1.3000)" in lineas[1]
+    assert "120 cambios" in lineas[2] and "cambio de método" in lineas[2]

@@ -739,6 +739,43 @@ class EntradaRatios:
         return "\n".join(lineas)
 
 
+# Hasta cuántas revisiones se listan una por una. Más que eso no es la fuente
+# corrigiendo un dato: es un cambio de método, y se resume por columna.
+LIMITE_REVISIONES_LISTADAS = 40
+
+
+def resumir_revisiones(revisiones: list[bitacora.Revision]) -> list[str]:
+    """Las revisiones, una por línea, o resumidas por columna si son demasiadas.
+
+    Una fuente que corrige un dato viejo deja una línea por dato. Un cambio de
+    método —otra edición de la fuente, otra regla de empalme— cambia cientos de
+    meses a la vez, y listarlos uno por uno entierra lo que importa: cuántos
+    cambiaron y cuánto cambió el que más.
+    """
+    if len(revisiones) <= LIMITE_REVISIONES_LISTADAS:
+        return [str(revision) for revision in revisiones]
+
+    def relativa(revision: bitacora.Revision) -> float:
+        if pd.isna(revision.anterior) or pd.isna(revision.nuevo) or revision.anterior == 0:
+            return float("inf")
+        return abs(revision.diferencia / revision.anterior) * 100.0
+
+    lineas = []
+    for columna in dict.fromkeys(revision.columna for revision in revisiones):
+        propias = [revision for revision in revisiones if revision.columna == columna]
+        mayor = max(propias, key=relativa)
+        lineas.append(
+            f"{columna}: {len(propias)} meses cambiaron respecto de la corrida anterior; "
+            f"el mayor cambio es de {formatear(relativa(mayor), 3)} % en "
+            f"{_mes(mayor.fecha)} ({formatear(mayor.anterior, 4)} -> {formatear(mayor.nuevo, 4)})"
+        )
+    lineas.append(
+        f"son {len(revisiones)} cambios, más de {LIMITE_REVISIONES_LISTADAS}: es un cambio "
+        "de método y no una revisión de la fuente, y por eso va resumido por columna"
+    )
+    return lineas
+
+
 def _leer_publicado(ruta: Path) -> pd.DataFrame | None:
     """Una salida de la corrida anterior, con `fecha` para comparar por fecha."""
     if not ruta.exists():
@@ -1052,7 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
         descartados=lineas_descartados,
         pares=lineas_pares,
         agregados=agregados,
-        revisiones=cambios_de_estado + [str(revision) for revision in revisiones],
+        revisiones=cambios_de_estado + resumir_revisiones(revisiones),
         contrastes=lineas_contrastes,
         metales=lineas_metales,
         notas=notas,
