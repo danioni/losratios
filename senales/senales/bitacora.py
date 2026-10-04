@@ -25,9 +25,11 @@ ENCABEZADO = (
     "se escriben a mano, se conservan arriba y el script no las toca.\n"
 )
 
-# Un título de entrada de corrida es una fecha ISO; cualquier otro título es
-# una sección escrita a mano que hay que preservar.
-PATRON_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# Un título de entrada de corrida es una fecha ISO, sola (S2) o seguida del
+# nombre de la serie ("2026-10-04 · ratios"), para que dos series que corren el
+# mismo día no se pisen la entrada. Cualquier otro título es una sección escrita
+# a mano que hay que preservar.
+PATRON_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}( · \S.*)?$")
 
 
 @dataclass(frozen=True)
@@ -188,7 +190,7 @@ def _separar_bloques(texto: str) -> tuple[list[str], dict[str, str]]:
     return fijas, entradas
 
 
-def actualizar_changelog(ruta: Path, entrada: EntradaChangelog) -> bool:
+def actualizar_changelog(ruta: Path, entrada) -> bool:
     """Agrega o reemplaza la entrada de esta corrida. Devuelve True si el archivo cambió.
 
     Idempotente: correrlo dos veces el mismo día deja una sola entrada. Si el
@@ -197,10 +199,14 @@ def actualizar_changelog(ruta: Path, entrada: EntradaChangelog) -> bool:
 
     Las secciones escritas a mano, como el registro de cambios de supuestos, se
     conservan tal cual y quedan arriba de las entradas de corrida.
+
+    `entrada` es cualquier objeto con `fecha_corrida` y `render()`. Si además
+    tiene `titulo`, ese es el título de su sección; si no, es la fecha sola.
     """
     previo = ruta.read_text(encoding="utf-8") if ruta.exists() else ""
     fijas, entradas = _separar_bloques(previo)
-    entradas[entrada.fecha_corrida.isoformat()] = entrada.render()
+    titulo = getattr(entrada, "titulo", None) or entrada.fecha_corrida.isoformat()
+    entradas[titulo] = entrada.render()
 
     ordenadas = sorted(entradas.items(), key=lambda par: par[0], reverse=True)
     bloques = fijas + [bloque for _, bloque in ordenadas]

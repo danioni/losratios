@@ -35,7 +35,12 @@ def normalizar_texto(texto: str) -> str:
     return " ".join(sin_acentos.lower().split())
 
 
-def escribir_csv_determinista(tabla: pd.DataFrame, ruta: Path, columnas: list[str]) -> None:
+def escribir_csv_determinista(
+    tabla: pd.DataFrame,
+    ruta: Path,
+    columnas: list[str],
+    formato_flotante: str = FORMATO_FLOTANTE,
+) -> None:
     """Escribe el CSV con orden de columnas, formato y saltos de linea fijos.
 
     Determinista a propósito: dos corridas con los mismos datos producen un
@@ -50,7 +55,7 @@ def escribir_csv_determinista(tabla: pd.DataFrame, ruta: Path, columnas: list[st
     tabla.loc[:, columnas].to_csv(
         temporal,
         index=False,
-        float_format=FORMATO_FLOTANTE,
+        float_format=formato_flotante,
         lineterminator="\n",
     )
     temporal.replace(ruta)
