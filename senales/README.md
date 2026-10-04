@@ -363,8 +363,10 @@ usar los meses marcados como aptos, que son los del tramo final sin
 interrupción con error de hasta 0.5 %, menos los que tienen un valor en disputa:
 **Oro/Plata desde 1968-04** (682 de 801 meses) y **BTC/Oro desde 2013-01** (161
 de 165). Lo que corta en 1968 son dos meses, febrero y marzo, que la fuente
-publica al dólar, con 1.4 % de error. Los meses anteriores se publican con su
-error a la vista y no son evidencia de nada (A-R0-17).
+publica al dólar, con 1.4 % de error. El corte coincide con el fin del London
+Gold Pool, en marzo de 1968: hasta entonces los bancos centrales sostenían el
+oro de Londres cerca de 35 USD. Los meses anteriores se publican con su error a
+la vista y no son evidencia de nada (A-R0-17).
 
 **Veinte meses tienen un valor en disputa.** Son los meses en que el Pink Sheet
 y el FMI no coinciden. Se publican con el valor del Pink Sheet, sin corregir.

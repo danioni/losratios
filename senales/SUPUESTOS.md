@@ -952,6 +952,46 @@ cayó justo en un entero y cuáles un dato publicado al dólar. A los diez se le
 asigna medio dólar de error. En ocho no pesa, porque el oro valía de 163 USD
 para arriba; en los dos de 1968, con el oro a 36 y 37, pasa el umbral.
 
+**El corte coincide con el fin del London Gold Pool.** Hasta marzo de 1968 el
+precio del oro en Londres no era un precio libre. Lo sostenían los principales
+bancos centrales, que compraban y vendían oro en ese mercado para mantenerlo
+pegado a la paridad oficial de 35 USD la onza. Bordo, Monnet y Naef lo
+describen así:
+
+- *"They coordinated their purchases and sales of gold in London to stabilize
+  the gold-dollar parity on which the whole Bretton Woods system was built."*
+  (p. 2)
+- *"The dollar-price of gold accepted by the Gold Pool lay within a wide band
+  [35.08 - 35.20]"* (p. 23).
+- *"On March 15, 1968, the Gold Pool was disbanded and a two-tier arrangement
+  put in its place."* (p. 47)
+
+Fuente: Michael Bordo, Eric Monnet y Alain Naef, *The Gold Pool (1961-1968) and
+the Fall of the Bretton Woods System. Lessons for Central Bank Cooperation*,
+NBER Working Paper 24016, noviembre de 2017, `https://www.nber.org/papers/w24016`.
+Leído el 2026-10-04. Es un documento de trabajo, sin revisión de pares, y lo
+dice en su portada.
+
+Lo que eso dice del tramo apto:
+
+- **Abril de 1968 es el primer mes completo sin el Pool.** Antes, el numerador
+  de Oro/Plata estaba sostenido administrativamente cerca de 35 USD, y el ratio
+  se movía casi solo por la plata. En la serie, el oro va de 34.95 a 35.27
+  entre 1960-01 y 1967-12; en abril de 1968 vale 37.86 y en mayo, 40.70.
+- **La regla corta ahí por precisión, no por esto.** Lo que deja afuera a los
+  meses anteriores son febrero y marzo de 1968, publicados al dólar. Pero son
+  los dos últimos meses del Pool: el corte por precisión cae donde también
+  cambia lo que el precio mide. Que una cosa explique la otra es una lectura;
+  la fuente no lo dice.
+- **El Pink Sheet de esos meses no calza con lo que describe el paper.** Trae
+  34.95 de octubre a diciembre de 1967, por debajo de la banda, y 35.5 y 36
+  para enero y febrero de 1968, por encima de un techo que, según el paper, el
+  precio no volvió a pasar mientras el Pool operó (*"the price would never
+  exceed this limit again"*, p. 23). No se contrastó mes a mes: el paper no
+  publica la serie. Es una razón más para no usar esos meses.
+
+No cambia la regla ni el tramo.
+
 **Antes del empalme** el tramo apto de Oro/Plata empezaba en 2009-02, con 212
 meses: toda la serie estaba redondeada y la plata tenía que valer unos 11 USD
 para cumplir el umbral. Ahí la regla del tramo final importaba por otra razón:

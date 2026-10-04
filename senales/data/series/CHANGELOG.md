@@ -11,6 +11,12 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-04 · A-R0-17 · Contexto del corte de 1968-04: coincide con el fin del
+  London Gold Pool.** Hasta el 15 de marzo de 1968 los bancos centrales
+  sostenían el oro de Londres entre 35.08 y 35.20 USD (Bordo, Monnet y Naef,
+  NBER Working Paper 24016). Abril de 1968 es el primer mes completo sin el
+  Pool. No cambia la regla, el tramo ni ningún valor.
+
 - **2026-10-04 · A-R0-20 · Supuesto nuevo: el oro y la plata se comparan cada mes
   con el FMI, y el mes que pasa del umbral queda como valor en disputa.** El
   umbral es la tolerancia del gate anual, 0.5 % el oro y 1 % la plata. Un valor
