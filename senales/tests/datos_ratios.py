@@ -171,3 +171,65 @@ def escribir_edicion_congelada(directorio: Path, oro: dict | None = None, plata:
         archivo=ARCHIVO_CONGELADA,
         sha256=hashlib.sha256(ruta.read_bytes()).hexdigest(),
     )
+
+
+# --- A-R0-20: la copia del FMI contra la que se compara el Pink Sheet ----------
+#
+# Los mismos meses que la serie empalmada de prueba, hasta agosto de 2026: el
+# FMI publica con un mes de rezago, y septiembre queda sin comparar. Los valores
+# quedan a 0.02 % del oro y a 0.1 % de la plata, lejos de los umbrales.
+ARCHIVO_FMI = "fmi_pcps_2026-10-04.xlsx"
+ORO_EMPALMADO = {**ORO, **ORO_CONGELADA}
+PLATA_EMPALMADA = {**PLATA, **PLATA_CONGELADA}
+FMI_ORO = {mes: valor * 1.0002 for mes, valor in ORO_EMPALMADO.items() if mes <= "2026-08"}
+FMI_PLATA = {mes: valor * 0.999 for mes, valor in PLATA_EMPALMADA.items() if mes <= "2026-08"}
+
+
+def filas_fmi(
+    oro: dict[str, float] | None = None,
+    plata: dict[str, float] | None = None,
+    descripcion_oro: str | None = None,
+    codigo_plata: str = "PSILVER",
+) -> list[tuple]:
+    """Las filas de la hoja 'External', con la forma del archivo real."""
+    from senales.configuracion import FMI_DESCRIPCION_ORO, FMI_DESCRIPCION_PLATA
+
+    oro = FMI_ORO if oro is None else oro
+    plata = FMI_PLATA if plata is None else plata
+    filas: list[tuple] = [
+        ("Commodity", "PALLFNF", "PGOLD", codigo_plata),
+        (
+            "Commodity.Description",
+            "All Commodity Price Index, 2016 = 100",
+            FMI_DESCRIPCION_ORO if descripcion_oro is None else descripcion_oro,
+            FMI_DESCRIPCION_PLATA,
+        ),
+        ("Data Type", "Index", "USD", "USD"),
+        ("Frequency", "Monthly", "Monthly", "Monthly"),
+    ]
+    for mes in sorted(set(oro) | set(plata)):
+        anio, numero = mes.split("-")
+        # El FMI escribe 2023M1, no 2023M01.
+        filas.append((f"{anio}M{int(numero)}", 150.0, oro.get(mes), plata.get(mes)))
+    return filas
+
+
+def escribir_copia_fmi(directorio: Path, **opciones):
+    """Escribe la copia del FMI de prueba y devuelve su declaración, con su hash."""
+    import dataclasses
+    import hashlib
+
+    import openpyxl
+
+    from senales.configuracion import FMI_COPIA
+
+    libro = openpyxl.Workbook()
+    hoja = libro.active
+    hoja.title = "External"
+    for fila in filas_fmi(**opciones):
+        hoja.append(list(fila))
+    ruta = directorio / ARCHIVO_FMI
+    libro.save(ruta)
+    return dataclasses.replace(
+        FMI_COPIA, archivo=ARCHIVO_FMI, sha256=hashlib.sha256(ruta.read_bytes()).hexdigest()
+    )

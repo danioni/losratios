@@ -21,6 +21,9 @@ from senales.fuentes_fred import ErrorDeFuente
 from senales.ratios import promedio_mensual
 from tests.datos_ratios import (
     ARCHIVO_CONGELADA,
+    ARCHIVO_FMI,
+    FMI_ORO,
+    FMI_PLATA,
     ORO,
     ORO_CONGELADA,
     anclas_de_prueba,
@@ -28,6 +31,7 @@ from tests.datos_ratios import (
     diaria_calendario,
     diaria_habil,
     documento_coin_metrics,
+    escribir_copia_fmi,
     escribir_edicion_congelada,
     escribir_pink_sheet,
     filas_shiller,
@@ -85,6 +89,8 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     _sembrar_crudos(crudo, privado, FECHA)
     # A-R0-19: la edición congelada es una copia versionada, con su hash declarado.
     edicion = escribir_edicion_congelada(crudo)
+    # A-R0-20: la copia del FMI también viaja con el repositorio.
+    copia_fmi = escribir_copia_fmi(crudo)
 
     # La primera corrida real deja en el manifiesto la fecha que declaró Shiller
     # en la cabecera HTTP. Acá se siembra esa fila, porque no hay descarga.
@@ -125,6 +131,7 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     # 2026. Acá el gate cierra contra anclas hechas para estos datos.
     monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba())
     monkeypatch.setattr(ratios, "PINK_SHEET_CONGELADA", edicion)
+    monkeypatch.setattr(ratios, "FMI_COPIA", copia_fmi)
 
     def prohibido(*args, **kwargs):
         raise AssertionError("ningún test sale a la red")
@@ -187,10 +194,11 @@ def test_los_crudos_del_dia_no_se_pisan(entorno):
 
 
 def test_el_directorio_publico_solo_recibe_los_crudos_que_se_pueden_redistribuir(entorno):
-    """A-R0-15: Pink Sheet (CC BY) y Coin Metrics (CC BY-NC). Shiller y FRED, no."""
+    """A-R0-15: Pink Sheet (CC BY), Coin Metrics (CC BY-NC) y el FMI. Shiller y FRED, no."""
     _correr()
     assert sorted(ruta.name for ruta in entorno["crudo"].iterdir()) == [
         f"coin_metrics_btc_{FECHA}.json",
+        ARCHIVO_FMI,
         f"pink_sheet_{FECHA}.xlsx",
         ARCHIVO_CONGELADA,
     ]
@@ -238,14 +246,15 @@ def test_el_manifiesto_publica_url_fecha_y_hash_de_cada_descarga(entorno):
     _correr()
     tabla = pd.read_csv(entorno["series"] / "descargas_ratios.csv", dtype=str, keep_default_na=False)
     assert set(tabla["fuente"]) == {
-        "pink_sheet", "pink_sheet_edicion_2025-01-03", "shiller_ie_data", "NASDAQCOM", "coin_metrics_btc",
+        "pink_sheet", "pink_sheet_edicion_2025-01-03", "fmi_pcps", "shiller_ie_data", "NASDAQCOM",
+        "coin_metrics_btc",
     }
     assert (tabla["fecha_descarga"] == FECHA).all()
     assert tabla["sha256"].str.fullmatch(r"[0-9a-f]{64}").all()
     en_repo = dict(zip(tabla["fuente"], tabla["crudo_en_repo"]))
     assert en_repo == {
-        "pink_sheet": "sí", "pink_sheet_edicion_2025-01-03": "sí", "shiller_ie_data": "no",
-        "NASDAQCOM": "no", "coin_metrics_btc": "sí",
+        "pink_sheet": "sí", "pink_sheet_edicion_2025-01-03": "sí", "fmi_pcps": "sí",
+        "shiller_ie_data": "no", "NASDAQCOM": "no", "coin_metrics_btc": "sí",
     }
 
 
@@ -259,7 +268,7 @@ def test_un_contraste_que_no_cierra_detiene_la_corrida_sin_publicar(entorno, mon
     error = capsys.readouterr().err
     assert "No ajustar la tolerancia" in error
     # El manifiesto registra lo que se bajó, cierre o no la validación.
-    assert len(pd.read_csv(entorno["series"] / "descargas_ratios.csv")) == 5
+    assert len(pd.read_csv(entorno["series"] / "descargas_ratios.csv")) == 6
 
 
 def test_una_fuente_de_contraste_inalcanzable_es_un_error_de_fuente(entorno, monkeypatch):
@@ -491,3 +500,121 @@ def test_sin_la_copia_y_sin_red_no_hay_empalme(entorno, monkeypatch):
     (entorno["crudo"] / ARCHIVO_CONGELADA).unlink()
     assert _correr() == ratios.CODIGO_ERROR_FUENTE
     assert not (entorno["series"] / "precios_mensuales.csv").exists()
+
+
+# --- A-R0-20: control mensual del oro y la plata contra el FMI ----------------
+
+
+def _con_disputa(entorno, monkeypatch, oro: dict | None = None, plata: dict | None = None) -> None:
+    """Reescribe la copia del FMI con algunos meses lejos del Pink Sheet."""
+    copia = escribir_copia_fmi(
+        entorno["crudo"], oro={**FMI_ORO, **(oro or {})}, plata={**FMI_PLATA, **(plata or {})}
+    )
+    monkeypatch.setattr(ratios, "FMI_COPIA", copia)
+
+
+def test_sin_meses_en_disputa_todo_el_tramo_es_apto_y_el_control_queda_escrito(entorno):
+    assert _correr() == 0
+    precios = pd.read_csv(entorno["series"] / "precios_mensuales.csv", keep_default_na=False).set_index("mes")
+    assert precios.loc["2024-03", "oro_contraste_fmi"] == "dentro del umbral"
+    # El FMI llega hasta agosto: septiembre se publica, y dice que no se comparó.
+    assert precios.loc["2026-09", "oro_contraste_fmi"] == "sin comparar"
+    assert precios.loc["2026-09", "plata_contraste_fmi"] == "sin comparar"
+    largos = pd.read_csv(entorno["series"] / "ratios.csv", keep_default_na=False)
+    assert set(largos["valor_en_disputa"]) == {""}
+    texto = (entorno["series"] / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "- Pink Sheet contra FMI:" in texto
+    assert "Oro: 44 meses comparados, de 2023-01 a 2026-08" in texto
+    assert "umbral +/-0.50 %; ningún mes en disputa" in texto
+    assert "umbral +/-1.00 %; ningún mes en disputa" in texto
+
+
+def test_un_mes_en_disputa_no_detiene_la_corrida_y_se_publica_sin_cambios(entorno, monkeypatch):
+    # El FMI dice 4070 donde el Pink Sheet dice 4199.84: 3.19 % de diferencia.
+    _con_disputa(entorno, monkeypatch, oro={"2024-03": 4070.0})
+    assert _correr() == 0
+    precios = pd.read_csv(entorno["series"] / "precios_mensuales.csv", keep_default_na=False).set_index("mes")
+    # El valor publicado sigue siendo el del Pink Sheet: se reporta, no se corrige.
+    assert float(precios.loc["2024-03", "oro_usd_oz"]) == 4199.84
+    assert precios.loc["2024-03", "oro_contraste_fmi"] == (
+        "valor en disputa: Pink Sheet 4199.84, FMI 4070.0, diferencia 3.190 %"
+    )
+    assert precios.loc["2024-03", "plata_contraste_fmi"] == "dentro del umbral"
+    assert precios.loc["2024-04", "oro_contraste_fmi"] == "dentro del umbral"
+    texto = (entorno["series"] / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "1 mes en disputa: 2024-03 (Pink Sheet 4199.84, FMI 4070.0, diferencia 3.190 %)" in texto
+
+
+def test_un_mes_en_disputa_sale_de_las_metricas_sin_cortar_el_tramo(entorno, monkeypatch):
+    _con_disputa(entorno, monkeypatch, oro={"2024-03": 4070.0})
+    _correr()
+    largos = pd.read_csv(entorno["series"] / "ratios.csv", keep_default_na=False)
+    oro_plata = largos[largos["par"] == "oro_plata"].set_index("mes")
+    assert oro_plata.loc["2024-03", "valor_en_disputa"] == "oro"
+    assert oro_plata.loc["2024-03", "apto_metricas"] == "no"
+    # Los meses de antes y de después siguen siendo aptos: no es un hueco.
+    assert oro_plata.loc["2024-02", "apto_metricas"] == "sí"
+    assert oro_plata.loc["2024-04", "apto_metricas"] == "sí"
+    assert oro_plata.loc["2023-01", "apto_metricas"] == "sí"
+    pares = pd.read_csv(entorno["series"] / "pares.csv", keep_default_na=False).set_index("par")
+    assert pares.loc["oro_plata", "apto_desde"] == "2023-01"
+    assert int(pares.loc["oro_plata", "meses_en_disputa"]) == 1
+    assert int(pares.loc["oro_plata", "meses_aptos"]) == len(oro_plata) - 1
+    texto = (entorno["series"] / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "menos 1 con un valor en disputa, A-R0-20" in texto
+
+
+def test_una_disputa_del_oro_alcanza_a_todos_los_pares_que_lo_llevan(entorno, monkeypatch):
+    _con_disputa(entorno, monkeypatch, oro={"2026-05": 4500.0}, plata={"2026-06": 70.0})
+    _correr()
+    largos = pd.read_csv(entorno["series"] / "ratios.csv", keep_default_na=False)
+    btc_oro = largos[largos["par"] == "btc_oro"].set_index("mes")
+    oro_plata = largos[largos["par"] == "oro_plata"].set_index("mes")
+    assert btc_oro.loc["2026-05", "valor_en_disputa"] == "oro"
+    assert btc_oro.loc["2026-05", "apto_metricas"] == "no"
+    # La plata no es un lado de BTC/Oro.
+    assert btc_oro.loc["2026-06", "valor_en_disputa"] == ""
+    assert btc_oro.loc["2026-06", "apto_metricas"] == "sí"
+    assert oro_plata.loc["2026-06", "valor_en_disputa"] == "plata"
+    assert oro_plata.loc["2026-06", "apto_metricas"] == "no"
+
+
+def test_la_copia_del_fmi_queda_en_el_manifiesto_y_su_atribucion_junto_a_la_serie(entorno):
+    _correr()
+    tabla = pd.read_csv(entorno["series"] / "descargas_ratios.csv", dtype=str, keep_default_na=False)
+    fila = tabla[tabla["fuente"] == "fmi_pcps"].iloc[0]
+    assert fila["url"].startswith("https://www.imf.org/")
+    assert fila["sha256"] == fuentes_precios.sha256_de(entorno["crudo"] / ARCHIVO_FMI)
+    series = pd.read_csv(entorno["series"] / "series.csv", keep_default_na=False).set_index("serie")
+    for metal in ("oro", "plata"):
+        assert "A-R0-20" in series.loc[metal, "validacion"]
+        assert "Source: International Monetary Fund, Primary Commodity Prices" in series.loc[metal, "validacion"]
+    assert "FMI" not in series.loc["btc", "validacion"]
+
+
+def test_sin_la_copia_del_fmi_la_corrida_se_detiene_y_no_sale_a_buscarla(entorno, capsys):
+    """La fixture prohíbe toda salida a la red: si intentara bajarla, el test fallaría de otro modo."""
+    (entorno["crudo"] / ARCHIVO_FMI).unlink()
+    assert _correr() == ratios.CODIGO_ERROR_FUENTE
+    assert not (entorno["series"] / "precios_mensuales.csv").exists()
+    error = capsys.readouterr().err
+    assert "no se baja solo" in error and "A-R0-20" in error
+
+
+def test_una_copia_del_fmi_que_cambio_no_se_usa(entorno):
+    escribir_copia_fmi(entorno["crudo"], oro={**FMI_ORO, "2024-03": 4070.0})
+    assert _correr() == ratios.CODIGO_ERROR_FUENTE
+    assert not (entorno["series"] / "precios_mensuales.csv").exists()
+
+
+def test_el_control_contra_el_fmi_es_idempotente(entorno, monkeypatch):
+    _con_disputa(entorno, monkeypatch, oro={"2024-03": 4070.0})
+    _correr()
+    series = [n for n in PUBLICOS if n.endswith(".csv")]
+    antes = {n: (entorno["series"] / n).read_bytes() for n in series}
+    assert _correr() == 0
+    assert {n: (entorno["series"] / n).read_bytes() for n in series} == antes
+    # La segunda corrida del día reemplaza la entrada del changelog; la tercera no la toca.
+    changelog = (entorno["series"] / "CHANGELOG.md").read_bytes()
+    assert _correr() == 0
+    assert (entorno["series"] / "CHANGELOG.md").read_bytes() == changelog

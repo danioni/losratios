@@ -356,3 +356,63 @@ def test_el_manifiesto_conserva_las_descargas_de_otros_dias(tmp_path):
         fuentes_precios.actualizar_manifiesto(ruta, [registro])
     tabla = fuentes_precios.leer_manifiesto(ruta)
     assert list(tabla["fecha_descarga"]) == ["2026-10-04", "2026-11-03"]
+
+
+# --- A-R0-20: la copia del FMI -------------------------------------------------
+
+
+def test_del_fmi_se_leen_el_oro_y_la_plata_con_meses_sin_cero_a_la_izquierda():
+    from tests.datos_ratios import FMI_ORO, FMI_PLATA, filas_fmi
+
+    fmi = fuentes_precios.interpretar_fmi(filas_fmi())
+    assert len(fmi.oro) == len(FMI_ORO) and len(fmi.plata) == len(FMI_PLATA)
+    assert fmi.oro.index[0] == pd.Timestamp("2023-01-01")
+    assert fmi.oro.loc["2023-10-01"] == pytest.approx(FMI_ORO["2023-10"])
+    assert fmi.plata.loc["2026-08-01"] == pytest.approx(FMI_PLATA["2026-08"])
+
+
+def test_un_hueco_del_fmi_es_un_hueco():
+    from tests.datos_ratios import FMI_ORO, filas_fmi
+
+    sin_marzo = {mes: valor for mes, valor in FMI_ORO.items() if mes != "2024-03"}
+    fmi = fuentes_precios.interpretar_fmi(filas_fmi(oro=sin_marzo))
+    assert pd.Timestamp("2024-03-01") not in fmi.oro.index
+    assert pd.Timestamp("2024-03-01") in fmi.plata.index
+
+
+def test_si_el_fmi_cambia_la_descripcion_del_oro_la_lectura_se_detiene():
+    from tests.datos_ratios import filas_fmi
+
+    with pytest.raises(ErrorDeFuente, match="descripción de PGOLD"):
+        fuentes_precios.interpretar_fmi(filas_fmi(descripcion_oro="Gold, spot, US$ per troy ounce"))
+
+
+def test_si_falta_una_serie_del_fmi_la_lectura_se_detiene():
+    from tests.datos_ratios import filas_fmi
+
+    with pytest.raises(ErrorDeFuente, match="PSILVER"):
+        fuentes_precios.interpretar_fmi(filas_fmi(codigo_plata="PSILV"))
+
+
+def test_la_copia_del_fmi_se_identifica_por_su_hash_y_nunca_se_baja(tmp_path, monkeypatch):
+    import dataclasses
+
+    from tests.datos_ratios import ARCHIVO_FMI, escribir_copia_fmi
+
+    def prohibido(*args, **kwargs):
+        raise AssertionError("la copia del FMI no se baja")
+
+    monkeypatch.setattr(fuentes_precios.requests, "get", prohibido)
+    copia = escribir_copia_fmi(tmp_path)
+    registro = fuentes_precios.cargar_copia_manual(copia, tmp_path)
+    assert registro.sha256 == copia.sha256 and registro.descargada_ahora is False
+    # Su licencia permite redistribuirla con atribución: viaja con el repositorio.
+    assert registro.fila()["crudo_en_repo"] == "sí"
+
+    otra = dataclasses.replace(copia, sha256="0" * 64)
+    with pytest.raises(ErrorDeFuente, match="El archivo cambió"):
+        fuentes_precios.cargar_copia_manual(otra, tmp_path)
+
+    (tmp_path / ARCHIVO_FMI).unlink()
+    with pytest.raises(ErrorDeFuente, match="no se baja solo"):
+        fuentes_precios.cargar_copia_manual(copia, tmp_path)

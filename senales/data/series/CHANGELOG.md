@@ -15,7 +15,11 @@ cita.
   del Pink Sheet del 3 de enero de 2025, sin redondear, para 1960-01 a 2024-12;
   edición vigente desde 2025-01. **Los valores publicados de 1960-01 a 2024-12
   cambian**: pasan de redondeados a sin redondear, hasta 1.4 % en el oro y 4.3 %
-  en la plata. En cada corrida, redondear la edición congelada tiene que
+  en la plata. Cambiaron 770 meses del oro, 774 de la plata, 780 de Oro/Plata y
+  143 de BTC/Oro: 2467 valores. El mayor cambio de cada columna: 1.389 % en el
+  oro de 1968-01 (36 -> 35.5), 4.280 % en la plata de 1962-01 (1 -> 1.0428),
+  4.615 % en Oro/Plata de 1962-09 (29.1667 -> 30.5127) y 0.042 % en BTC/Oro de
+  2015-06. En cada corrida, redondear la edición congelada tiene que
   reproducir la vigente en todos los meses superpuestos; si no, la corrida se
   detiene. La edición congelada está versionada en `data/raw/` y se identifica
   por su SHA-256. `precios_mensuales.csv` gana la columna `pink_sheet_edicion`.
@@ -192,13 +196,14 @@ cita.
 
 - Descargas:
   - pink_sheet_edicion_2025-01-03: https://thedocs.worldbank.org/en/doc/5d903e848db1d1b83e0ec8f744e55570-0350012021/related/CMO-Historical-Data-Monthly.xlsx, sha256 bd89b83eeceadaecb803018c104f76b316d2df3fae28ef7afde48021100c7e11, actualizada el 2025-01-03
+  - fmi_pcps: https://www.imf.org/-/media/files/research/commodityprices/monthly/external-data.xlsx, sha256 e0bc0cbbd08208e9868fb16e21992ff4b86a7676a2b5f64d32a02bdb8bdcc464
   - pink_sheet: https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx, sha256 ea1c350827878ea3bbe30e3cda16a13fd3bd5b409b8458940dc94a36b5a33154, actualizada el 2026-10-02
   - shiller_ie_data: https://img1.wsimg.com/blobby/go/e5e77e0b-59d1-44d9-ab25-4763ac982e53/downloads/70fec4f5-727f-4e53-b5f1-179af109c5fa/ie_data.xls?ver=1788371540009, sha256 044196dafe44c3030b2facbdea023975b3f6aa68b4e52f8f9bafc403e19589c1, actualizada el 2026-09-02
   - NASDAQCOM: https://fred.stlouisfed.org/graph/fredgraph.csv?id=NASDAQCOM, sha256 5f40c787ab892665ed1239b0ccad0eda45b3c725ef09a66d3c0026c25e56de04, actualizada el 2026-10-03
   - coin_metrics_btc: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=PriceUSD&frequency=1d&page_size=10000, sha256 b1acbe3f13bf639f3f4f508a03bd722908c50ffd3e315ac0337b410669027e8a
 - Series, en meses completos:
-  - Oro: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-7, A-R0-9, A-R0-17, A-R0-19)
-  - Plata: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-8, A-R0-9, A-R0-17, A-R0-19)
+  - Oro: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-7, A-R0-9, A-R0-17, A-R0-19, A-R0-20)
+  - Plata: 1960-01 a 2026-09, 801 meses, se publica (CC BY 4.0; A-R0-8, A-R0-9, A-R0-17, A-R0-19, A-R0-20)
   - BTC: 2013-01 a 2026-09, 165 meses, se publica (CC BY-NC 4.0; A-R0-4, A-R0-5, A-R0-10)
   - S&P 500: 1871-01 a 2026-08, 1868 meses, se calcula y no se publica: NO MEDIDO: pendiente de permiso del dueño del índice (sin licencia declarada; A-R0-2, A-R0-11, A-R0-13)
   - Nasdaq Composite: 1971-03 a 2026-09, 667 meses, se calcula y no se publica: NO MEDIDO: pendiente de permiso del dueño del índice (Copyrighted: Pre-Approval Required; uso educativo no comercial; A-R0-3, A-R0-13)
@@ -210,21 +215,19 @@ cita.
   - Nasdaq Composite | 1971-02: la serie empieza el 1971-02-05, con el mes empezado
   - Nasdaq Composite | 2026-10: mes en curso (la última observación es del 2026-10-02)
 - Pares:
-  - Oro / Plata: estimación, 1960-01 a 2026-09, 801 meses; apto para métricas desde 1968-04 (702 meses con error de redondeo <= 0.5 %, A-R0-17)
-  - BTC / Oro: dato, 2013-01 a 2026-09, 165 meses; apto para métricas desde 2013-01 (165 meses con error de redondeo <= 0.5 %, A-R0-17)
+  - Oro / Plata: estimación, 1960-01 a 2026-09, 801 meses; apto para métricas desde 1968-04 (682 meses: el tramo final con error de redondeo <= 0.5 %, A-R0-17, menos 20 con un valor en disputa, A-R0-20)
+  - BTC / Oro: dato, 2013-01 a 2026-09, 165 meses; apto para métricas desde 2013-01 (161 meses: el tramo final con error de redondeo <= 0.5 %, A-R0-17, menos 4 con un valor en disputa, A-R0-20)
   - Oro / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 1960-01 a 2026-08, 800 meses
   - BTC / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 2013-01 a 2026-08, 164 meses
   - Nasdaq / S&P 500: NO MEDIDO: pendiente de permiso del dueño del índice, 1971-03 a 2026-08, 666 meses
 - Meses agregados: 0
-- Revisiones de datos históricos:
-  - oro_usd_oz: 770 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 1.389 % en 1968-01 (36.0000 -> 35.5000)
-  - plata_usd_oz: 774 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 4.280 % en 1962-01 (1.0000 -> 1.0428)
-  - oro_plata: 780 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 4.615 % en 1962-09 (29.1667 -> 30.5127)
-  - btc_oro: 143 meses cambiaron respecto de la corrida anterior; el mayor cambio es de 0.042 % en 2015-06 (0.2014 -> 0.2014)
-  - son 2467 cambios, más de 40: es un cambio de método y no una revisión de la fuente, y por eso va resumido por columna
+- Revisiones de datos históricos: ninguna
 - Empalme del Pink Sheet:
   - OK - Oro: redondear la edición del 2025-01-03 reproduce la vigente en 780 de 780 meses superpuestos; 11 quedan exactamente a medio paso de redondeo: 1968-01 (35.5 y 36.0), 1971-10 (42.5 y 43.0), 1973-04 (90.5 y 91.0), 1982-12 (444.5 y 445.0), 1985-03 (313.5 y 314.0), 1985-06 (316.5 y 317.0), 1985-11 (321.5 y 322.0), 2002-02 (295.5 y 296.0), 2015-06 (1181.5 y 1182.0), 2016-02 (1199.5 y 1200.0), 2022-05 (1848.5 y 1849.0)
   - OK - Plata: redondear la edición del 2025-01-03 reproduce la vigente en 780 de 780 meses superpuestos; 1 queda exactamente a medio paso de redondeo: 2015-09 (14.75 y 14.8)
+- Pink Sheet contra FMI:
+  - Oro: 560 meses comparados, de 1980-01 a 2026-08; diferencia mediana 0.017 %; umbral +/-0.50 %; 10 meses en disputa: 1985-03 (Pink Sheet 313.5, FMI 303.94, diferencia 3.145 %); 1985-11 (Pink Sheet 321.5, FMI 325.24, diferencia -1.150 %); 1986-01 (Pink Sheet 347.48, FMI 345.38, diferencia 0.608 %); 1997-09 (Pink Sheet 322.82, FMI 324.4762, diferencia -0.510 %); 2000-05 (Pink Sheet 275.19, FMI 276.7409, diferencia -0.560 %); 2011-12 (Pink Sheet 1639.97, FMI 1652.3056, diferencia -0.747 %); 2015-12 (Pink Sheet 1075.74, FMI 1068.2526, diferencia 0.701 %); 2016-12 (Pink Sheet 1157.36, FMI 1151.4028, diferencia 0.517 %); 2025-05 (Pink Sheet 3309.0, FMI 3288.0095, diferencia 0.638 %); 2026-01 (Pink Sheet 4753.0, FMI 4719.7059, diferencia 0.705 %)
+  - Plata: 560 meses comparados, de 1980-01 a 2026-08; diferencia mediana 0.096 %; umbral +/-1.00 %; 10 meses en disputa: 1980-01 (Pink Sheet 38.8756, FMI 39.2843, diferencia -1.040 %); 1985-07 (Pink Sheet 5.9997, FMI 6.0836, diferencia -1.379 %); 1985-08 (Pink Sheet 6.1511, FMI 6.2498, diferencia -1.580 %); 1987-04 (Pink Sheet 7.3495, FMI 7.4727, diferencia -1.649 %); 2004-04 (Pink Sheet 7.1486, FMI 7.055, diferencia 1.327 %); 2011-04 (Pink Sheet 42.6952, FMI 41.9656, diferencia 1.739 %); 2011-05 (Pink Sheet 37.3359, FMI 36.75, diferencia 1.594 %); 2020-07 (Pink Sheet 20.647, FMI 20.405, diferencia 1.186 %); 2024-12 (Pink Sheet 30.764, FMI 30.3707, diferencia 1.295 %); 2025-12 (Pink Sheet 62.3, FMI 64.7325, diferencia -3.758 %)
 - Contrastes:
   - OK - S&P 500 contra FRED SP500, promedio mensual de los cierres diarios: 119 meses, diferencia mediana 0.000 %, máxima 0.232 % en 2024-01, tolerancia +/-0.50 %
   - OK - Nasdaq Composite contra API de nasdaq.com, promedio mensual de los cierres diarios: 119 meses, diferencia mediana 0.000 %, máxima 0.027 % en 2023-08, tolerancia +/-0.10 %

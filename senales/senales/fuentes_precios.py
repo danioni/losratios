@@ -30,12 +30,18 @@ import requests
 
 from senales.configuracion import (
     COLUMNAS_DESCARGAS,
+    FMI_CODIGO_ORO,
+    FMI_CODIGO_PLATA,
+    FMI_DESCRIPCION_ORO,
+    FMI_DESCRIPCION_PLATA,
+    FMI_HOJA,
     PINK_SHEET_DESCRIPCION_ORO,
     PINK_SHEET_DESCRIPCION_PLATA,
     PINK_SHEET_HOJA_DESCRIPCION,
     PINK_SHEET_HOJA_PRECIOS,
     PINK_SHEET_UNIDAD,
     Contraste,
+    CopiaManual,
     Descarga,
     EdicionCongelada,
 )
@@ -317,6 +323,40 @@ def cargar_edicion_congelada(
     )
 
 
+def cargar_copia_manual(copia: CopiaManual, dir_crudo: Path) -> RegistroDescarga:
+    """La copia versionada de un archivo que se bajó una vez, a mano (A-R0-20).
+
+    Nunca sale a la red. Si la copia falta o cambió, la corrida se detiene: el
+    control que depende de ella decide qué meses entran a las métricas, y
+    publicar sin él sería publicar otra cosa.
+    """
+    ruta = dir_crudo / copia.archivo
+    if not ruta.exists():
+        raise ErrorDeFuente(
+            f"{copia.descarga.clave}: falta {copia.archivo} en {dir_crudo}. Este archivo no "
+            "se baja solo: los términos de la fuente prohíben la descarga masiva por "
+            f"medios automatizados (A-R0-20). Hay que bajarlo a mano de {copia.descarga.url} "
+            f"y comprobar que su sha256 sea {copia.sha256}; si la fuente ya publica otra "
+            "edición, actualizar configuracion.py con la fecha y el hash nuevos."
+        )
+    resumen = sha256_de(ruta)
+    if resumen != copia.sha256:
+        raise ErrorDeFuente(
+            f"{copia.descarga.clave}: {ruta.name} tiene sha256 {resumen[:16]}… y la copia "
+            f"declarada es {copia.sha256[:16]}…. El archivo cambió; no se usa."
+        )
+    return RegistroDescarga(
+        descarga=copia.descarga,
+        fecha_descarga=copia.fecha_descarga,
+        ruta=ruta,
+        url=copia.descarga.url,
+        bytes=ruta.stat().st_size,
+        sha256=resumen,
+        actualizada=None,
+        descargada_ahora=False,
+    )
+
+
 def actualizar_manifiesto(ruta: Path, registros: list[RegistroDescarga]) -> bool:
     """Deja una fila por (fecha, fuente). Devuelve True si el archivo cambió."""
     previo = leer_manifiesto(ruta)
@@ -494,6 +534,63 @@ def leer_pink_sheet(
         descripcion_oro,
         descripcion_plata,
     )
+
+
+# --- FMI, Primary Commodity Prices -------------------------------------------
+
+
+@dataclass(frozen=True)
+class PreciosFMI:
+    oro: pd.Series
+    plata: pd.Series
+
+
+def interpretar_fmi(filas: list[tuple]) -> PreciosFMI:
+    """Saca oro y plata de las filas de la hoja 'External' de la base mensual.
+
+    La primera fila trae el código de cada serie y la segunda, su descripción.
+    La descripción es la convención: si cambia, la corrida se detiene.
+    """
+    if len(filas) < 3 or not isinstance(filas[0][0], str) or filas[0][0].strip() != "Commodity":
+        raise ErrorDeFuente("FMI: la hoja no empieza con la fila de códigos ('Commodity')")
+    codigos = [c.strip() if isinstance(c, str) else c for c in filas[0]]
+    descripciones = filas[1]
+
+    series = {}
+    for nombre, codigo, esperada in (
+        ("oro", FMI_CODIGO_ORO, FMI_DESCRIPCION_ORO),
+        ("plata", FMI_CODIGO_PLATA, FMI_DESCRIPCION_PLATA),
+    ):
+        if codigo not in codigos:
+            raise ErrorDeFuente(f"FMI: no se encontró la serie '{codigo}'")
+        columna = codigos.index(codigo)
+        hallada = descripciones[columna] if columna < len(descripciones) else None
+        if not isinstance(hallada, str) or normalizar_texto(hallada) != normalizar_texto(esperada):
+            raise ErrorDeFuente(
+                f"FMI: la descripción de {codigo} ya no es la que se leyó al fijar el "
+                f"control.\n  esperada: {esperada}\n  hallada:  {hallada}\n"
+                "Releer la fuente y actualizar configuracion.py, FUENTES.md y "
+                "SUPUESTOS.md (A-R0-20)."
+            )
+        pares: list[tuple[pd.Timestamp, float]] = []
+        for fila in filas[2:]:
+            etiqueta = fila[0].strip() if fila and isinstance(fila[0], str) else ""
+            # El FMI escribe los meses sin cero a la izquierda: 1980M1, 1980M10.
+            hallado = re.fullmatch(r"(\d{4})M(\d{1,2})", etiqueta)
+            if not hallado:
+                continue
+            valor = fila[columna] if columna < len(fila) else None
+            if isinstance(valor, (int, float)) and not isinstance(valor, bool):
+                mes = pd.Timestamp(year=int(hallado.group(1)), month=int(hallado.group(2)), day=1)
+                pares.append((mes, float(valor)))
+        if not pares:
+            raise ErrorDeFuente(f"FMI: no se pudo leer ninguna fila de {codigo}")
+        series[nombre] = _serie_mensual(pares, f"fmi_{nombre}")
+    return PreciosFMI(oro=series["oro"], plata=series["plata"])
+
+
+def leer_fmi(ruta: Path) -> PreciosFMI:
+    return interpretar_fmi(filas_de_xlsx(ruta, FMI_HOJA))
 
 
 # --- Shiller -----------------------------------------------------------------

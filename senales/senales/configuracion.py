@@ -414,6 +414,27 @@ DESCARGA_COIN_METRICS = Descarga(
     ),
 )
 
+# A-R0-20: la base mensual de precios de materias primas del FMI. No alimenta
+# ninguna serie: es la referencia del control mensual del oro y la plata. Los
+# términos del FMI dejan redistribuir sus datos con atribución y prohíben la
+# descarga masiva por medios automatizados. Por eso es una copia bajada una vez,
+# versionada en data/raw/, y el pipeline nunca sale a buscarla.
+DESCARGA_FMI = Descarga(
+    clave="fmi_pcps",
+    descripcion="FMI, Primary Commodity Prices, base mensual (external-data.xlsx)",
+    clase_licencia=CLASE_NO_COMERCIAL,
+    licencia=(
+        "Términos del FMI para datos estadísticos: uso libre con atribución; "
+        "reuso comercial con permiso"
+    ),
+    url="https://www.imf.org/-/media/files/research/commodityprices/monthly/external-data.xlsx",
+    extension="xlsx",
+    atribucion=(
+        "Source: International Monetary Fund, Primary Commodity Prices, "
+        "https://www.imf.org/en/research/commodity-prices. Los valores se citan sin cambios."
+    ),
+)
+
 DESCARGAS = (
     DESCARGA_PINK_SHEET,
     DESCARGA_SHILLER,
@@ -473,6 +494,42 @@ PINK_SHEET_CONGELADA = EdicionCongelada(
     descripcion_plata=PINK_SHEET_DESCRIPCION_PLATA,
 )
 
+
+@dataclass(frozen=True)
+class CopiaManual:
+    """Un archivo de referencia bajado una vez, a mano, que viaja con el repositorio.
+
+    A diferencia de una edición congelada, el pipeline nunca sale a buscarlo: si
+    la copia falta, la corrida se detiene y dice de dónde bajarla.
+    """
+
+    descarga: Descarga
+    archivo: str  # nombre fijo dentro de data/raw/
+    edicion: str  # como la nombra la fuente
+    fecha_descarga: date
+    sha256: str
+
+
+# A-R0-20: la copia del FMI contra la que se compara el Pink Sheet. La
+# descripción de cada serie es la que la planilla traía al leerla; si cambia,
+# cambió lo que la serie mide y la corrida se detiene.
+FMI_HOJA = "External"
+FMI_CODIGO_ORO = "PGOLD"
+FMI_DESCRIPCION_ORO = (
+    "Gold, Fixing Committee of the London Bullion Market Association, London 3 PM "
+    "fixed price, US$ per troy ounce"
+)
+FMI_CODIGO_PLATA = "PSILVER"
+FMI_DESCRIPCION_PLATA = "Silver, London Bullion Market Association, USD/troy ounce"
+
+FMI_COPIA = CopiaManual(
+    descarga=DESCARGA_FMI,
+    archivo="fmi_pcps_2026-10-04.xlsx",
+    edicion="Excel Database: September 2026",
+    fecha_descarga=date(2026, 10, 4),
+    sha256="e0bc0cbbd08208e9868fb16e21992ff4b86a7676a2b5f64d32a02bdb8bdcc464",
+)
+
 # A-R0-7: primer mes del oro "spot". Antes es el fixing de la tarde de Londres.
 ORO_QUIEBRE_DEFINICION = "2025-06"
 ORO_DEFINICION_ANTES = "fixing de la tarde de Londres"
@@ -488,7 +545,7 @@ SERIE_ORO = SeriePrecio(
     unidad="USD por onza troy",
     estado=ESTADO_DATO,
     banda_plausible=(30.0, 50_000.0),
-    supuestos=("A-R0-7", "A-R0-9", "A-R0-17", "A-R0-19"),
+    supuestos=("A-R0-7", "A-R0-9", "A-R0-17", "A-R0-19", "A-R0-20"),
     medio_paso_redondeo=0.5,  # la edición vigente del Pink Sheet publica el oro al dólar entero
 )
 
@@ -500,7 +557,7 @@ SERIE_PLATA = SeriePrecio(
     # A-R0-8: que la serie sea un promedio mensual se infiere, no está escrito.
     estado=ESTADO_ESTIMACION,
     banda_plausible=(0.5, 1_000.0),
-    supuestos=("A-R0-8", "A-R0-9", "A-R0-17", "A-R0-19"),
+    supuestos=("A-R0-8", "A-R0-9", "A-R0-17", "A-R0-19", "A-R0-20"),
     medio_paso_redondeo=0.05,  # y la plata, a un decimal
 )
 
@@ -652,6 +709,19 @@ BANDAS_LBMA = (
 # error a la vista y marcados como no aptos. El umbral es un supuesto.
 UMBRAL_ERROR_REDONDEO_PCT = 0.5
 
+# A-R0-20: control mensual del oro y la plata contra el FMI, sobre todo el
+# historial que tienen en común. Un mes cuya diferencia pasa del umbral queda
+# como "valor en disputa": se publica sin cambios y no entra a ninguna métrica.
+# No detiene la corrida.
+#
+# El umbral es la tolerancia del gate anual (A-R0-16), que ya estaba fijada: no
+# se eligió un número nuevo después de ver la comparación. No se ajusta para que
+# un mes entre o salga.
+UMBRAL_DISPUTA_PCT = {"oro": TOLERANCIA_GATE_ORO_PCT, "plata": TOLERANCIA_GATE_PLATA_PCT}
+VALOR_EN_DISPUTA = "valor en disputa"
+CONTRASTE_FMI_DENTRO = "dentro del umbral"
+CONTRASTE_FMI_SIN_COMPARAR = "sin comparar"
+
 # Diferencia mínima para contar un cambio entre corridas como revisión de la
 # fuente y no como redondeo del CSV.
 EPSILON_REVISION_PRECIOS = 0.0005
@@ -673,13 +743,23 @@ COLUMNAS_PRECIOS = [
     "oro_usd_oz",
     "oro_error_redondeo_pct",
     "oro_definicion",
+    "oro_contraste_fmi",
     "plata_usd_oz",
     "plata_error_redondeo_pct",
     "plata_estado",
+    "plata_contraste_fmi",
     "pink_sheet_edicion",
     "btc_usd",
 ]
-COLUMNAS_RATIOS = ["mes", "par", "valor", "error_redondeo_pct", "apto_metricas", "estado"]
+COLUMNAS_RATIOS = [
+    "mes",
+    "par",
+    "valor",
+    "error_redondeo_pct",
+    "valor_en_disputa",
+    "apto_metricas",
+    "estado",
+]
 COLUMNAS_PARES = [
     "par",
     "nombre",
@@ -690,6 +770,7 @@ COLUMNAS_PARES = [
     "meses",
     "apto_desde",
     "meses_aptos",
+    "meses_en_disputa",
 ]
 COLUMNAS_SERIES_INFO = [
     "serie",

@@ -17,6 +17,10 @@ permite sin interpretarla y si su validación externa cerró (A-R0-14). Lo demá
 se calcula igual, queda fuera del repositorio y se publica como NO MEDIDO, con
 el motivo. Si el contraste de BTC o de un índice no cierra, la corrida se
 detiene sin escribir ninguna serie.
+
+El oro y la plata se comparan además, mes a mes, contra el FMI (A-R0-20). Ese
+control no detiene la corrida: el mes que pasa del umbral se publica sin
+cambios, marcado como valor en disputa, y queda fuera de las métricas.
 """
 
 from __future__ import annotations
@@ -47,6 +51,8 @@ from senales.configuracion import (
     COLUMNAS_SERIES_INFO,
     CONTRASTES,
     CONTRASTE_BTC,
+    CONTRASTE_FMI_DENTRO,
+    CONTRASTE_FMI_SIN_COMPARAR,
     CONTRASTE_NASDAQ,
     CONTRASTE_SP500,
     DESCARGA_COIN_METRICS,
@@ -61,6 +67,7 @@ from senales.configuracion import (
     EPSILON_REVISION_RATIOS,
     ESTADO_DATO,
     ESTADO_ESTIMACION,
+    FMI_COPIA,
     FORMATO_RATIOS,
     MINIMO_ANIOS_GATE,
     NASDAQ_FECHA_BASE,
@@ -75,7 +82,9 @@ from senales.configuracion import (
     SERIES_PRECIO,
     TOLERANCIA_GATE_ORO_PCT,
     TOLERANCIA_GATE_PLATA_PCT,
+    UMBRAL_DISPUTA_PCT,
     UMBRAL_ERROR_REDONDEO_PCT,
+    VALOR_EN_DISPUTA,
     VENTANA_CONTRASTE_NASDAQ_ANIOS,
     AnclaAnual,
     BandaTrimestral,
@@ -387,18 +396,158 @@ def apto_desde(error: pd.Series) -> str:
     return _mes(error.index[error.index > no_aptos.index[-1]][0])
 
 
-def meses_aptos(error: pd.Series) -> pd.Series:
-    """Qué meses de un ratio entran a una métrica (A-R0-17).
+def meses_aptos(error: pd.Series, en_disputa: pd.Series | None = None) -> pd.Series:
+    """Qué meses de un ratio entran a una métrica (A-R0-17, A-R0-20).
 
     Los del tramo final sin interrupción, no todos los que cumplen el umbral de
     a uno. Un mes suelto que lo cumple antes de ese tramo queda afuera: lo cumple
     porque el metal estaba caro ese mes, y elegir los meses por el nivel del
     precio sesga cualquier percentil que se calcule con ellos.
+
+    Un mes con un valor en disputa sale, y no corta el tramo: es una exclusión
+    puntual y declarada, no un hueco de precisión. Los meses que lo siguen y los
+    que lo preceden dentro del tramo siguen siendo aptos.
     """
     desde = apto_desde(error)
     if not desde:
         return pd.Series(False, index=error.index)
-    return pd.Series(error.index >= pd.Timestamp(desde + "-01"), index=error.index)
+    aptos = pd.Series(error.index >= pd.Timestamp(desde + "-01"), index=error.index)
+    if en_disputa is not None:
+        aptos &= ~en_disputa.reindex(error.index, fill_value=False).astype(bool)
+    return aptos
+
+
+# --- A-R0-20: control mensual del oro y la plata contra el FMI -----------------
+
+
+@dataclass(frozen=True)
+class Disputa:
+    """Un mes en que el Pink Sheet y el FMI se apartan más que el umbral."""
+
+    mes: str
+    valor: float  # el del Pink Sheet, que es el que se publica, sin cambios
+    referencia: float  # el del FMI
+    diferencia_pct: float  # medida sobre el valor del FMI
+
+    def detalle(self) -> str:
+        return (
+            f"Pink Sheet {self.valor!r}, FMI {round(self.referencia, 4)!r}, "
+            f"diferencia {formatear(self.diferencia_pct, 3)} %"
+        )
+
+    def marca(self) -> str:
+        """Lo que acompaña al valor en precios_mensuales.csv."""
+        return f"{VALOR_EN_DISPUTA}: {self.detalle()}"
+
+
+@dataclass(frozen=True)
+class ResultadoFMI:
+    """Una serie del Pink Sheet contra la del FMI, sobre todos los meses en común."""
+
+    serie: str
+    umbral_pct: float
+    comparados: tuple[str, ...]
+    mediana_pct: float | None
+    disputas: tuple[Disputa, ...]
+
+    def resumen(self) -> str:
+        nombre = SERIES_POR_CLAVE[self.serie].nombre
+        if not self.comparados:
+            return f"{nombre}: ningún mes en común con el FMI; no hay control"
+        linea = (
+            f"{nombre}: {len(self.comparados)} meses comparados, de {self.comparados[0]} a "
+            f"{self.comparados[-1]}; diferencia mediana {formatear(self.mediana_pct, 3)} %; "
+            f"umbral +/-{formatear(self.umbral_pct, 2)} %; "
+        )
+        if not self.disputas:
+            return linea + "ningún mes en disputa"
+        return (
+            linea
+            + f"{len(self.disputas)} {'mes' if len(self.disputas) == 1 else 'meses'} en disputa: "
+            + "; ".join(f"{disputa.mes} ({disputa.detalle()})" for disputa in self.disputas)
+        )
+
+    def validacion(self) -> str:
+        """El texto que acompaña a la serie en series.csv, con la atribución al FMI."""
+        return (
+            f"control mensual contra el FMI, +/-{formatear(self.umbral_pct, 2)} % (A-R0-20): "
+            f"{len(self.disputas)} de {len(self.comparados)} meses comparados quedan como "
+            f"{VALOR_EN_DISPUTA}. {FMI_COPIA.descarga.atribucion}"
+        )
+
+
+def comparar_con_fmi(
+    mensual: pd.Series, referencia: pd.Series, serie: str, umbral_pct: float
+) -> ResultadoFMI:
+    """Compara todos los meses que el Pink Sheet y el FMI tienen en común.
+
+    No es un gate: no cierra ni deja de cerrar, y no detiene la corrida. Dice
+    qué meses quedan en disputa. Tampoco decide cuál de las dos fuentes tiene
+    razón: el valor publicado sigue siendo el del Pink Sheet.
+    """
+    comunes = mensual.dropna().index.intersection(referencia.dropna().index)
+    if len(comunes) == 0:
+        return ResultadoFMI(serie, umbral_pct, (), None, ())
+    diferencia = (mensual.loc[comunes] / referencia.loc[comunes] - 1.0) * 100.0
+    fuera = diferencia[diferencia.abs() > umbral_pct]
+    return ResultadoFMI(
+        serie=serie,
+        umbral_pct=umbral_pct,
+        comparados=tuple(_mes(mes) for mes in comunes),
+        mediana_pct=float(diferencia.abs().median()),
+        disputas=tuple(
+            Disputa(_mes(mes), float(mensual.loc[mes]), float(referencia.loc[mes]), float(valor))
+            for mes, valor in fuera.items()
+        ),
+    )
+
+
+def meses_en_disputa(comparaciones: dict[str, ResultadoFMI], indice: pd.Index) -> pd.DataFrame:
+    """Por serie, qué meses tienen su valor en disputa. Una serie sin control, ninguno."""
+    tabla = pd.DataFrame(False, index=indice, columns=[serie.clave for serie in SERIES_PRECIO])
+    for clave, resultado in comparaciones.items():
+        meses = [pd.Timestamp(disputa.mes + "-01") for disputa in resultado.disputas]
+        tabla.loc[tabla.index.isin(meses), clave] = True
+    return tabla
+
+
+def lados_en_disputa(par: Par, disputas: pd.DataFrame | None, indice: pd.Index) -> pd.Series:
+    """Qué lados de un par tienen el valor en disputa en cada mes.
+
+    Vacío si ninguno; si no, "oro", "plata" u "oro y plata". Un ratio no es más
+    firme que su lado más débil: con un lado en disputa, el mes no es apto.
+    """
+    if disputas is None:
+        return pd.Series("", index=indice, dtype="object")
+    propias = disputas.reindex(indice, fill_value=False)
+    return pd.Series(
+        [
+            " y ".join(
+                lado for lado in (par.numerador, par.denominador) if bool(propias.at[mes, lado])
+            )
+            for mes in indice
+        ],
+        index=indice,
+        dtype="object",
+    )
+
+
+def _contraste_fmi(resultado: ResultadoFMI | None, valores: pd.Series) -> list[str]:
+    """Lo que el control contra el FMI dice de cada mes publicado de un metal."""
+    comparados = set() if resultado is None else set(resultado.comparados)
+    marcas = {} if resultado is None else {d.mes: d.marca() for d in resultado.disputas}
+    salida = []
+    for mes, valor in valores.items():
+        etiqueta = _mes(mes)
+        if pd.isna(valor):
+            salida.append("")
+        elif etiqueta in marcas:
+            salida.append(marcas[etiqueta])
+        elif etiqueta in comparados:
+            salida.append(CONTRASTE_FMI_DENTRO)
+        else:
+            salida.append(CONTRASTE_FMI_SIN_COMPARAR)
+    return salida
 
 
 def verificar_base_nasdaq(diaria: pd.Series) -> None:
@@ -468,12 +617,18 @@ def _redondear(valores: pd.Series, decimales: int = 4):
     return valores.round(decimales).to_numpy()
 
 
-def tabla_precios(precios: pd.DataFrame, pasos: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+def tabla_precios(
+    precios: pd.DataFrame,
+    pasos: pd.DataFrame,
+    validadas: set[str],
+    comparaciones: dict[str, ResultadoFMI] | None = None,
+) -> pd.DataFrame:
     """Las series que se publican, con lo que hay que decir junto a cada una.
 
     Las columnas son siempre las mismas. La de una serie que no se publica queda
     vacía: el motivo está en series.csv.
     """
+    comparaciones = comparaciones or {}
     claves = ("oro", "plata", "btc")
     visibles = precios.loc[:, list(claves)].copy()
     for clave in claves:
@@ -491,6 +646,8 @@ def tabla_precios(precios: pd.DataFrame, pasos: pd.DataFrame, validadas: set[str
         "" if pd.isna(valor) else (ORO_DEFINICION_ANTES if mes < quiebre else ORO_DEFINICION_DESPUES)
         for mes, valor in visibles["oro"].items()
     ]
+    # A-R0-20: un valor en disputa se publica sin cambios, y se dice.
+    tabla["oro_contraste_fmi"] = _contraste_fmi(comparaciones.get("oro"), visibles["oro"])
     tabla["plata_usd_oz"] = visibles["plata"].to_numpy()
     tabla["plata_error_redondeo_pct"] = _redondear(
         error_redondeo_pct(visibles["plata"], pasos["plata"])
@@ -499,6 +656,7 @@ def tabla_precios(precios: pd.DataFrame, pasos: pd.DataFrame, validadas: set[str
     tabla["plata_estado"] = [
         "" if pd.isna(valor) else SERIES_POR_CLAVE["plata"].estado for valor in visibles["plata"]
     ]
+    tabla["plata_contraste_fmi"] = _contraste_fmi(comparaciones.get("plata"), visibles["plata"])
     # A-R0-19: de qué edición del Pink Sheet salen los metales de cada mes.
     corte = pd.Timestamp(PINK_SHEET_CONGELADA.ultimo_mes + "-01")
     tabla["pink_sheet_edicion"] = [
@@ -511,11 +669,17 @@ def tabla_precios(precios: pd.DataFrame, pasos: pd.DataFrame, validadas: set[str
     return tabla
 
 
-def tabla_ratios(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+def tabla_ratios(
+    pares: pd.DataFrame,
+    errores: pd.DataFrame,
+    validadas: set[str],
+    disputas: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """Los pares que se publican, en formato largo. Los demás no tienen filas acá.
 
-    Cada fila lleva el error máximo del ratio por redondeo y si el mes es apto
-    para métricas (A-R0-17). Un mes no apto se publica igual, con su error a la
+    Cada fila lleva el error máximo del ratio por redondeo, qué lado tiene el
+    valor en disputa, si alguno, y si el mes es apto para métricas (A-R0-17,
+    A-R0-20). Un mes no apto se publica igual, con su error y su disputa a la
     vista; lo que no puede es entrar a un percentil, a una tendencia ni a la
     evidencia de nada.
     """
@@ -525,6 +689,7 @@ def tabla_ratios(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]
             continue
         valores = pares[par.clave].dropna()
         error = errores.loc[valores.index, par.clave]
+        lados = lados_en_disputa(par, disputas, valores.index)
         bloques.append(
             pd.DataFrame(
                 {
@@ -532,7 +697,10 @@ def tabla_ratios(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]
                     "par": par.clave,
                     "valor": valores.to_numpy(),
                     "error_redondeo_pct": _redondear(error),
-                    "apto_metricas": ["sí" if apto else "no" for apto in meses_aptos(error)],
+                    "valor_en_disputa": lados.to_numpy(),
+                    "apto_metricas": [
+                        "sí" if apto else "no" for apto in meses_aptos(error, lados != "")
+                    ],
                     "estado": estado_del_par(par, validadas),
                 }
             )
@@ -542,7 +710,12 @@ def tabla_ratios(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]
     return pd.concat(bloques, ignore_index=True).sort_values(["mes", "par"], kind="stable")
 
 
-def tabla_pares(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str]) -> pd.DataFrame:
+def tabla_pares(
+    pares: pd.DataFrame,
+    errores: pd.DataFrame,
+    validadas: set[str],
+    disputas: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     """Los cinco pares, publicados o no, y hasta dónde llega cada uno.
 
     Es donde un par que no se muestra aparece: existe, tiene historia, y su
@@ -552,6 +725,7 @@ def tabla_pares(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str])
     for par in PARES:
         valores = pares[par.clave].dropna()
         error = errores.loc[valores.index, par.clave]
+        lados = lados_en_disputa(par, disputas, valores.index)
         filas.append(
             {
                 "par": par.clave,
@@ -563,7 +737,9 @@ def tabla_pares(pares: pd.DataFrame, errores: pd.DataFrame, validadas: set[str])
                 "meses": len(valores),
                 # A-R0-17: desde qué mes el par es apto para métricas sin interrupción.
                 "apto_desde": apto_desde(error),
-                "meses_aptos": int(meses_aptos(error).sum()),
+                # A-R0-20: un mes en disputa no es apto, y no corta el tramo.
+                "meses_aptos": int(meses_aptos(error, lados != "").sum()),
+                "meses_en_disputa": int((lados != "").sum()),
             }
         )
     return pd.DataFrame(filas, columns=COLUMNAS_PARES)
@@ -830,6 +1006,7 @@ class EntradaRatios:
     contrastes: list[str]
     metales: list[str]
     empalme: list[str] = field(default_factory=list)
+    fmi: list[str] = field(default_factory=list)
     notas: list[str] = field(default_factory=list)
 
     @property
@@ -859,6 +1036,7 @@ class EntradaRatios:
             lineas.append("- Meses agregados: 0")
         bloque("Revisiones de datos históricos", self.revisiones, "ninguna")
         bloque("Empalme del Pink Sheet", self.empalme, "sin control")
+        bloque("Pink Sheet contra FMI", self.fmi, "sin control")
         bloque("Contrastes", self.contrastes, "ninguno")
         bloque("Oro y plata", self.metales, "sin controles")
         for nota in self.notas:
@@ -967,6 +1145,8 @@ class Fuentes:
     plata: pd.Series
     oro_congelada: pd.Series  # edición de enero de 2025, sin redondear (A-R0-19)
     plata_congelada: pd.Series
+    fmi_oro: pd.Series  # referencia del control mensual (A-R0-20)
+    fmi_plata: pd.Series
     pink_sheet_actualizada: date | None
     sp500: pd.Series
     shiller_actualizada: date | None
@@ -981,6 +1161,10 @@ def cargar_fuentes(fecha_descarga: date) -> Fuentes:
         # La edición congelada no se baja: es la copia versionada (A-R0-19).
         registros[PINK_SHEET_CONGELADA.descarga.clave] = fuentes_precios.cargar_edicion_congelada(
             PINK_SHEET_CONGELADA, DIR_CRUDO
+        )
+        # La copia del FMI tampoco se baja, ni siquiera si falta (A-R0-20).
+        registros[FMI_COPIA.descarga.clave] = fuentes_precios.cargar_copia_manual(
+            FMI_COPIA, DIR_CRUDO
         )
         for descarga in (
             DESCARGA_PINK_SHEET,
@@ -1008,12 +1192,15 @@ def cargar_fuentes(fecha_descarga: date) -> Fuentes:
             f"{congelada.actualizada} y la edición congelada es la del "
             f"{PINK_SHEET_CONGELADA.fecha_edicion}"
         )
+    fmi = fuentes_precios.leer_fmi(registros[FMI_COPIA.descarga.clave].ruta)
     return Fuentes(
         registros=list(registros.values()),
         oro=pink.oro,
         plata=pink.plata,
         oro_congelada=congelada.oro,
         plata_congelada=congelada.plata,
+        fmi_oro=fmi.oro,
+        fmi_plata=fmi.plata,
         # La fecha que la propia planilla declara manda sobre la de la cabecera HTTP.
         pink_sheet_actualizada=pink.actualizada
         or registros[DESCARGA_PINK_SHEET.clave].actualizada,
@@ -1112,6 +1299,18 @@ def main(argv: list[str] | None = None) -> int:
     pares = calcular_pares(precios)
     errores = errores_de_pares(precios, pasos)
 
+    # A-R0-20: el oro y la plata contra el FMI, sobre todo el historial en común.
+    # No detiene la corrida: marca los meses en disputa.
+    referencias_fmi = {"oro": fuentes.fmi_oro, "plata": fuentes.fmi_plata}
+    comparaciones = {
+        metal: comparar_con_fmi(
+            precios[metal], referencias_fmi[metal], metal, UMBRAL_DISPUTA_PCT[metal]
+        )
+        for metal in ("oro", "plata")
+    }
+    disputas = meses_en_disputa(comparaciones, precios.index)
+    lineas_fmi = [comparaciones[metal].resumen() for metal in ("oro", "plata")]
+
     # --- Validación -----------------------------------------------------------
     contrastes = [
         contrastar(precios[contraste.serie], referencias[contraste.serie], contraste)
@@ -1136,6 +1335,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {linea}")
     print("Empalme del Pink Sheet")
     for linea in lineas_empalme:
+        print(f"  {linea}")
+    print("Pink Sheet contra FMI")
+    for linea in lineas_fmi:
         print(f"  {linea}")
     print("Contrastes")
     for linea in lineas_contrastes:
@@ -1168,7 +1370,12 @@ def main(argv: list[str] | None = None) -> int:
         metal for metal in ("oro", "plata") if gates[metal].ok and bandas_ok.get(metal, True)
     }
     validaciones = {c.serie: _validacion_de_contraste(c) for c in CONTRASTES}
-    validaciones.update({metal: gates[metal].validacion() for metal in ("oro", "plata")})
+    validaciones.update(
+        {
+            metal: f"{gates[metal].validacion()}; {comparaciones[metal].validacion()}"
+            for metal in ("oro", "plata")
+        }
+    )
 
     sin_validar = [m for m in ("oro", "plata") if m not in validadas]
     if sin_validar:
@@ -1200,9 +1407,9 @@ def main(argv: list[str] | None = None) -> int:
         for motivo in motivos
     ]
 
-    publicada_precios = tabla_precios(precios, pasos, validadas)
-    publicada_ratios = tabla_ratios(pares, errores, validadas)
-    publicada_pares = tabla_pares(pares, errores, validadas)
+    publicada_precios = tabla_precios(precios, pasos, validadas, comparaciones)
+    publicada_ratios = tabla_ratios(pares, errores, validadas, disputas)
+    publicada_pares = tabla_pares(pares, errores, validadas, disputas)
     interna = tabla_interna(precios, pares)
 
     previa_precios = _leer_publicado(ARCHIVO_PRECIOS)
@@ -1242,8 +1449,9 @@ def main(argv: list[str] | None = None) -> int:
         + (f", {fila.primer_mes} a {fila.ultimo_mes}, {fila.meses} meses" if fila.meses else "")
         + (
             f"; apto para métricas desde {fila.apto_desde or 'ningún mes'} "
-            f"({fila.meses_aptos} meses con error de redondeo <= "
-            f"{formatear(UMBRAL_ERROR_REDONDEO_PCT, 1)} %, A-R0-17)"
+            f"({fila.meses_aptos} meses: el tramo final con error de redondeo <= "
+            f"{formatear(UMBRAL_ERROR_REDONDEO_PCT, 1)} %, A-R0-17, menos "
+            f"{fila.meses_en_disputa} con un valor en disputa, A-R0-20)"
             if fila.publicado == "sí"
             else ""
         )
@@ -1272,6 +1480,7 @@ def main(argv: list[str] | None = None) -> int:
         contrastes=lineas_contrastes,
         metales=lineas_metales,
         empalme=lineas_empalme,
+        fmi=lineas_fmi,
         notas=notas,
     )
     cambio = bitacora.actualizar_changelog(ARCHIVO_CHANGELOG, entrada)

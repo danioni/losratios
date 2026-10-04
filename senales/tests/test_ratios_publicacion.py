@@ -710,3 +710,144 @@ def test_los_precios_publicados_dicen_de_que_edicion_sale_cada_mes():
     assert tabla.loc["2024-12", "oro_error_redondeo_pct"] < tabla.loc["2025-01", "oro_error_redondeo_pct"]
     sin = tabla_precios(precios, ratios.medios_pasos(precios, "2024-12"), SIN_METALES)
     assert set(sin["pink_sheet_edicion"]) == {""}
+
+
+# --- A-R0-20: control mensual del oro y la plata contra el FMI ----------------
+
+
+def _por_mes(valores: dict[str, float]) -> pd.Series:
+    return pd.Series(
+        list(valores.values()),
+        index=pd.DatetimeIndex([pd.Timestamp(m + "-01") for m in valores], name="mes"),
+    )
+
+
+def test_el_umbral_de_disputa_es_la_tolerancia_del_gate():
+    """No es un número nuevo: es el que ya estaba fijado antes de mirar la comparación."""
+    assert configuracion.UMBRAL_DISPUTA_PCT == {
+        "oro": configuracion.TOLERANCIA_GATE_ORO_PCT,
+        "plata": configuracion.TOLERANCIA_GATE_PLATA_PCT,
+    }
+    assert configuracion.UMBRAL_DISPUTA_PCT == {"oro": 0.5, "plata": 1.0}
+
+
+def test_solo_queda_en_disputa_el_mes_que_pasa_del_umbral():
+    serie = _por_mes({"2024-01": 100.0, "2024-02": 100.4, "2024-03": 103.0, "2024-04": 99.0})
+    referencia = _por_mes({"2024-01": 100.0, "2024-02": 100.0, "2024-03": 100.0, "2024-04": 100.0})
+    resultado = ratios.comparar_con_fmi(serie, referencia, "oro", 0.5)
+    assert resultado.comparados == ("2024-01", "2024-02", "2024-03", "2024-04")
+    assert [d.mes for d in resultado.disputas] == ["2024-03", "2024-04"]
+    # La diferencia se mide sobre el valor del FMI, con su signo.
+    assert resultado.disputas[0].diferencia_pct == pytest.approx(3.0)
+    assert resultado.disputas[1].diferencia_pct == pytest.approx(-1.0)
+    assert resultado.mediana_pct == pytest.approx(0.7)
+
+
+def test_una_diferencia_igual_al_umbral_no_es_una_disputa():
+    serie = _por_mes({"2024-01": 100.5})
+    resultado = ratios.comparar_con_fmi(serie, _por_mes({"2024-01": 100.0}), "oro", 0.5)
+    assert resultado.disputas == ()
+
+
+def test_un_mes_que_el_fmi_no_trae_no_se_compara_ni_queda_en_disputa():
+    serie = _por_mes({"1979-12": 500.0, "1980-01": 600.0, "2026-09": 4300.0})
+    referencia = _por_mes({"1980-01": 600.0})
+    resultado = ratios.comparar_con_fmi(serie, referencia, "oro", 0.5)
+    assert resultado.comparados == ("1980-01",)
+    assert resultado.disputas == ()
+
+
+def test_sin_meses_en_comun_no_hay_control_y_se_dice():
+    resultado = ratios.comparar_con_fmi(_por_mes({"1970-01": 35.0}), _por_mes({"1980-01": 600.0}), "oro", 0.5)
+    assert resultado.comparados == () and resultado.disputas == ()
+    assert "ningún mes en común con el FMI" in resultado.resumen()
+
+
+def test_el_resumen_lista_cada_mes_en_disputa_con_los_dos_valores():
+    serie = _por_mes({"1985-02": 299.1, "1985-03": 313.5})
+    referencia = _por_mes({"1985-02": 299.1, "1985-03": 303.94})
+    resumen = ratios.comparar_con_fmi(serie, referencia, "oro", 0.5).resumen()
+    assert "Oro: 2 meses comparados, de 1985-02 a 1985-03" in resumen
+    assert "umbral +/-0.50 %" in resumen
+    assert "1 mes en disputa: 1985-03 (Pink Sheet 313.5, FMI 303.94, diferencia 3.145 %)" in resumen
+
+
+def _con_oro_en_disputa(precios: pd.DataFrame, mes: str, serie: str = "oro") -> dict:
+    referencia = precios[serie].copy()
+    referencia.loc[pd.Timestamp(mes + "-01")] *= 1.05
+    return {serie: ratios.comparar_con_fmi(precios[serie], referencia, serie, 0.5)}
+
+
+def test_un_mes_en_disputa_no_es_apto_y_no_corta_el_tramo():
+    precios = _con_plata([18.0, 9.9, 11.2, 11.3, 12.0, 12.5, 13.0])
+    errores = _errores(precios)
+    comparaciones = _con_oro_en_disputa(precios, "2008-12")
+    disputas = ratios.meses_en_disputa(comparaciones, precios.index)
+    tabla = tabla_ratios(calcular_pares(precios), errores, TODAS, disputas)
+    oro_plata = tabla[tabla["par"] == "oro_plata"].set_index("mes")
+    #                                            jul   ago   sep   oct   nov   dic   ene
+    assert list(oro_plata["apto_metricas"]) == ["no", "no", "no", "sí", "sí", "no", "sí"]
+    assert list(oro_plata["valor_en_disputa"]) == ["", "", "", "", "", "oro", ""]
+    pares = tabla_pares(calcular_pares(precios), errores, TODAS, disputas).set_index("par")
+    # El tramo sigue empezando donde empezaba: la disputa no es un hueco de precisión.
+    assert pares.loc["oro_plata", "apto_desde"] == "2008-10"
+    assert pares.loc["oro_plata", "meses_aptos"] == 3
+    assert pares.loc["oro_plata", "meses_en_disputa"] == 1
+    # El ratio en disputa se publica igual, con su valor.
+    assert oro_plata.loc["2008-12", "valor"] == pytest.approx(900.0 / 12.5)
+
+
+def test_una_disputa_antes_del_tramo_apto_se_marca_y_no_cambia_el_tramo():
+    precios = _con_plata([18.0, 9.9, 11.2, 11.3, 12.0])
+    disputas = ratios.meses_en_disputa(_con_oro_en_disputa(precios, "2008-07"), precios.index)
+    pares = tabla_pares(calcular_pares(precios), _errores(precios), TODAS, disputas).set_index("par")
+    assert pares.loc["oro_plata", "apto_desde"] == "2008-10"
+    assert pares.loc["oro_plata", "meses_aptos"] == 2
+    assert pares.loc["oro_plata", "meses_en_disputa"] == 1
+
+
+def test_con_los_dos_lados_en_disputa_el_par_lo_dice():
+    precios = _con_plata([12.0, 12.5, 13.0])
+    comparaciones = {
+        **_con_oro_en_disputa(precios, "2008-08"),
+        **_con_oro_en_disputa(precios, "2008-08", serie="plata"),
+    }
+    disputas = ratios.meses_en_disputa(comparaciones, precios.index)
+    tabla = tabla_ratios(calcular_pares(precios), _errores(precios), TODAS, disputas)
+    oro_plata = tabla[tabla["par"] == "oro_plata"].set_index("mes")
+    assert oro_plata.loc["2008-08", "valor_en_disputa"] == "oro y plata"
+    assert oro_plata.loc["2008-08", "apto_metricas"] == "no"
+
+
+def test_sin_control_ningun_mes_esta_en_disputa():
+    precios = _con_plata([12.0, 12.5, 13.0])
+    tabla = tabla_ratios(calcular_pares(precios), _errores(precios), TODAS)
+    assert set(tabla["valor_en_disputa"]) == {""}
+    pares = tabla_pares(calcular_pares(precios), _errores(precios), TODAS).set_index("par")
+    assert pares.loc["oro_plata", "meses_en_disputa"] == 0
+
+
+def test_los_precios_dicen_que_resulto_el_control_de_cada_mes(precios):
+    referencia = precios["oro"].iloc[:-1].copy()  # el último mes no está en el FMI
+    referencia.iloc[1] *= 0.97
+    comparaciones = {"oro": ratios.comparar_con_fmi(precios["oro"], referencia, "oro", 0.5)}
+    tabla = tabla_precios(precios, _pasos(precios), TODAS, comparaciones).set_index("mes")
+    assert tabla.iloc[0]["oro_contraste_fmi"] == "dentro del umbral"
+    assert tabla.iloc[1]["oro_contraste_fmi"].startswith("valor en disputa: Pink Sheet ")
+    assert tabla.iloc[-1]["oro_contraste_fmi"] == "sin comparar"
+    # El valor en disputa se publica tal como lo trae el Pink Sheet.
+    assert tabla.iloc[1]["oro_usd_oz"] == precios["oro"].iloc[1]
+    # La plata no tuvo control en esta llamada.
+    assert set(tabla["plata_contraste_fmi"]) == {"sin comparar"}
+    # Una serie que no se publica no lleva marca.
+    sin = tabla_precios(precios, _pasos(precios), SIN_METALES, comparaciones)
+    assert set(sin["oro_contraste_fmi"]) == {""}
+
+
+def test_el_changelog_lleva_el_bloque_del_control_contra_el_fmi():
+    entrada = _entrada(date(2026, 10, 4))
+    assert "- Pink Sheet contra FMI: sin control" in entrada.render()
+    entrada.fmi = ["Oro: 560 meses comparados"]
+    texto = entrada.render()
+    assert "- Pink Sheet contra FMI:\n  - Oro: 560 meses comparados" in texto
+    assert texto.index("Empalme del Pink Sheet") < texto.index("Pink Sheet contra FMI") < texto.index("Contrastes")
