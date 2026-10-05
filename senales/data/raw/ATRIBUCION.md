@@ -8,6 +8,9 @@ Solo están acá los crudos cuya licencia permite redistribuirlos. Los de Shille
 y de FRED `NASDAQCOM` no están: ver A-R0-15 en `SUPUESTOS.md`. Los de las
 fuentes de contraste de BTC y de los índices tampoco: no se guardan (A-R0-12).
 
+Los CSV de FRED de S2 están desde antes de esa regla (A-S2-10). Lo que se leyó
+de sus términos está al final, y no cierra del todo.
+
 ## `coin_metrics_btc_<fecha>.json`
 
 - **Fuente:** Coin Metrics, datos community. Métrica `PriceUSD` de BTC.
@@ -96,5 +99,91 @@ fuentes de contraste de BTC y de los índices tampoco: no se guardan (A-R0-12).
 
 ## Los CSV de FRED de S2 (`WALCL`, `WDTGAL`, `RRPONTSYD`)
 
-Están documentados en el `README.md`, sección Fuentes. Este archivo no afirma
-nada sobre su licencia: no se leyó para esta revisión.
+Son las descargas de `https://fred.stlouisfed.org/graph/fredgraph.csv?id=<SERIE>`
+que S2 conserva (A-S2-10): dos por serie, del 2026-09-22 y del 2026-10-03. Qué
+mide cada serie está en el `README.md`, sección Fuentes.
+
+Lo que sigue se leyó el 2026-10-05, entre las 11:35 y las 11:39 UTC: la página
+de cada serie en FRED, los términos de FRED y los del dueño de cada serie. Es
+una lectura de las cláusulas, no un dictamen legal.
+
+| Serie | Dueño, según la página de FRED | Publicación de origen | Etiqueta de derechos en FRED |
+| --- | --- | --- | --- |
+| `WALCL` | Board of Governors of the Federal Reserve System (US) | H.4.1 Factors Affecting Reserve Balances | "Public Domain: Citation Requested" |
+| `WDTGAL` | Board of Governors of the Federal Reserve System (US) | H.4.1 Factors Affecting Reserve Balances | "Public Domain: Citation Requested" |
+| `RRPONTSYD` | Federal Reserve Bank of New York | Temporary Open Market Operations | "Copyrighted: Citation Required" |
+
+Páginas: `https://fred.stlouisfed.org/series/WALCL`,
+`https://fred.stlouisfed.org/series/WDTGAL` y
+`https://fred.stlouisfed.org/series/RRPONTSYD`. Las notas de `RRPONTSYD` no
+traen ninguna línea de copyright: la etiqueta es lo único que lo dice.
+
+- **Lo que los términos de FRED permiten.** `https://fred.stlouisfed.org/legal/`,
+  resumen, sección III, "Use of Data with Copyright Restrictions". Literal:
+  - "Public Domain: Citation requested": *"These series may be under copyright
+    or in the public domain and may be used without permission, provided you do
+    not engage in any prohibited use. When using, please cite the data source
+    and acknowledge that you obtained the data from FRED [...] when displaying
+    or publishing it."*
+  - "Copyrighted: Citation required": *"These series are under copyright; but,
+    provided you have not engaged in any prohibited uses, you may use these
+    data series with proper attribution of the source and acknowledgment that
+    you obtained the data from FRED [...] when displaying or publishing it."*
+- **Lo que los mismos términos restringen.** Los términos completos, en la misma
+  página, sección "Property Rights and Licenses". Literal:
+  - *"Except as expressly provided in these Terms of Use, FRED® Content may not
+    be modified, duplicated, copied, distributed, [...] republished, uploaded,
+    downloaded, scraped, displayed, posted, transmitted on any Internet,
+    Intranet or Extranet site [...] without the Bank's prior written
+    permission"*. La definición de "FRED® Content" incluye los datos.
+  - La licencia general permite *"to download or print a copy of any portion of
+    the FRED® Content [...] solely for your personal, non-commercial use"*.
+  - *"BEFORE USING DATA SERIES OWNED BY THIRD PARTIES FOR ANYTHING OTHER THAN
+    YOUR OWN PERSONAL USE, YOU MUST CONTACT THE DATA OWNER TO OBTAIN
+    PERMISSION."*
+  - Entre los usos prohibidos del resumen (sección II): redistribuir contenido
+    de terceros *"for commercial use"* sin permiso escrito del proveedor, y los
+    métodos de extracción *"that are disruptive, or adversely impacts the
+    stability, performance, or availability of the FRED® Services"*.
+- **Los dos textos no dicen lo mismo, y este archivo no decide cuál rige.** El
+  resumen deja usar y publicar las series de las dos etiquetas con su cita. Los
+  términos completos reservan la redistribución del contenido de FRED al
+  permiso escrito del banco, salvo lo que los propios términos permitan de
+  forma expresa.
+- **Lo que dice el dueño de `RRPONTSYD`.** Federal Reserve Bank of New York,
+  términos de uso (`https://www.newyorkfed.org/privacy/termsofuse`, "Last
+  Updated: 6/9/2023"). Literal: *"The New York Fed grants you a non-exclusive
+  license, subject to the Terms, to use, copy, and distribute Content for your
+  personal or business purposes."* "Content" incluye los datos. Condiciones:
+  atribuir con el formato que sigue, redistribuir con los mismos permisos y
+  condiciones, y no dar a entender que el banco avala el uso. La lista de
+  contenidos con restricciones propias de esos términos no nombra las
+  operaciones de repo. El archivo de este directorio no se bajó de
+  newyorkfed.org, sino de FRED.
+- **Lo que dice el dueño de `WALCL` y `WDTGAL`.** No se encontró una cláusula de
+  la Junta sobre reutilizar sus datos. Se leyó su página "Website Policies"
+  (`https://www.federalreserve.gov/website-linking-policies.htm`, "Last
+  Update: August 28, 2026"), que solo habla de derechos de autor a propósito
+  de los sitios externos que enlaza. **No leído:** si otra página de la Junta
+  declara el estado de derechos de los datos del H.4.1.
+- **Atribución.** La cita que sugiere la página de cada serie:
+  - *Board of Governors of the Federal Reserve System (US), Assets: Total
+    Assets: Total Assets (Less Eliminations from Consolidation): Wednesday
+    Level [WALCL], retrieved from FRED, Federal Reserve Bank of St. Louis;
+    https://fred.stlouisfed.org/series/WALCL.*
+  - *Board of Governors of the Federal Reserve System (US), Liabilities and
+    Capital: Liabilities: Deposits with F.R. Banks, Other Than Reserve
+    Balances: U.S. Treasury, General Account: Wednesday Level [WDTGAL],
+    retrieved from FRED, Federal Reserve Bank of St. Louis;
+    https://fred.stlouisfed.org/series/WDTGAL.*
+  - *Federal Reserve Bank of New York, Overnight Reverse Repurchase Agreements:
+    Treasury Securities Sold by the Federal Reserve in the Temporary Open
+    Market Operations [RRPONTSYD], retrieved from FRED, Federal Reserve Bank of
+    St. Louis; https://fred.stlouisfed.org/series/RRPONTSYD.* Y, con el formato
+    que piden los términos del banco: *"© 2026 Federal Reserve Bank of New
+    York. Content from the New York Fed subject to the Terms of Use at
+    newyorkfed.org."*
+- **Cambios:** ninguno. Cada archivo es la respuesta de FRED, byte por byte.
+- **Estado.** Los seis archivos siguen versionados, como estaban. Si pueden
+  seguir en un repositorio público depende de cuál de los dos textos de FRED
+  rige, y esa decisión está pendiente.
