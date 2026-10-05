@@ -283,7 +283,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
             ¿Cuánto paga el mercado por escasez?
           </h3>
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Oro/Plata mide el apetito por escasez pura (oro) vs escasez con utilidad industrial (plata). Cuando está por encima de 80, la plata históricamente está barata relativa al oro. Conecta con el argumento del Numerador: cuanto más inelástica la oferta, más captura el activo del debasement.
+            Oro/Plata mide el apetito por escasez pura (oro) vs escasez con utilidad industrial (plata). Compara el metal monetario con uno de uso mayormente industrial. Conecta con el argumento del Numerador: cuanto más inelástica la oferta, más captura el activo del debasement.
           </p>
         </div>
         {bloque("oro_plata")}
