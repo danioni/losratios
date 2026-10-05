@@ -176,7 +176,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
                 3. La se&ntilde;al de rotaci&oacute;n
               </div>
               <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                Cuando un ratio est&aacute; barato hist&oacute;ricamente, puede ser oportunidad de acumular el numerador. Los ratios revelan lo que los precios en fiat ocultan.
+                Marca un par cuyo ratio est&aacute; en zona extrema de su historia (|z| &ge; 2). Describe d&oacute;nde est&aacute; el ratio respecto de su historia; no indica qu&eacute; hacer ni cu&aacute;ndo.
               </p>
             </div>
             </>) : (
