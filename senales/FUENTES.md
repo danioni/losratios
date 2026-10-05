@@ -853,10 +853,13 @@ plata, y Coin Metrics community para BTC. Del FMI el sitio muestra los valores
 de los meses en disputa, con su atribución, que viene en la columna `validacion`
 de `series.csv`. Del S&P 500 y del Nasdaq Composite no muestra ningún nivel.
 
-**Lo que queda en el código sin mostrarse.** Las tablas de CAGR y de poder
-adquisitivo están ocultas, como NO MEDIDO. Sus cifras son valores de referencia
-escritos a mano, sin procedencia verificada (`src/lib/data.ts` y
-`src/lib/currency.ts`): no salen de ninguna fuente de este documento.
+**Las tablas de CAGR y de poder adquisitivo ya no están en el código.** El
+sitio las nombra con el estado NO MEDIDO y nada más. Sus cifras eran valores de
+referencia escritos a mano, sin procedencia verificada, y entre ellos había
+niveles anuales del S&P 500 y del Nasdaq Composite. Se eliminaron del código
+el 2026-10-05, con los componentes que solo existían para mostrarlas: las
+anclas de `src/lib/data.ts` y `src/lib/currency.ts` entero. Si esas tablas se
+publican, leerán de `data/series/`, como los ratios.
 
 ### 8.2 Lo que usaba hasta la fase 3: lectura del 2026-10-04
 
@@ -913,7 +916,7 @@ aparece en `src/`.
 | Yahoo `GC=F`, `SI=F` | Se dejó de consultar. El oro y la plata salen del Pink Sheet. |
 | Yahoo `^GSPC`, `^IXIC` | Se dejó de consultar. El S&P 500 y el Nasdaq Composite se calculan en el pipeline y no se muestran: sus pares figuran como NO MEDIDO. |
 | CoinGecko, historia y precio actual | Se dejó de consultar. BTC sale de Coin Metrics community. El sitio no muestra un precio del momento. |
-| `BTC_STATIC_ANCHORS` y la serie mensual interpolada entre anclas | Eliminadas. Las anclas anuales siguen en `src/lib/data.ts` solo para la tabla de CAGR, que está oculta. |
+| `BTC_STATIC_ANCHORS` y la serie mensual interpolada entre anclas | Eliminadas. Las anclas anuales que quedaban en `src/lib/data.ts` para la tabla de CAGR se eliminaron después, el 2026-10-05, con la tabla (8.1). |
 | FRED `M2SL` | Se dejó de consultar. El dato se pedía y se nombraba en el pie, pero ningún gráfico ni tabla lo mostraba. La sección 9.8 preveía conservarlo y agregar el aviso de la API; sin la API, el aviso no hace falta. Ningún código lee ya `FRED_API_KEY`. |
 
 El pipeline de S2 sigue leyendo FRED por CSV, sin clave: eso no es el sitio.
