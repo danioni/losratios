@@ -219,7 +219,7 @@ la primera pasada tuvo la misma causa.
 | Cboe, `https://cdn.cboe.com/api/global/us_indices/daily_prices/SPX_History.csv` | leída, **(c)** | Diaria, columnas `DATE,SPX`, 13.047 filas del 1975-01-02 al 2026-10-02; 293.010 bytes. La página de datos históricos de Cboe enlaza los CSV de la familia VIX en esa misma ruta, pero no este: no está documentado. Términos de cboe.com: una copia para *"personal non-commercial use"* y prohibición de publicar sin consentimiento escrito. **Se usó solo como contraste.** |
 | Nasdaq (api.nasdaq.com), símbolo SPX | **no sirve** | Responde `"Symbol not exists."`. |
 | Stooq `^spx` | **no sirve** | Ver sección 7. |
-| Yahoo Finance `^GSPC` | leída, **(c)** | Responde desde la máquina con salida directa. Es lo que usa hoy el sitio: ver sección 8. |
+| Yahoo Finance `^GSPC` | leída, **(c)** | Responde desde la máquina con salida directa. Es lo que usaba el sitio hasta la fase 3: ver sección 8.2. |
 
 ---
 
@@ -265,7 +265,7 @@ la primera pasada tuvo la misma causa.
 | Nasdaq (api.nasdaq.com), `/api/quote/COMP/historical?assetclass=index`, originador | leída, **(c)** | Diaria, cierre. Con `fromdate=1971-01-01` devuelve 10.849 filas y la más antigua es del **1984-10-11**. API sin documentación pública; exige cabeceras de navegador. Términos de nasdaq.com: licencia *"solely for your personal, non-commercial use"* y prohibición de copiar o publicar el contenido sin aprobación escrita. **Se usó solo como contraste.** |
 | indexes.nasdaqomx.com | parcial, **(c)** | La página "History for COMP" existe; no se exploró. Mismo dueño y mismos términos. |
 | Nasdaq Data Link (data.nasdaq.com) | **no sirve** | Ver sección 7. |
-| Yahoo Finance `^IXIC` | **(c)** | Es lo que usa hoy el sitio: ver sección 8. |
+| Yahoo Finance `^IXIC` | **(c)** | Es lo que usaba el sitio hasta la fase 3: ver sección 8.2. |
 
 ---
 
@@ -590,7 +590,7 @@ y fuera de las métricas. Lo que corresponde es reportarlo al Banco Mundial
 | Candidata | Estado | Lo verificado |
 | --- | --- | --- |
 | Deutsche Bundesbank | **no sirve** | La consulta `BBEX3/.XAG....` responde HTTP 404: no publica plata. |
-| Yahoo Finance `SI=F` | **(c)** | Futuro de COMEX, no spot. Es lo que usa hoy el sitio: ver sección 8. |
+| Yahoo Finance `SI=F` | **(c)** | Futuro de COMEX, no spot. Es lo que usaba el sitio hasta la fase 3: ver sección 8.2. |
 
 No apareció ninguna fuente diaria de plata que se pueda publicar. La única
 fuente (a) es mensual.
@@ -823,7 +823,46 @@ Fijar la fecha de "confiable" es un supuesto (A-R0-10), no un dato.
 
 ---
 
-## 8. Fuentes que usa hoy el sitio
+## 8. Fuentes que usa el sitio
+
+**Actualizada el 2026-10-05, con la fase 3.** El sitio ya no consulta ninguna
+fuente externa: ni Yahoo, ni CoinGecko, ni FRED. Lee los archivos de
+`data/series/` cuando se construye y no vuelve a pedir datos: no hay precios en
+vivo ni API propia. La sección 8.1 dice qué usa ahora; la 8.2 conserva, sin
+cambios, la lectura del 2026-10-04 de lo que usaba antes; la 8.3 dice qué pasó
+con cada cosa.
+
+### 8.1 Lo que usa desde la fase 3
+
+Leído el 2026-10-05 del código de la fase 3: `src/lib/series.ts`,
+`src/app/page.tsx` y `src/app/fuentes/page.tsx`.
+
+| Archivo de `data/series/` | Qué muestra el sitio con él |
+| --- | --- |
+| `ratios.csv` | El nivel mensual de los pares publicados (hoy Oro / Plata y BTC / Oro), su error máximo por redondeo y qué meses son aptos para métricas. |
+| `pares.csv` | Los cinco pares. De los publicados: el estado, el rango de meses y el último dato. De los demás: solo el nombre y el estado NO MEDIDO, sin gráfico ni valor. |
+| `series.csv` | De cada serie: fuente, unidad, licencia, **atribución** y validación, tal cual. Van bajo cada gráfico y en la página `/fuentes`. |
+| `precios_mensuales.csv` | Solo las columnas `oro_contraste_fmi` y `plata_contraste_fmi`: los dos valores de un mes en disputa y qué meses están "sin comparar" (A-R0-20). |
+| `descargas_ratios.csv` | La tabla de descargas de `/fuentes`: fuente, fecha, URL y SHA-256. |
+
+Si uno de los cinco falta, está mal formado o contradice a otro, el sitio no se
+construye. No hay respaldo.
+
+Las fuentes de origen son las de la sección 9.2: el Pink Sheet para el oro y la
+plata, y Coin Metrics community para BTC. Del FMI el sitio muestra los valores
+de los meses en disputa, con su atribución, que viene en la columna `validacion`
+de `series.csv`. Del S&P 500 y del Nasdaq Composite no muestra ningún nivel.
+
+**Lo que queda en el código sin mostrarse.** Las tablas de CAGR y de poder
+adquisitivo están ocultas, como NO MEDIDO. Sus cifras son valores de referencia
+escritos a mano, sin procedencia verificada (`src/lib/data.ts` y
+`src/lib/currency.ts`): no salen de ninguna fuente de este documento.
+
+### 8.2 Lo que usaba hasta la fase 3: lectura del 2026-10-04
+
+Lo que sigue se conserva como se escribió ese día, en presente. Describe un
+código que la fase 3 eliminó (`src/lib/market-api.ts` y la ruta
+`/api/market-data`) y un pie de página que ya no nombra esas fuentes.
 
 Leído del código en `origin/main` (`1823a93`), archivo `src/lib/market-api.ts`,
 y del pie de página (`src/components/Footer.tsx`). Sirve para saber qué hay que
@@ -867,6 +906,17 @@ de forma destacada el aviso *"This product uses the FRED® API but is not
 endorsed or certified by the Federal Reserve Bank of St. Louis."* Ese aviso no
 aparece en `src/`.
 
+### 8.3 Qué pasó con cada una en la fase 3
+
+| Lo que usaba | Qué pasó |
+| --- | --- |
+| Yahoo `GC=F`, `SI=F` | Se dejó de consultar. El oro y la plata salen del Pink Sheet. |
+| Yahoo `^GSPC`, `^IXIC` | Se dejó de consultar. El S&P 500 y el Nasdaq Composite se calculan en el pipeline y no se muestran: sus pares figuran como NO MEDIDO. |
+| CoinGecko, historia y precio actual | Se dejó de consultar. BTC sale de Coin Metrics community. El sitio no muestra un precio del momento. |
+| `BTC_STATIC_ANCHORS` y la serie mensual interpolada entre anclas | Eliminadas. Las anclas anuales siguen en `src/lib/data.ts` solo para la tabla de CAGR, que está oculta. |
+| FRED `M2SL` | Se dejó de consultar. El dato se pedía y se nombraba en el pie, pero ningún gráfico ni tabla lo mostraba. La sección 9.8 preveía conservarlo y agregar el aviso de la API; sin la API, el aviso no hace falta. Ningún código lee ya `FRED_API_KEY`. |
+
+El pipeline de S2 sigue leyendo FRED por CSV, sin clave: eso no es el sitio.
 ---
 
 ## 9. Decisiones
