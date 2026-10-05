@@ -9,7 +9,7 @@ y de FRED `NASDAQCOM` no están: ver A-R0-15 en `SUPUESTOS.md`. Los de las
 fuentes de contraste de BTC y de los índices tampoco: no se guardan (A-R0-12).
 
 Los CSV de FRED de S2 están desde antes de esa regla (A-S2-10). Lo que se leyó
-de sus términos está al final, y no cierra del todo.
+de sus términos y la decisión de mantenerlos están al final.
 
 ## `coin_metrics_btc_<fecha>.json`
 
@@ -160,12 +160,16 @@ traen ninguna línea de copyright: la etiqueta es lo único que lo dice.
   contenidos con restricciones propias de esos términos no nombra las
   operaciones de repo. El archivo de este directorio no se bajó de
   newyorkfed.org, sino de FRED.
-- **Lo que dice el dueño de `WALCL` y `WDTGAL`.** No se encontró una cláusula de
-  la Junta sobre reutilizar sus datos. Se leyó su página "Website Policies"
-  (`https://www.federalreserve.gov/website-linking-policies.htm`, "Last
-  Update: August 28, 2026"), que solo habla de derechos de autor a propósito
-  de los sitios externos que enlaza. **No leído:** si otra página de la Junta
-  declara el estado de derechos de los datos del H.4.1.
+- **Lo que dice el dueño de `WALCL` y `WDTGAL`.** Junta de la Reserva Federal,
+  página "Disclaimer" (`https://www.federalreserve.gov/disclaimer.htm`, "Last
+  Update: August 02, 2024"), apartado "Copyright/trademark", leída el
+  2026-10-05 a las 12:16 UTC. Literal: *"Unless otherwise indicated,
+  information on Board's website is in the public domain and may be copied and
+  distributed without permission. Please cite to the Board as the source of
+  the information."* El H.4.1 es una publicación de la Junta en ese sitio, y
+  su página (`https://www.federalreserve.gov/releases/h41/`) no indica otra
+  cosa. El archivo de este directorio no se bajó de federalreserve.gov, sino
+  de FRED.
 - **Atribución.** La cita que sugiere la página de cada serie:
   - *Board of Governors of the Federal Reserve System (US), Assets: Total
     Assets: Total Assets (Less Eliminations from Consolidation): Wednesday
@@ -184,6 +188,10 @@ traen ninguna línea de copyright: la etiqueta es lo único que lo dice.
     York. Content from the New York Fed subject to the Terms of Use at
     newyorkfed.org."*
 - **Cambios:** ninguno. Cada archivo es la respuesta de FRED, byte por byte.
-- **Estado.** Los seis archivos siguen versionados, como estaban. Si pueden
-  seguir en un repositorio público depende de cuál de los dos textos de FRED
-  rige, y esa decisión está pendiente.
+- **Decisión (2026-10-05).** Los seis archivos se quedan versionados. Se
+  sostienen en lo que declara el dueño de cada serie, no en los términos de
+  FRED: la Junta pone la información de su sitio en el dominio público y pide
+  que se la cite, y el Federal Reserve Bank of New York da licencia para copiar
+  y distribuir con atribución. Los términos completos de FRED siguen diciendo
+  lo que dicen arriba. Por eso queda pendiente bajar S2 directamente de los
+  dueños de los datos (`FUENTES.md`, sección 12).
