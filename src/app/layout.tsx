@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Los Ratios — Cross-Asset Ratios · Detección de Pares Desalineados",
   description:
-    "Los precios en fiat son ruido. Los ratios son señal. Numerador ÷ Denominador para detectar activos sobrevendidos y pares desalineados.",
+    "Activos medidos contra activos, con datos mensuales observados, fuentes citadas y supuestos declarados.",
   keywords: [
     "ratios financieros",
     "cross-asset",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Los Ratios",
     description:
-      "Los precios en fiat son ruido. Los ratios son señal.",
+      "Activos medidos contra activos, con datos mensuales observados, fuentes citadas y supuestos declarados.",
     url: "https://losratios.com",
     siteName: "Los Ratios",
     type: "website",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Los Ratios",
     description:
-      "Los precios en fiat son ruido. Los ratios son señal.",
+      "Activos medidos contra activos, con datos mensuales observados, fuentes citadas y supuestos declarados.",
   },
   icons: {
     icon: "/favicon.svg",
