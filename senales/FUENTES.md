@@ -853,6 +853,29 @@ plata, y Coin Metrics community para BTC. Del FMI el sitio muestra los valores
 de los meses en disputa, con su atribución, que viene en la columna `validacion`
 de `series.csv`. Del S&P 500 y del Nasdaq Composite no muestra ningún nivel.
 
+**Una fuente citada que no es una serie.** La portada dice que la plata es un
+metal "de uso mayormente industrial", y `/fuentes` cita de dónde sale. Leído el
+2026-10-05, a las 12:23 UTC: la página "Silver Supply & Demand" del Silver
+Institute (`https://silverinstitute.org/silver-supply-demand/`), que dice estar
+adaptada en parte del *World Silver Survey 2025*, y su tabla "Silver Supply and
+Demand", en millones de onzas, con el pie "Source: Metals Focus"
+(`https://silverinstitute.org/wp-content/uploads/2025/06/Silver-S-D-2025.jpg`).
+
+- Para 2024: *Industrial (total)* 680.5 y *Total Demand* 1164.1, el 58.5 %.
+- De 2016 a 2024 la partida industrial pasa de la mitad del total en siete de
+  los nueve años. En 2016 (491.0 de 993.3, 49.4 %) y en 2022 (592.3 de 1284.2,
+  46.1 %), no.
+- Las cifras se transcribieron de la imagen de la tabla. Las de 2024 cierran
+  con la suma de sus partidas y con el texto de la misma página (*"Total
+  silver demand fell by 3 percent to 1.16 billion ounces (Boz) in 2024"*).
+- Es una sola fuente: no se contrastó con una segunda.
+- Licencia: el aviso legal del sitio
+  (`https://silverinstitute.org/legal-disclaimer/`) no trae una cláusula sobre
+  reutilizar los datos. Aquí no se copia la tabla: se transcriben seis cifras,
+  con su cita.
+- **No leído:** el *World Silver Survey 2026*, que la página de publicaciones
+  ya lista.
+
 **Las tablas de CAGR y de poder adquisitivo ya no están en el código.** El
 sitio las nombra con el estado NO MEDIDO y nada más. Sus cifras eran valores de
 referencia escritos a mano, sin procedencia verificada, y entre ellos había
