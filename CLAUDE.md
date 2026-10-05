@@ -31,7 +31,9 @@ repositorio.
 - **La regla de la tolerancia rige desde el 2026-10-05.** Las que se fijaron
   con lo observado a la vista (A-R0-12 y el umbral de A-R0-20) quedan como
   están, porque ya lo declaran.
-- **Sin interpolación ni datos sintéticos.** Un hueco es un hueco.
+- **No se inventan valores.** Sin interpolación ni datos sintéticos: un hueco
+  es un hueco. Un arrastre solo se permite si es un supuesto declarado, con
+  tope y con la fecha de origen visible (como A-S2-5).
 - **Los dos lados de un ratio usan la misma convención.** Hoy: promedio mensual
   de cierres diarios, y solo de meses completos.
 - **El sitio describe, no recomienda.** No usa verbos de acción ni la palabra
