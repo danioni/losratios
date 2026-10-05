@@ -53,6 +53,9 @@ repositorio.
   changelog, `FUENTES.md` y los tests.
 - Se respetan los términos de cada fuente. Por ejemplo, el FMI no permite la
   descarga masiva automatizada: su archivo se actualiza a mano.
+- **Antes de cualquier pedido automatizado a un sitio, leer su `robots.txt` y
+  sus términos.** Si prohíben el acceso automatizado, no se descarga nada de
+  ahí.
 
 ## Forma de trabajo
 
