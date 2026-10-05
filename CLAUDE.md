@@ -32,8 +32,9 @@ repositorio.
 
 ## Licencias y repositorio público
 
-- **El repositorio es público.** Solo se versionan crudos de dominio público,
-  CC BY o CC BY-NC, con su archivo de atribución. Los demás van a
+- **El repositorio es público.** Solo se versionan crudos cuya licencia permite
+  redistribuirlos (dominio público, CC BY, CC BY-NC u otros términos que lo
+  permitan con atribución), con su archivo de atribución. Los demás van a
   `senales/data/privado/`, que git ignora; de esos se publica la URL, la fecha
   y el SHA-256, para que la corrida sea reproducible.
 - Los pares con S&P 500 o Nasdaq quedan como "NO MEDIDO: pendiente de permiso
