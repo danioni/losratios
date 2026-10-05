@@ -229,7 +229,7 @@ export function generateNarrative(pair: string, zScore: number): string {
   if (absZ < Z_EXTREME) {
     return `${a} ${zScore > 0 ? "caro" : "barato"} vs ${b} respecto de su historia (${z})`;
   }
-  return `${a}/${b} en zona extrema de su historia (${z}). Históricamente los extremos tienden a revertir; el momento no es predecible.`;
+  return `${a}/${b} en zona extrema de su historia (${z})`;
 }
 
 // ============================================================

@@ -163,7 +163,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
                 2. El z-score extremo
               </div>
               <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                Un z-score de +2&sigma; o -2&sigma; indica que el ratio est&aacute; muy lejos de su media hist&oacute;rica. Los desequilibrios tienden a revertir &mdash; no predicen cu&aacute;ndo.
+                Un z-score de +2&sigma; o -2&sigma; indica que el ratio est&aacute; muy lejos de su media hist&oacute;rica.
               </p>
             </div>
             <div className="space-y-2">
@@ -252,7 +252,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
             Dentro de los ganadores: ¿hard money o capital productivo?
           </h3>
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Oro/S&P 500 y BTC/S&P 500 juntos cuentan una historia: cuánto está apostando el mercado a la narrativa de escasez pura (oro y Bitcoin) vs la narrativa de crecimiento productivo (acciones). No es &ldquo;compra BTC&rdquo; o &ldquo;compra acciones&rdquo;. Es cuánto de cada uno, y cuándo cambia el peso.
+            Oro/S&P 500 y BTC/S&P 500 juntos cuentan una historia: cuánto está apostando el mercado a la narrativa de escasez pura (oro y Bitcoin) vs la narrativa de crecimiento productivo (acciones).
           </p>
         </div>
         {bloque("oro_sp500")}
@@ -268,7 +268,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
             Growth vs Quality: el ciclo dentro del ciclo
           </h3>
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Dentro del capital productivo, el Nasdaq (growth/tech) vs el S&P 500 (quality/broad market) marca otro ciclo. Cuando el Nasdaq está muy caro relativo al S&P, los quality compounders como Visa, Mastercard, Costco y Berkshire están relativamente baratos.
+            Dentro del capital productivo, el Nasdaq (growth/tech) vs el S&P 500 (quality/broad market) marca otro ciclo.
           </p>
         </div>
         {bloque("nasdaq_sp500")}
@@ -310,7 +310,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
         <div className="divider-gradient max-w-xs mx-auto" />
         <div className="max-w-2xl mx-auto text-center space-y-3">
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Los ratios no predicen. Documentan desequilibrios históricos que tienden a revertir. Cuándo revierten — eso nadie lo sabe. Esto no es asesoría financiera. Es un marco analítico.
+            Los ratios no predicen. Esto no es asesoría financiera. Es un marco analítico.
           </p>
         </div>
       </div>

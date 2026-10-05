@@ -130,6 +130,26 @@ export default function Fuentes() {
           </div>
         </section>
 
+        {/* Afirmaciones del texto de la portada que citan una fuente que no es una serie.
+            Las cifras están transcritas a mano de la fuente, con su cita y la fecha de lectura. */}
+        <section className="space-y-4">
+          <h3 className="font-serif text-lg sm:text-xl tracking-wide" style={{ color: "var(--text-primary)" }}>Otras fuentes citadas</h3>
+          <div className="card-glass card-accent-left rounded-xl p-4 sm:p-6 space-y-3 text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>La plata, &ldquo;de uso mayormente industrial&rdquo;</p>
+              <p>
+                En 2024 la demanda industrial de plata fue de 680.5 millones de onzas, sobre una demanda total de 1164.1 millones: el 58.5 %.
+                Entre 2016 y 2024 pas&oacute; de la mitad del total en siete de los nueve a&ntilde;os; en 2016 (49.4 %) y en 2022 (46.1 %), no.
+              </p>
+              <p>
+                Fuente: The Silver Institute, tabla &ldquo;Silver Supply and Demand&rdquo; (Source: Metals Focus), adaptada del World Silver Survey 2025:{" "}
+                <a href="https://silverinstitute.org/silver-supply-demand/" target="_blank" rel="noopener noreferrer" style={enlace}>silverinstitute.org/silver-supply-demand</a>
+                . Le&iacute;da el 2026-10-05. Los porcentajes son la divisi&oacute;n de las dos cifras de cada a&ntilde;o.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Lo que todavía no se publica */}
         <section className="space-y-4">
           <h3 className="font-serif text-lg sm:text-xl tracking-wide" style={{ color: "var(--text-primary)" }}>Lo que todav&iacute;a no se publica</h3>
