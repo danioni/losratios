@@ -275,7 +275,7 @@ fuente · `2` un contraste, o el control del empalme, no cerró.
 | --- | --- |
 | `data/series/precios_mensuales.csv` | Oro, plata y BTC, por mes. El oro lleva su definición fila por fila (A-R0-7) y la plata, su estado de estimación (A-R0-8). Los dos metales llevan su error máximo por redondeo (A-R0-17), de qué edición del Pink Sheet sale cada mes (A-R0-19) y qué resultó su control contra el FMI: "dentro del umbral", "sin comparar" o "valor en disputa", con los dos valores (A-R0-20). |
 | `data/series/ratios.csv` | Los pares que se publican, en formato largo: `mes, par, valor, error_redondeo_pct, valor_en_disputa, apto_metricas, estado`. |
-| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes, desde qué mes es apto para métricas y cuántos meses tiene en disputa. Acá es donde un par sin permiso dice NO MEDIDO. |
+| `data/series/pares.csv` | Los cinco pares, publicados o no: estado, primer y último mes, desde qué mes es apto para métricas y cuántos meses tiene en disputa. Aquí es donde un par sin permiso dice NO MEDIDO. |
 | `data/series/series.csv` | Las cinco series: fuente, licencia, **atribución**, estado y con qué se valida cada una. Sin valores. |
 | `data/series/descargas_ratios.csv` | El manifiesto: de cada descarga, la URL, la fecha, los bytes y el SHA-256. |
 | `data/raw/pink_sheet_<fecha>.xlsx`, `data/raw/coin_metrics_btc_<fecha>.json` | Los crudos cuya licencia permite redistribuirlos (CC BY y CC BY-NC). |

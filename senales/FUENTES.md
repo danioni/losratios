@@ -1,6 +1,6 @@
 # Fuentes de precios para los ratios
 
-> **APROBADO CON CONDICIONES (2026-10-04).** Todo lo que figura acá se leyó de
+> **APROBADO CON CONDICIONES (2026-10-04).** Todo lo que figura aquí se leyó de
 > la fuente el 2026-10-04, en dos pasadas: la primera desde un entorno con
 > proxy (10:43–11:00 UTC) y la segunda desde una máquina con salida directa
 > (13:39–15:30 UTC). Cada cifra dice de cuál pasada sale cuando importa. Nada
@@ -428,7 +428,7 @@ los dos metales.
   literal: *"USGS-authored or produced data and information are considered to
   be in the U.S. Public Domain."* La misma página dice que el material de
   terceros con copyright suele ir marcado; la tabla de precios no lleva ninguna
-  marca. De todos modos acá no se copia el documento: se transcriben ocho
+  marca. De todos modos aquí no se copia el documento: se transcriben ocho
   cifras, con su cita.
 
 ### 4.7 FMI, Primary Commodity Prices — leída, (b), control mensual
@@ -517,8 +517,8 @@ oro es **marzo de 1985**: 313.5 en el Pink Sheet y 303.94 en el FMI, a 3.1 %.
 - Es una cotización **independiente** de las otras dos: la de un comerciante de
   Estados Unidos, no el fixing de Londres. Es la misma cotización contra la que
   cierra el gate anual (4.6).
-- Licencia: es una publicación del gobierno federal de Estados Unidos. Acá no se
-  copia: se transcriben cifras, con su cita.
+- Licencia: es una publicación del gobierno federal de Estados Unidos. Aquí no
+  se copia: se transcriben cifras, con su cita.
 
 | Mes | Pink Sheet | FMI | Engelhard | Pink Sheet contra Engelhard | FMI contra Engelhard |
 | --- | --- | --- | --- | --- | --- |
@@ -925,7 +925,7 @@ El pipeline de S2 sigue leyendo FRED por CSV, sin clave: eso no es el sitio.
 ## 9. Decisiones
 
 **Aprobadas el 2026-10-04, con condiciones.** Los supuestos que las sostienen
-están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-20; acá va la decisión y la
+están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-20; aquí va la decisión y la
 evidencia.
 
 ### 9.1 Regla de publicación

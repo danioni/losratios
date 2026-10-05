@@ -18,7 +18,7 @@ const ARCHIVO_DESCARGAS = "descargas_ratios.csv";
 
 // A-R0-17: una métrica solo usa los meses con error por redondeo de hasta este
 // umbral. Es el UMBRAL_ERROR_REDONDEO_PCT de senales/senales/configuracion.py.
-// Acá no decide nada: qué meses son aptos lo dice la columna apto_metricas. Solo
+// Aquí no decide nada: qué meses son aptos lo dice la columna apto_metricas. Solo
 // sirve para nombrar el motivo de un mes que ratios.csv ya marca como no apto.
 const UMBRAL_ERROR_REDONDEO_PCT = 0.5;
 // A-R0-17: hasta marzo de 1968 el oro de Londres no era un precio libre. Abril

@@ -93,7 +93,7 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     copia_fmi = escribir_copia_fmi(crudo)
 
     # La primera corrida real deja en el manifiesto la fecha que declaró Shiller
-    # en la cabecera HTTP. Acá se siembra esa fila, porque no hay descarga.
+    # en la cabecera HTTP. Aquí se siembra esa fila, porque no hay descarga.
     marcador = privado / f"shiller_ie_data_{FECHA}.xls"
     fila = {
         "fecha_descarga": FECHA,
@@ -128,7 +128,7 @@ def entorno(tmp_path: Path, monkeypatch) -> dict[str, Path]:
     monkeypatch.setattr(fuentes_precios, "filas_de_xls", lambda ruta, hoja: filas_shiller(SHILLER))
     monkeypatch.setattr(ratios, "obtener_referencias", _referencias())
     # Las anclas reales del USGS son de 2021 a 2024; los datos de prueba, de 2023 a
-    # 2026. Acá el gate cierra contra anclas hechas para estos datos.
+    # 2026. Aquí el gate cierra contra anclas hechas para estos datos.
     monkeypatch.setattr(ratios, "ANCLAS_USGS", anclas_de_prueba())
     monkeypatch.setattr(ratios, "PINK_SHEET_CONGELADA", edicion)
     monkeypatch.setattr(ratios, "FMI_COPIA", copia_fmi)

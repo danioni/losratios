@@ -13,7 +13,7 @@ import MetricCard from "./MetricCard";
 import NoMedidoCard from "./NoMedidoCard";
 import RatioChart, { type TimeRange } from "./RatioChart";
 
-// Color de cada par en su gráfico. Un par que no esté acá usa el cian.
+// Color de cada par en su gráfico. Un par que no esté aquí usa el cian.
 const COLOR_DEL_PAR: Record<string, keyof typeof DEFAULT_COLORS> = {
   btc_oro: "gold",
   oro_sp500: "amber",

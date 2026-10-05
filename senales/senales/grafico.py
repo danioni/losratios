@@ -51,7 +51,7 @@ def dibujar(
     """Escribe el PNG de dos paneles y devuelve la ruta.
 
     La fórmula y la fuente llegan como texto desde quien llama, armadas con los
-    identificadores que están configurados. Escribirlas acá a mano haría que el
+    identificadores que están configurados. Escribirlas aquí a mano haría que el
     gráfico siguiera nombrando una serie vieja después de cambiarla (A-S2-4).
     """
     datos = tabla.dropna(subset=["s2_1_liquidez_neta"])

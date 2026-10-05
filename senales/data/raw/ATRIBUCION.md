@@ -4,7 +4,7 @@ Los archivos de este directorio son descargas tal como las entregó cada fuente,
 sin modificar. Cada uno queda registrado en `data/series/descargas_ratios.csv`
 con su URL, su fecha y su SHA-256.
 
-Solo están acá los crudos cuya licencia permite redistribuirlos. Los de Shiller
+Solo están aquí los crudos cuya licencia permite redistribuirlos. Los de Shiller
 y de FRED `NASDAQCOM` no están: ver A-R0-15 en `SUPUESTOS.md`. Los de las
 fuentes de contraste de BTC y de los índices tampoco: no se guardan (A-R0-12).
 
@@ -81,7 +81,7 @@ de sus términos está al final, y no cierra del todo.
 - **Condiciones:**
   - Atribución: *"Source: International Monetary Fund, Primary Commodity
     Prices, https://www.imf.org/en/research/commodity-prices"*.
-  - Decir si los datos se transformaron. Acá no se transforman.
+  - Decir si los datos se transformaron. Aquí no se transforman.
   - Uso comercial: *"For any potential commercial reuse of IMF Data, please
     email copyright@imf.org to request permission."*
   - Quien redistribuya este archivo tiene que mantener la atribución y dar a

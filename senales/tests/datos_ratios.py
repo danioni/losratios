@@ -1,7 +1,7 @@
 """Datos de prueba de la fase R. Todo sintético: ningún test toca la red.
 
 Las fuentes de los índices y de BTC no son abiertas, así que en el repositorio
-no hay un recorte real de ninguna. Lo que se reproduce acá es la *forma* de
+no hay un recorte real de ninguna. Lo que se reproduce aquí es la *forma* de
 cada archivo —hojas, encabezados, marcas de dato faltante— con números
 inventados que no salen de ninguna fuente.
 """
