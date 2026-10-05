@@ -1,6 +1,6 @@
 # Supuestos
 
-Cada decisión que afecta un número publicado está acá, numerada y con estado.
+Cada decisión que afecta un número publicado está aquí, numerada y con estado.
 Los estados son cuatro:
 
 | Estado | Qué significa |
@@ -93,7 +93,7 @@ declaración de `WDTGAL` en `configuracion.py` deja de decir `millones`
 
 **Alternativa.** `WTREGEN`, el TGA como promedio semanal en miles de millones de
 USD. Sigue declarada en `configuracion.py` como `SERIE_TGA_PROMEDIO_SEMANAL`;
-para volver a ella, apuntar `SERIE_TGA` ahí y registrar el cambio acá y en
+para volver a ella, apuntar `SERIE_TGA` ahí y registrar el cambio aquí y en
 `data/series/CHANGELOG.md`.
 
 **Lo que este cambio no toca.** La fórmula de S2.1 sigue igual, y la tolerancia
@@ -190,7 +190,7 @@ con esta tabla:
 
 - Si coinciden, la unidad queda **VERIFICADA** y así se anota en el changelog.
 - Si difieren, la corrida **se detiene**. No se aplica un factor de corrección
-  silencioso: hay que arreglar la configuración y anotarlo acá.
+  silencioso: hay que arreglar la configuración y anotarlo aquí.
 - Si no se pueden leer los metadatos (FRED caído, formato cambiado, red
   bloqueada), la unidad queda **NO VERIFICADA**, la corrida sigue y quedan como
   red dos controles: la banda de orden de magnitud de cada serie y el caso de
@@ -254,7 +254,7 @@ reconstruir cualquier corrida pasada con exactitud, incluso después de que FRED
 revise los datos.
 
 El costo es que el repositorio crece unos cientos de KB por corrida. Si eso
-molesta, la decisión a tomar es cuántas descargas conservar, y va acá antes de
+molesta, la decisión a tomar es cuántas descargas conservar, y va aquí antes de
 tocar el `.gitignore`.
 
 ---
@@ -419,7 +419,7 @@ S2.1 sin notar que el total dejó de estar acotado.
 
 Se fijaron el 2026-10-04, al cerrar el paso 0 de la fase R y **antes de
 escribir código**. La evidencia de cada cifra —qué se leyó, de dónde y cuándo—
-está en `FUENTES.md`; acá va la decisión y lo que la haría cambiar.
+está en `FUENTES.md`; aquí va la decisión y lo que la haría cambiar.
 
 Tres de estos supuestos son **condicionales**: A-R0-2, A-R0-3 y A-R0-4 valen
 **mientras el sitio no tenga vínculo comercial**. El día que lo tenga, dejan de
@@ -436,10 +436,14 @@ promedio de los cierres diarios de cada mes calendario. Así los dos lados de un
 ratio describen el mismo mes. Mezclar un promedio con un cierre de fin de mes es
 el error de A-S2-13 con otro nombre.
 
-No era la única convención posible. El sitio usa hoy el cierre de fin de mes
-para índices y metales, y el borrador de `FUENTES.md` proponía el cierre semanal
-del viernes. Decidió la licencia: las únicas fuentes abiertas de oro y plata son
-promedios mensuales.
+No era la única convención posible. Hasta la fase 3 el sitio usaba el cierre de
+fin de mes para índices y metales, y el borrador de `FUENTES.md` proponía el
+cierre semanal del viernes. Decidió la licencia: las únicas fuentes abiertas de
+oro y plata son promedios mensuales.
+
+Hoy el sitio lee las series de `senales/` y no tiene otra fuente: lo que muestra
+es esta convención, el promedio mensual de cierres diarios (`FUENTES.md`,
+sección 8.1).
 
 **Solo entran meses completos.** La regla depende de cómo viene la fuente:
 
@@ -605,7 +609,7 @@ la plata.
 No siempre fue así. Hasta su edición del 3 de enero de 2025 el Banco Mundial
 publicaba la misma serie sin redondear, y por eso el redondeo ya no alcanza a
 toda la historia: de 1960-01 a 2024-12 el oro y la plata salen de esa edición
-(A-R0-19). El redondeo de la vigente solo pesa desde 2025-01, donde es chico:
+(A-R0-19). El redondeo de la vigente solo pesa desde 2025-01, donde es pequeño:
 0.02 % en el oro y hasta 0.16 % en la plata.
 
 Con la serie entera redondeada, que es como se publicó primero, el error llegaba
@@ -780,7 +784,7 @@ se detiene.
 El costo es real para los dos crudos que quedan afuera: si la fuente revisa o
 retira el archivo, la corrida vieja ya no se puede reconstruir desde el
 repositorio, solo verificar que el archivo cambió. A-S2-10 existe para evitar
-eso, y acá se acepta perderlo.
+eso, y aquí se acepta perderlo.
 
 Y hay un costo de tamaño para los que entran: el crudo de Coin Metrics pesa medio
 megabyte y trae la historia completa en cada descarga. La edición congelada del
@@ -823,7 +827,7 @@ de ver el resultado. De qué están hechas:
 | **Suma de lo acotado** | **0.33 %** | **0.52 %** | |
 | Margen para la diferencia de cotización, fixing de Londres contra Engelhard | 0.17 % | 0.48 % | No se pudo medir. Es lo que el gate pone a prueba. |
 
-El margen para la diferencia de cotización es chico a propósito. Si las dos
+El margen para la diferencia de cotización es pequeño a propósito. Si las dos
 cotizaciones se apartan más que eso, el gate no cierra, y eso también es un
 resultado: quiere decir que el Pink Sheet y el USGS no describen el mismo precio
 con esta precisión. **No se ensancha la tolerancia para que cierre.**
@@ -855,7 +859,7 @@ tienen su propio contraste.
 
 **Estado: dato.** El gate cerró el 2026-10-04, con las tolerancias ya escritas.
 
-Se calculó dos veces ese día, y las dos están acá. La primera, con la serie
+Se calculó dos veces ese día, y las dos están aquí. La primera, con la serie
 redondeada de la edición vigente. La segunda, después del empalme con la edición
 sin redondear (A-R0-19), y es la que vale: los cuatro años del gate caen en el
 tramo sin redondear. **Las tolerancias no se tocaron entre una y otra.**
@@ -929,7 +933,7 @@ columna `apto_desde`.
 
 **Un valor en disputa tampoco entra.** Un mes en que el Pink Sheet y el FMI se
 apartan más que el umbral de A-R0-20 queda fuera de las métricas, aunque su
-error por redondeo sea chico. No corta el tramo: es una exclusión puntual y
+error por redondeo sea pequeño. No corta el tramo: es una exclusión puntual y
 declarada, mes por mes, no un hueco de precisión. Los meses de antes y de
 después siguen siendo aptos, y `apto_desde` no cambia.
 

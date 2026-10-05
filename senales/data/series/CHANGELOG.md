@@ -11,6 +11,12 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-05 · A-R0-1 · El texto deja de decir que el sitio usa el cierre de
+  fin de mes: desde la fase 3 lee las series de `senales/`.** Lo que muestra es
+  el promedio mensual de cierres diarios, que es la convención de este
+  supuesto. El cierre de fin de mes queda como lo que el sitio usaba hasta la
+  fase 3 (`FUENTES.md`, sección 8.2). No cambia la regla ni ningún valor.
+
 - **2026-10-04 · A-R0-17 · Contexto del corte de 1968-04: coincide con el fin del
   London Gold Pool.** Hasta el 15 de marzo de 1968 los bancos centrales
   sostenían el oro de Londres entre 35.08 y 35.20 USD (Bordo, Monnet y Naef,

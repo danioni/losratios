@@ -5,7 +5,7 @@ Niveles de miércoles: WALCL 6746.548, TGA 991.708, ON RRP 5.375
 
 El ancla original de esta serie mezclaba columnas del release (nivel de miércoles
 para los activos totales, promedio semanal para el TGA y el ON RRP) y el gate la
-rechazó en la primera corrida real. Varios de los tests de acá existen para que
+rechazó en la primera corrida real. Varios de los tests de aquí existen para que
 esa clase de error no vuelva a pasar desapercibida: ver A-S2-13 y A-S2-14.
 """
 

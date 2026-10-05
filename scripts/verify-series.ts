@@ -1,116 +1,92 @@
 // ============================================================
-// Verificación de la serie mensual de respaldo (generateMonthlyData).
+// Verificación del lector de las series de senales/ (src/lib/series.ts).
 // Ejecutar: npm run verify
-// - meses consecutivos sin huecos desde 1971-01 hasta el último ancla
-// - cada ancla se reproduce exactamente en su mes (sin ruido sintético)
-// - los meses intermedios son interpolación pura (punto medio verificable)
+// Requiere Node ≥ 22.18 (type stripping nativo). Sale con código 1 si falla.
+// - los CSV publicados cargan y dicen lo mismo entre sí
+// - un archivo que falta o está mal formado hace que cargarSeries() lance,
+//   que es lo que detiene el build
 // ============================================================
-import {
-  assetData,
-  ANCHORS,
-  findTrailingGap,
-  monthsBetween,
-  computeAllFromRawAssets,
-  computeRatioSMAs,
-  METRICAS_VERIFICADAS,
-  NO_MEDIDO,
-  summaries,
-  rotationSignals,
-  type AssetDataPoint,
-} from "../src/lib/data.ts";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { cargarSeries, DIR_SERIES } from "../src/lib/series.ts";
 
 let failures = 0;
 function check(name: string, ok: boolean, detail = ""): void {
   if (!ok) failures++;
   console.log(`${ok ? "OK  " : "FAIL"} ${name}${detail ? `: ${detail}` : ""}`);
 }
-function nextMonth(date: string): string {
-  const [y, m] = date.split("-").map(Number);
-  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+
+console.log("── Series publicadas ──");
+const { pares, series, descargas, ultimoMes } = cargarSeries();
+check("los CSV cargan", true, `${pares.length} pares, ${series.length} series, ${descargas.length} descargas, último mes ${ultimoMes}`);
+for (const par of pares) {
+  if (!par.publicado) {
+    console.log(`     ${par.nombre.padEnd(18)} ${par.estado}`);
+    continue;
+  }
+  const noAptos = par.puntos.filter((punto) => !punto.apto);
+  console.log(
+    `     ${par.nombre.padEnd(18)} ${par.estado}, ${par.primerMes} a ${par.ultimoMes}, ${par.meses} meses, ` +
+    `${par.mesesAptos} aptos, ${par.mesesEnDisputa} en disputa`,
+  );
+  check(`${par.nombre}: todo mes no apto dice por qué`, noAptos.every((punto) => punto.motivos.length > 0));
+  check(`${par.nombre}: ningún mes apto trae motivos`, par.puntos.every((punto) => !punto.apto || punto.motivos.length === 0));
+  check(`${par.nombre}: todo mes en disputa trae los dos valores`,
+    par.puntos.filter((punto) => punto.enDisputa).every((punto) => punto.motivos.some((motivo) => motivo.detalle.includes("FMI"))));
+  const motivos = new Map<string, number>();
+  for (const punto of noAptos) {
+    for (const motivo of punto.motivos) {
+      motivos.set(motivo.etiqueta, (motivos.get(motivo.etiqueta) ?? 0) + 1);
+    }
+  }
+  for (const [motivo, meses] of motivos) console.log(`       ${String(meses).padStart(3)} meses: ${motivo}`);
+  if (par.aptosSinSegundaFuente.meses > 0) {
+    console.log(`       ${String(par.aptosSinSegundaFuente.meses).padStart(3)} meses aptos sin segunda fuente: ${par.aptosSinSegundaFuente.tramos.join(", ")}`);
+  }
 }
 
-const dates = assetData.map((d) => d.date);
-const firstAnchor = ANCHORS[0].date;
-const lastAnchor = ANCHORS[ANCHORS.length - 1].date;
-const expectedMonths = (parseInt(lastAnchor, 10) - parseInt(firstAnchor, 10)) * 12 + 1;
-
-console.log("── Continuidad mensual ──");
-check("primer mes", dates[0] === `${firstAnchor}-01`, `${dates[0]} (esperado ${firstAnchor}-01)`);
-check("último mes", dates[dates.length - 1] === `${lastAnchor}-01`, `${dates[dates.length - 1]} (esperado ${lastAnchor}-01)`);
-check("cantidad de meses", dates.length === expectedMonths, `${dates.length} (esperado ${expectedMonths})`);
-
-const gaps: string[] = [];
-for (let i = 1; i < dates.length; i++) {
-  if (dates[i] !== nextMonth(dates[i - 1])) gaps.push(`${dates[i - 1]} → ${dates[i]}`);
+// Cada caso rompe una copia de los CSV y espera que cargarSeries() lance.
+console.log("\n── Un archivo que falta o está mal formado detiene la carga ──");
+function debeFallar(name: string, romper: (dir: string) => void): void {
+  const dir = mkdtempSync(path.join(tmpdir(), "losratios-series-"));
+  try {
+    cpSync(DIR_SERIES, dir, { recursive: true });
+    romper(dir);
+    let mensaje = "";
+    try {
+      cargarSeries(dir);
+    } catch (error) {
+      mensaje = error instanceof Error ? error.message : String(error);
+    }
+    check(name, mensaje !== "", mensaje || "cargó sin error");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
-check("sin huecos ni duplicados entre meses consecutivos", gaps.length === 0, gaps.length ? gaps.slice(0, 5).join(", ") : "ninguno");
-
-const years = new Set(dates.map((d) => d.slice(0, 4)));
-const missingYears: number[] = [];
-for (let y = parseInt(firstAnchor, 10); y <= parseInt(lastAnchor, 10); y++) {
-  if (!years.has(String(y))) missingYears.push(y);
+function editar(dir: string, archivo: string, cambio: (texto: string) => string): void {
+  const ruta = path.join(dir, archivo);
+  const antes = readFileSync(ruta, "utf8");
+  const despues = cambio(antes);
+  if (despues === antes) throw new Error(`el caso no cambió ${archivo}`);
+  writeFileSync(ruta, despues);
 }
-check("todos los años presentes", missingYears.length === 0, missingYears.length ? missingYears.join(", ") : "ninguno falta");
 
-console.log("\n── Anclas reproducidas exactamente (sin ruido) ──");
-const byDate = new Map(assetData.map((d) => [d.date, d]));
-let anchorMismatch = 0;
-for (const a of ANCHORS) {
-  const p = byDate.get(`${a.date}-01`);
-  const same = !!p && p.gold === a.gold && p.silver === a.silver && p.sp500 === a.sp500 && p.nasdaq === a.nasdaq && p.btc === a.btc;
-  if (!same) anchorMismatch++;
+for (const archivo of ["ratios.csv", "pares.csv", "series.csv", "precios_mensuales.csv", "descargas_ratios.csv"]) {
+  debeFallar(`falta ${archivo}`, (dir) => rmSync(path.join(dir, archivo)));
 }
-check(`${ANCHORS.length} anclas coinciden con su mes de enero`, anchorMismatch === 0, anchorMismatch ? `${anchorMismatch} difieren` : "todas");
-
-console.log("\n── Interpolación pura entre anclas bianuales ──");
-// 1971 → 1973: 24 meses; 1972-01 es el punto medio exacto (t = 0,5)
-const a71 = ANCHORS.find((a) => a.date === "1971")!;
-const a73 = ANCHORS.find((a) => a.date === "1973")!;
-const mid = byDate.get("1972-01");
-check("1972-01 existe", !!mid);
-if (mid) {
-  const want = (a71.gold + a73.gold) / 2;
-  check("1972-01 oro = punto medio lineal 1971/1973", Math.abs(mid.gold - want) < 1e-9, `${mid.gold} vs ${want}`);
-}
-const noNaN = assetData.every((d) => [d.gold, d.silver, d.sp500, d.nasdaq, d.btc].every((v) => Number.isFinite(v)));
-check("sin NaN/Infinity en la serie", noNaN);
-
-console.log("\n── Hueco al final (punto en vivo separado del último mes de referencia) ──");
-check("monthsBetween 2026-01 → 2026-10 = 9", monthsBetween("2026-01", "2026-10") === 9);
-check("sin hueco cuando el último mes es el siguiente", findTrailingGap(["2025-12", "2026-01"]) === null);
-const g = findTrailingGap(["2026-01", "2026-10"]);
-check("hueco 2026-01 → 2026-10: faltan Feb..Sep (8 meses)", !!g && g.missingFrom === "2026-02" && g.missingTo === "2026-09" && g.missingMonths === 8, JSON.stringify(g));
-const g2 = findTrailingGap(["2025-11", "2026-02"]);
-check("hueco con cambio de año: faltan 2025-12..2026-01", !!g2 && g2.missingFrom === "2025-12" && g2.missingTo === "2026-01" && g2.missingMonths === 2, JSON.stringify(g2));
-
-// Serie de respaldo + punto en vivo (oro ×2) con hueco: ventana y medias sin ese punto
-const last = assetData[assetData.length - 1];
-const livePoint: AssetDataPoint = { ...last, date: "2026-10", gold: last.gold * 2 };
-const base = computeAllFromRawAssets(assetData);
-const withLive = computeAllFromRawAssets([...assetData, livePoint]);
-const baseGoldSp = base.summaries.find((s) => s.pair === "Oro / S&P 500")!;
-const liveGoldSp = withLive.summaries.find((s) => s.pair === "Oro / S&P 500")!;
-check("con hueco: media y σ de la ventana no cambian al añadir el punto en vivo",
-  Math.abs(baseGoldSp.mean - liveGoldSp.mean) < 1e-12 && Math.abs(baseGoldSp.stdDev - liveGoldSp.stdDev) < 1e-12,
-  `media ${baseGoldSp.mean.toFixed(6)} vs ${liveGoldSp.mean.toFixed(6)}`);
-check("con hueco: el valor actual sí es el del punto en vivo", Math.abs(liveGoldSp.current - (livePoint.gold / livePoint.sp500)) < 1e-12);
-const smas = computeRatioSMAs(withLive.ratios, "goldSp500");
-check("con hueco: SMA 50/200 del punto en vivo = null", smas.sma50[smas.sma50.length - 1] === null && smas.sma200[smas.sma200.length - 1] === null);
-check("con hueco: SMA del último mes de referencia sigue siendo un número", typeof smas.sma200[smas.sma200.length - 2] === "number");
-// Sin hueco (mismo mes siguiente): el punto sí entra en la ventana
-const nextPoint: AssetDataPoint = { ...last, date: "2026-02", gold: last.gold * 2 };
-const withNext = computeAllFromRawAssets([...assetData, nextPoint]);
-const nextGoldSp = withNext.summaries.find((s) => s.pair === "Oro / S&P 500")!;
-check("sin hueco: la media de la ventana sí cambia al añadir el mes siguiente", Math.abs(baseGoldSp.mean - nextGoldSp.mean) > 1e-9);
-
-console.log(`\n── Flag METRICAS_VERIFICADAS = ${METRICAS_VERIFICADAS} ──`);
-if (!METRICAS_VERIFICADAS) {
-  check("sin métricas verificadas: ninguna etiqueta publicada (todas NO MEDIDO)", summaries.every((s) => s.signal === NO_MEDIDO && s.context === NO_MEDIDO));
-  check("sin métricas verificadas: ninguna señal de rotación", rotationSignals.length === 0);
-  check("el z-score numérico se conserva en los datos para reactivar", summaries.every((s) => Number.isFinite(s.zScore)));
-} else {
-  check("métricas verificadas: las etiquetas se publican", summaries.every((s) => s.signal !== NO_MEDIDO));
-}
+debeFallar("ratios.csv vacío", (dir) => writeFileSync(path.join(dir, "ratios.csv"), ""));
+debeFallar("ratios.csv sin la columna valor", (dir) => editar(dir, "ratios.csv", (t) => t.replace("mes,par,valor,", "mes,par,nivel,")));
+debeFallar("ratios.csv con un valor que no es un número", (dir) => editar(dir, "ratios.csv", (t) => t.replace("38.60129145", "n/d")));
+debeFallar("ratios.csv con una fila a la que le falta un campo", (dir) => editar(dir, "ratios.csv", (t) => t.replace(",0.0196,,no,estimación", ",0.0196,no,estimación")));
+debeFallar("ratios.csv con un mes repetido", (dir) => editar(dir, "ratios.csv", (t) => t.replace("1960-02,oro_plata", "1960-01,oro_plata")));
+debeFallar("ratios.csv al que le falta un mes que pares.csv cuenta", (dir) => editar(dir, "ratios.csv", (t) => t.replace(/^1975-06,oro_plata.*\r?\n/m, "")));
+debeFallar("ratios.csv con filas de un par que no se publica", (dir) => editar(dir, "ratios.csv", (t) => `${t.trimEnd()}\n2026-08,oro_sp500,0.5,0,,sí,dato\n`));
+debeFallar("pares.csv con un par publicado en estado NO MEDIDO", (dir) => editar(dir, "pares.csv", (t) => t.replace("BTC / Oro,sí,dato", "BTC / Oro,sí,NO MEDIDO: sin validación externa")));
+debeFallar("pares.csv con comillas sin cerrar", (dir) => editar(dir, "pares.csv", (t) => t.replace("Oro / Plata", '"Oro / Plata')));
+debeFallar("series.csv sin la serie de un par", (dir) => editar(dir, "series.csv", (t) => t.replace(/^plata,.*\r?\n/m, "")));
+debeFallar("precios_mensuales.csv sin los dos valores de un mes en disputa", (dir) => editar(dir, "precios_mensuales.csv", (t) => t.replace('"valor en disputa: Pink Sheet 313.5, FMI 303.94, diferencia 3.145 %"', "dentro del umbral")));
+debeFallar("descargas_ratios.csv con un SHA-256 que no lo es", (dir) => editar(dir, "descargas_ratios.csv", (t) => t.replace("5f40c787", "5f40")));
 
 console.log(failures === 0 ? "\nTodo OK" : `\n${failures} verificación(es) fallida(s)`);
 process.exit(failures === 0 ? 0 : 1);

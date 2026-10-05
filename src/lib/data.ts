@@ -1,49 +1,9 @@
 // ============================================================
-// Los Ratios — Data Layer
-// 5 ratios that matter + universe of winners
-// Structure ready for real APIs (CoinGecko, FRED, Yahoo Finance)
+// Los Ratios — métricas que todavía no se publican
+// Los ratios que muestra el sitio no salen de aquí: se leen de senales/ en el
+// build (src/lib/series.ts). Este archivo conserva las funciones de cálculo de
+// lo que está oculto. No contiene datos: lo que se publique leerá de senales/.
 // ============================================================
-
-export interface AssetDataPoint {
-  date: string;
-  gold: number;
-  silver: number;
-  sp500: number;
-  nasdaq: number;
-  btc: number;
-  // M2 EE.UU. (FRED M2SL) en billones (10^12) de USD. Solo disponible vía API;
-  // no existe serie estática: los anclajes anuales no incluyen M2.
-  m2Usd?: number;
-}
-
-// The 5 ratios that matter
-export interface ClassRatioDataPoint {
-  date: string;
-  btcGold: number;       // BTC / Oro — EL RATIO CENTRAL
-  goldSp500: number;     // Oro / S&P 500
-  btcSp500: number;      // BTC / S&P 500
-  nasdaqSp500: number;   // Nasdaq / S&P 500
-  goldSilver: number;    // Oro / Plata
-}
-
-export interface RatioSummary {
-  name: string;
-  pair: string;
-  current: number;
-  mean: number;
-  stdDev: number;
-  zScore: number;
-  signal: string;
-  signalType: "overbought" | "oversold" | "neutral";
-  context: string;
-}
-
-export interface RotationSignal {
-  message: string;
-  type: "rotate_from" | "rotate_to";
-  pair: string;
-  zScore: number;
-}
 
 // ============================================================
 // BOLLINGER BANDS
@@ -58,168 +18,27 @@ export interface BollingerBandPoint {
   lower2: number | null;
 }
 
-// ============================================================
-// PERFORMANCE HISTÓRICA (CAGR) — Universe of Winners
-// ============================================================
-export interface AssetPerformance {
-  ticker: string;
-  name: string;
-  sector: string;
-  marketCap: number;       // billions USD
-  ipoYear: number;
-  priceStart: number;
-  price5YAgo: number;
-  priceCurrent: number;
-  years: number;
-  cagrHistorical: number;  // % anual
-  cagr5Y: number;          // % anual últimos 5 años
-  vsM2: number;            // CAGR − 7 (supuesto de expansión monetaria ~7% anual, no dato medido)
-  beatsM2: boolean;
-}
-
-// ============================================================
-// PAIR DEFINITIONS — only the 5 that matter
-// ============================================================
-export const PAIR_DEFS: { name: string; pair: string; key: keyof ClassRatioDataPoint; description: string; color: string; startYear: number }[] = [
-  { name: "BTC ÷ Oro", pair: "BTC / Oro", key: "btcGold", description: "Market share del digital gold — ¿está ganando el argumento?", color: "gold", startYear: 2010 },
-  { name: "Oro ÷ S&P 500", pair: "Oro / S&P 500", key: "goldSp500", description: "Fear vs greed — protección vs crecimiento", color: "amber", startYear: 1971 },
-  { name: "BTC ÷ S&P 500", pair: "BTC / S&P 500", key: "btcSp500", description: "Hard money vs capital productivo", color: "cyan", startYear: 2010 },
-  { name: "Nasdaq ÷ S&P 500", pair: "Nasdaq / S&P 500", key: "nasdaqSp500", description: "Growth vs quality — el ciclo dentro del ciclo", color: "blue", startYear: 1971 },
-  { name: "Oro ÷ Plata", pair: "Oro / Plata", key: "goldSilver", description: "Escasez pura vs escasez con utilidad — >80 = plata barata", color: "red", startYear: 1971 },
-];
-
 const SMA_LONG = 200;  // meses — ventana para media y z-score
 const SMA_SHORT = 50;  // meses — media corta para cruces
 
 // ============================================================
-// MÉTRICAS NO DEFENDIBLES — FLAG
-// Todo el historial que muestra el sitio es interpolación entre valores de
-// referencia; solo el último punto es observado. Sobre esa base, z-score,
-// percentil, etiquetas (Neutral/Extendido/Extremo), bandas de Bollinger y
-// señales de rotación no se publican. El código de cálculo se conserva y se
-// reactiva cambiando este flag a true cuando haya series observadas.
+// MÉTRICAS — FLAG
+// El sitio muestra el nivel mensual de cada ratio. z-score, percentil,
+// etiquetas (Neutral/Extendido/Extremo), bandas de Bollinger y señales de
+// rotación no se publican todavía: se publicarán en la siguiente etapa sobre
+// estas mismas series, y solo con los meses que ratios.csv marca como aptos
+// (apto_metricas, A-R0-17 y A-R0-20). Las funciones de cálculo se conservan
+// abajo; el flag queda en false hasta entonces.
 // ============================================================
 export const METRICAS_VERIFICADAS = false;
-export const NO_MEDIDO = "NO MEDIDO: se publicará con datos observados.";
-export const NOTA_VALORES_REFERENCIA =
-  "Calculado sobre valores de referencia sin procedencia verificada; se reemplaza cuando haya series observadas.";
+export const NO_MEDIDO = "NO MEDIDO: se publicarán en la siguiente etapa sobre estas mismas series.";
 
 // ============================================================
-// HISTORICAL ANCHORS (1971-2026)
-// Starts at 1971: Nixon shock (fiat standard) + Nasdaq launch
-// Sources: Yahoo Finance, WGC, CoinGecko,
-//          elnumerador.com, eldenominador.com
-// BTC = 0 before 2009 (didn't exist); BTC ratios skip those rows
+// TABLAS DE CAGR Y PODER ADQUISITIVO
+// No se publican: no hay series observadas para ellas, y el sitio muestra este
+// texto en su lugar. Cuando se publiquen leerán de senales/, como los ratios.
 // ============================================================
-const anchors: AssetDataPoint[] = [
-  // ── Fiat standard era (1971-1994) ────────────────────────
-  { date: "1971", gold: 41, silver: 1.4, sp500: 102, nasdaq: 114, btc: 0 },
-  { date: "1973", gold: 106, silver: 3.3, sp500: 97, nasdaq: 92, btc: 0 },
-  { date: "1975", gold: 140, silver: 4.4, sp500: 90, nasdaq: 78, btc: 0 },
-  { date: "1977", gold: 165, silver: 4.7, sp500: 95, nasdaq: 105, btc: 0 },
-  { date: "1979", gold: 512, silver: 21.8, sp500: 108, nasdaq: 152, btc: 0 },
-  { date: "1980", gold: 615, silver: 16.4, sp500: 136, nasdaq: 202, btc: 0 },
-  { date: "1982", gold: 456, silver: 10.8, sp500: 141, nasdaq: 232, btc: 0 },
-  { date: "1984", gold: 309, silver: 6.1, sp500: 167, nasdaq: 247, btc: 0 },
-  { date: "1986", gold: 391, silver: 5.5, sp500: 242, nasdaq: 349, btc: 0 },
-  { date: "1988", gold: 410, silver: 6.1, sp500: 278, nasdaq: 381, btc: 0 },
-  { date: "1990", gold: 383, silver: 4.1, sp500: 330, nasdaq: 374, btc: 0 },
-  { date: "1992", gold: 333, silver: 3.7, sp500: 435, nasdaq: 677, btc: 0 },
-  { date: "1994", gold: 384, silver: 5.3, sp500: 459, nasdaq: 752, btc: 0 },
-  // ── Dot-com era (1995-2008) ──────────────────────────────
-  { date: "1995", gold: 387, silver: 5.2, sp500: 616, nasdaq: 1052, btc: 0 },
-  { date: "1996", gold: 369, silver: 4.9, sp500: 741, nasdaq: 1291, btc: 0 },
-  { date: "1997", gold: 290, silver: 4.7, sp500: 970, nasdaq: 1570, btc: 0 },
-  { date: "1998", gold: 288, silver: 5.1, sp500: 1229, nasdaq: 2193, btc: 0 },
-  { date: "1999", gold: 290, silver: 5.3, sp500: 1469, nasdaq: 4069, btc: 0 },
-  { date: "2000", gold: 273, silver: 4.6, sp500: 1320, nasdaq: 2471, btc: 0 },
-  { date: "2001", gold: 276, silver: 4.4, sp500: 1148, nasdaq: 1950, btc: 0 },
-  { date: "2002", gold: 347, silver: 4.8, sp500: 880, nasdaq: 1336, btc: 0 },
-  { date: "2003", gold: 416, silver: 5.9, sp500: 1112, nasdaq: 2003, btc: 0 },
-  { date: "2004", gold: 436, silver: 6.8, sp500: 1212, nasdaq: 2178, btc: 0 },
-  { date: "2005", gold: 518, silver: 8.8, sp500: 1248, nasdaq: 2205, btc: 0 },
-  { date: "2006", gold: 636, silver: 12.9, sp500: 1418, nasdaq: 2415, btc: 0 },
-  { date: "2007", gold: 836, silver: 14.8, sp500: 1468, nasdaq: 2652, btc: 0 },
-  { date: "2008", gold: 865, silver: 11.0, sp500: 903, nasdaq: 1577, btc: 0 },
-  // ── BTC era (2009-2026) ──────────────────────────────────
-  { date: "2009", gold: 1096, silver: 17.5, sp500: 1115, nasdaq: 2269, btc: 0.001 },
-  { date: "2010", gold: 1421, silver: 30.9, sp500: 1258, nasdaq: 2653, btc: 0.30 },
-  { date: "2011", gold: 1566, silver: 28.2, sp500: 1258, nasdaq: 2605, btc: 4.70 },
-  { date: "2012", gold: 1675, silver: 30.4, sp500: 1426, nasdaq: 3020, btc: 13.5 },
-  { date: "2013", gold: 1205, silver: 19.5, sp500: 1848, nasdaq: 4177, btc: 751 },
-  { date: "2014", gold: 1266, silver: 19.1, sp500: 2059, nasdaq: 4736, btc: 320 },
-  { date: "2015", gold: 1060, silver: 13.9, sp500: 2044, nasdaq: 5007, btc: 430 },
-  { date: "2016", gold: 1151, silver: 16.1, sp500: 2239, nasdaq: 5383, btc: 960 },
-  { date: "2017", gold: 1296, silver: 17.1, sp500: 2674, nasdaq: 6903, btc: 14000 },
-  { date: "2018", gold: 1282, silver: 15.5, sp500: 2507, nasdaq: 6635, btc: 3800 },
-  { date: "2019", gold: 1517, silver: 17.9, sp500: 3231, nasdaq: 8973, btc: 7200 },
-  { date: "2020", gold: 1898, silver: 26.5, sp500: 3756, nasdaq: 12888, btc: 28900 },
-  { date: "2021", gold: 1829, silver: 23.4, sp500: 4766, nasdaq: 15645, btc: 47000 },
-  { date: "2022", gold: 1824, silver: 24.0, sp500: 3840, nasdaq: 10466, btc: 16500 },
-  { date: "2023", gold: 2063, silver: 24.1, sp500: 4770, nasdaq: 15011, btc: 42200 },
-  { date: "2024", gold: 2625, silver: 30.5, sp500: 5881, nasdaq: 19310, btc: 93000 },
-  { date: "2025", gold: 4315, silver: 72, sp500: 6845, nasdaq: 23242, btc: 87500 },
-  { date: "2026", gold: 5162, silver: 87, sp500: 6901, nasdaq: 22878, btc: 67650 },
-];
-
-/** Anclas de referencia (solo lectura), expuestas para scripts/verify-series.ts */
-export const ANCHORS: readonly AssetDataPoint[] = anchors;
-
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-// Geometric interpolation: a * (b/a)^t — correct for exponential assets like BTC
-function glerp(a: number, b: number, t: number): number {
-  if (a <= 0 || b <= 0) return lerp(a, b, t);
-  return a * Math.pow(b / a, t);
-}
-
-function generateMonthlyData(): AssetDataPoint[] {
-  const result: AssetDataPoint[] = [];
-  for (let i = 0; i < anchors.length - 1; i++) {
-    const a = anchors[i];
-    const b = anchors[i + 1];
-    const yearA = parseInt(a.date, 10);
-    const yearB = parseInt(b.date, 10);
-    // 12 meses por cada año entre anclas (antes de 1995 las anclas son bianuales),
-    // con t proporcional, para que no falte ningún mes de la serie.
-    const totalMonths = 12 * (yearB - yearA);
-    for (let m = 0; m < totalMonths; m++) {
-      const t = m / totalMonths;
-      // Interpolación pura entre anclas: lineal (lerp) y geométrica (glerp) para BTC.
-      // Sin ruido sintético: cualquier "variación" mensual sería inventada.
-      result.push({
-        date: `${yearA + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, "0")}`,
-        gold: lerp(a.gold, b.gold, t),
-        silver: lerp(a.silver, b.silver, t),
-        sp500: lerp(a.sp500, b.sp500, t),
-        nasdaq: lerp(a.nasdaq, b.nasdaq, t),
-        btc: glerp(a.btc, b.btc, t),
-      });
-    }
-  }
-  const last = anchors[anchors.length - 1];
-  result.push({ ...last, date: `${last.date}-01` });
-  return result;
-}
-
-function safeDiv(a: number, b: number): number {
-  if (!b || !isFinite(b)) return 0;
-  const r = a / b;
-  return isFinite(r) ? r : 0;
-}
-
-function computeRatios(assets: AssetDataPoint[]): ClassRatioDataPoint[] {
-  return assets.map((d) => ({
-    date: d.date,
-    btcGold: safeDiv(d.btc, d.gold),
-    goldSp500: safeDiv(d.gold, d.sp500),
-    btcSp500: safeDiv(d.btc, d.sp500),
-    nasdaqSp500: safeDiv(d.nasdaq, d.sp500),
-    goldSilver: safeDiv(d.gold, d.silver),
-  }));
-}
+export const NO_MEDIDO_TABLAS = "NO MEDIDO: se publicarán cuando haya series observadas para ellas.";
 
 // ============================================================
 // LOG-SCALE DETECTION
@@ -318,7 +137,7 @@ export function computeSMA(values: number[], period: number, useLogScale?: boole
 // ============================================================
 // STATISTICS & SIGNALS
 // ============================================================
-function computeStats(values: number[]): { mean: number; stdDev: number } {
+export function computeStats(values: number[]): { mean: number; stdDev: number } {
   const n = values.length;
   if (n === 0) return { mean: 0, stdDev: 0 };
   const mean = values.reduce((s, v) => s + v, 0) / n;
@@ -331,7 +150,7 @@ function computeStats(values: number[]): { mean: number; stdDev: number } {
  * Returns the z-score of log(current) relative to the distribution of log(values).
  * This gives meaningful z-scores for exponential assets like BTC.
  */
-function computeLogStats(values: number[]): { mean: number; stdDev: number; logMean: number; logStdDev: number } {
+export function computeLogStats(values: number[]): { mean: number; stdDev: number; logMean: number; logStdDev: number } {
   const positives = values.filter(v => v > 0);
   const n = positives.length;
   if (n === 0) return { mean: 0, stdDev: 0, logMean: 0, logStdDev: 0 };
@@ -380,7 +199,7 @@ export function formatZ(zScore: number): string {
   return `${zScore >= 0 ? "+" : ""}${zScore.toFixed(1)}σ`;
 }
 
-function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
+export function getSignal(zScore: number, pair: string): { signal: string; signalType: "overbought" | "oversold" | "neutral"; context: string } {
   const absZ = Math.abs(zScore);
   const context = generateNarrative(pair, zScore);
   if (absZ >= Z_EXTREME) {
@@ -410,265 +229,15 @@ export function generateNarrative(pair: string, zScore: number): string {
   if (absZ < Z_EXTREME) {
     return `${a} ${zScore > 0 ? "caro" : "barato"} vs ${b} respecto de su historia (${z})`;
   }
-  return `${a}/${b} en zona extrema de su historia (${z}). Históricamente los extremos tienden a revertir; el momento no es predecible.`;
+  return `${a}/${b} en zona extrema de su historia (${z})`;
 }
 
 // ============================================================
-// BUILD SUMMARIES & ROTATION SIGNALS
+// CAGR
 // ============================================================
-// ============================================================
-// HUECO AL FINAL DE LA SERIE
-// El último punto puede ser un precio en vivo con fecha real (p. ej. 2026-10)
-// mientras el anterior es el último valor de referencia (2026-01). No se
-// rellenan los meses intermedios: el hueco se declara y ese punto queda fuera
-// de las medias móviles, las bandas y la ventana del z-score.
-// ============================================================
-export interface TrailingGap {
-  /** Último mes de la serie mensual continua */
-  prev: string;
-  /** Fecha del último punto (separado del anterior por más de un mes) */
-  last: string;
-  /** Primer y último mes sin datos */
-  missingFrom: string;
-  missingTo: string;
-  missingMonths: number;
-}
-
-/** Meses entre dos fechas YYYY-MM (positivo si `to` es posterior). */
-export function monthsBetween(from: string, to: string): number {
-  const [fy, fm] = from.split("-").map(Number);
-  const [ty, tm] = to.split("-").map(Number);
-  return (ty - fy) * 12 + (tm - fm);
-}
-
-function addMonths(date: string, n: number): string {
-  const [y, m] = date.split("-").map(Number);
-  const idx = y * 12 + (m - 1) + n;
-  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, "0")}`;
-}
-
-/** Devuelve el hueco si el último punto no es el mes siguiente al penúltimo; si no, null. */
-export function findTrailingGap(dates: string[]): TrailingGap | null {
-  if (dates.length < 2) return null;
-  const prev = dates[dates.length - 2];
-  const last = dates[dates.length - 1];
-  const gap = monthsBetween(prev, last);
-  if (gap <= 1) return null;
-  return { prev, last, missingFrom: addMonths(prev, 1), missingTo: addMonths(last, -1), missingMonths: gap - 1 };
-}
-
-function buildSummaries(ratios: ClassRatioDataPoint[]): RatioSummary[] {
-  const gap = findTrailingGap(ratios.map((d) => d.date));
-  return PAIR_DEFS.map(({ pair, key }) => {
-    const values = ratios.map((d) => d[key] as number);
-    const current = values[values.length - 1];
-
-    // Con hueco al final, el punto en vivo no forma parte de la historia mensual:
-    // se compara contra la ventana anterior, pero no entra en su media ni en su σ.
-    const history = gap ? values.slice(0, -1) : values;
-    const windowSize = Math.min(SMA_LONG, history.length);
-    const windowValues = history.slice(-windowSize);
-
-    // Use log-scale for ratios that span orders of magnitude (BTC/Gold, BTC/S&P)
-    const useLog = needsLogScale(windowValues);
-
-    let zScore: number;
-    let mean: number;
-    let stdDev: number;
-
-    if (useLog && current > 0) {
-      const logStats = computeLogStats(windowValues);
-      zScore = logStats.logStdDev > 0 ? (Math.log(current) - logStats.logMean) / logStats.logStdDev : 0;
-      mean = logStats.mean;    // geometric mean
-      stdDev = logStats.logStdDev;  // in log space
-    } else {
-      const stats = computeStats(windowValues);
-      zScore = stats.stdDev > 0 ? (current - stats.mean) / stats.stdDev : 0;
-      mean = stats.mean;
-      stdDev = stats.stdDev;
-    }
-
-    const computed = getSignal(zScore, pair);
-    // Sin métricas verificadas, la etiqueta y su contexto no se publican
-    // (el z-score numérico se conserva en el objeto para reactivar sin recalcular).
-    const { signal, signalType, context } = METRICAS_VERIFICADAS
-      ? computed
-      : { signal: NO_MEDIDO, signalType: "neutral" as const, context: NO_MEDIDO };
-    return { name: `${pair}`, pair, current, mean, stdDev, zScore, signal, signalType, context };
-  });
-}
-
-// Solo pares en zona extrema (|z| ≥ Z_EXTREME). El mensaje es la misma
-// plantilla descriptiva de generateNarrative: sin "oportunidad" ni acciones.
-function buildRotationSignals(sums: RatioSummary[]): RotationSignal[] {
-  const signals: RotationSignal[] = [];
-  // Sin métricas verificadas no se emite ninguna señal (el cálculo queda abajo).
-  if (!METRICAS_VERIFICADAS) return signals;
-  for (const s of sums) {
-    if (Math.abs(s.zScore) >= Z_EXTREME) {
-      signals.push({
-        message: generateNarrative(s.pair, s.zScore),
-        type: s.zScore > 0 ? "rotate_from" : "rotate_to",
-        pair: s.pair,
-        zScore: s.zScore,
-      });
-    }
-  }
-  return signals.sort((a, b) => Math.abs(b.zScore) - Math.abs(a.zScore));
-}
-
-// ============================================================
-// PERFORMANCE HISTÓRICA — Universe of Winners Only
-// ============================================================
-const M2_BENCHMARK = 7; // Supuesto: expansión monetaria ~7% anual. No es un dato medido de M2 global ni de inflación.
-
-const PERFORMANCE_ANCHORS: { ticker: string; name: string; sector: string; marketCap: number; ipoYear: number; priceStart: number; price5YAgo: number; priceCurrent: number }[] = [
-  // Universe of winners — assets whose CAGR exceeds the ~7% annual assumption
-  // price5YAgo = Feb 2021 prices, priceCurrent = Feb 2026 prices
-  { ticker: "BTC", name: "Bitcoin", sector: "Crypto", marketCap: 1340, ipoYear: 2009, priceStart: 0.001, price5YAgo: 33593, priceCurrent: 67650 },
-  { ticker: "GOLD", name: "Oro (onza)", sector: "Commodities", marketCap: 18200, ipoYear: 1971, priceStart: 35, price5YAgo: 1854, priceCurrent: 5162 },
-  { ticker: "AAPL", name: "Apple", sector: "Tech", marketCap: 3900, ipoYear: 1980, priceStart: 0.10, price5YAgo: 130, priceCurrent: 274 },
-  { ticker: "MSFT", name: "Microsoft", sector: "Tech", marketCap: 2970, ipoYear: 1986, priceStart: 0.10, price5YAgo: 229, priceCurrent: 399 },
-  { ticker: "GOOGL", name: "Alphabet", sector: "Tech", marketCap: 3700, ipoYear: 2004, priceStart: 2.50, price5YAgo: 94, priceCurrent: 306 },
-  { ticker: "NVDA", name: "NVIDIA", sector: "Tech", marketCap: 4600, ipoYear: 1999, priceStart: 1.50, price5YAgo: 13.2, priceCurrent: 185 },
-  { ticker: "META", name: "Meta", sector: "Tech", marketCap: 1630, ipoYear: 2012, priceStart: 38, price5YAgo: 260, priceCurrent: 653 },
-  { ticker: "V", name: "Visa", sector: "Finance", marketCap: 620, ipoYear: 2008, priceStart: 11, price5YAgo: 191, priceCurrent: 313 },
-  { ticker: "MA", name: "Mastercard", sector: "Finance", marketCap: 480, ipoYear: 2006, priceStart: 3.90, price5YAgo: 313, priceCurrent: 496 },
-  { ticker: "COST", name: "Costco", sector: "Consumer", marketCap: 450, ipoYear: 1985, priceStart: 2.50, price5YAgo: 331, priceCurrent: 987 },
-  { ticker: "BRK.B", name: "Berkshire Hathaway", sector: "Finance", marketCap: 1120, ipoYear: 1996, priceStart: 23, price5YAgo: 229, priceCurrent: 494 },
-  // Context assets that DON'T beat M2 — shown for comparison
-  { ticker: "SPX", name: "S&P 500", sector: "Index", marketCap: 124000, ipoYear: 1957, priceStart: 44, price5YAgo: 3773, priceCurrent: 6901 },
-  { ticker: "SILVER", name: "Plata (onza)", sector: "Commodities", marketCap: 1800, ipoYear: 1971, priceStart: 1.39, price5YAgo: 28.5, priceCurrent: 87 },
-];
-
 export function computeCAGR(priceStart: number, priceEnd: number, years: number): number {
   if (priceStart <= 0 || priceEnd <= 0 || years <= 0) return 0;
   return (Math.pow(priceEnd / priceStart, 1 / years) - 1) * 100;
-}
-
-export function getAnchorPrice(asset: 'gold' | 'silver' | 'sp500' | 'nasdaq' | 'btc', year: number): number {
-  let best = anchors[0];
-  for (const a of anchors) {
-    const aYear = parseInt(a.date);
-    if (aYear <= year) best = a;
-    if (aYear > year) break;
-  }
-  return best[asset];
-}
-
-// Map PERFORMANCE_ANCHORS tickers to AssetDataPoint keys for live price overrides
-const TICKER_TO_ASSET_KEY: Partial<Record<string, keyof AssetDataPoint>> = {
-  BTC: "btc",
-  GOLD: "gold",
-  SPX: "sp500",
-  SILVER: "silver",
-};
-
-function buildPerformanceData(liveLastPoint?: AssetDataPoint): AssetPerformance[] {
-  const currentYear = 2026;
-  return PERFORMANCE_ANCHORS.map(a => {
-    let priceCurrent = a.priceCurrent;
-
-    // Override with live API data when available
-    if (liveLastPoint) {
-      const assetKey = TICKER_TO_ASSET_KEY[a.ticker];
-      if (assetKey) {
-        const livePrice = liveLastPoint[assetKey] as number;
-        if (livePrice > 0) priceCurrent = livePrice;
-      }
-    }
-
-    const years = currentYear - a.ipoYear;
-    const cagrHistorical = computeCAGR(a.priceStart, priceCurrent, years);
-    const cagr5Y = computeCAGR(a.price5YAgo, priceCurrent, 5);
-    const vsM2 = cagrHistorical - M2_BENCHMARK;
-    return {
-      ticker: a.ticker,
-      name: a.name,
-      sector: a.sector,
-      marketCap: a.marketCap,
-      ipoYear: a.ipoYear,
-      priceStart: a.priceStart,
-      price5YAgo: a.price5YAgo,
-      priceCurrent,
-      years,
-      cagrHistorical,
-      cagr5Y,
-      vsM2,
-      beatsM2: cagrHistorical > M2_BENCHMARK,
-    };
-  }).sort((a, b) => b.cagrHistorical - a.cagrHistorical);
-}
-
-// ============================================================
-// BUILD ALL DATA
-// ============================================================
-const rawAssets = generateMonthlyData();
-const ratioData = computeRatios(rawAssets);
-const summariesData = buildSummaries(ratioData);
-
-// EXPORTS (static fallback data for SSR / offline)
-export const assetData = rawAssets;
-export const ratios = ratioData;
-export const summaries = summariesData;
-export const rotationSignals = buildRotationSignals(summaries);
-export const assetPerformance = buildPerformanceData();
-
-// ============================================================
-// COMPUTED MARKET DATA — used by API route
-// ============================================================
-/** Procedencia de los datos devueltos por /api/market-data. */
-export interface MarketDataMeta {
-  /** Fecha (YYYY-MM) del último punto de la serie devuelta por la API */
-  lastDate: string;
-  /** BTC: CoinGecko en vivo, o anclajes estáticos interpolados (rate limit) */
-  btcSource: "coingecko" | "static-fallback";
-  /** Si el BTC del último punto se sobrescribió con el precio spot de CoinGecko */
-  btcSpotOverride: boolean;
-}
-
-export interface ComputedMarketData {
-  assetData: AssetDataPoint[];
-  ratios: ClassRatioDataPoint[];
-  summaries: RatioSummary[];
-  rotationSignals: RotationSignal[];
-  assetPerformance: AssetPerformance[];
-  meta?: MarketDataMeta;
-}
-
-/**
- * Takes raw AssetDataPoint[] (from real APIs) and computes everything.
- */
-export function computeAllFromRawAssets(assets: AssetDataPoint[]): ComputedMarketData {
-  const ratioD = computeRatios(assets);
-  const sumsD = buildSummaries(ratioD);
-  const rotD = buildRotationSignals(sumsD);
-  const lastPoint = assets.length > 0 ? assets[assets.length - 1] : undefined;
-  const perfD = buildPerformanceData(lastPoint); // uses live prices when available
-
-  return {
-    assetData: assets,
-    ratios: ratioD,
-    summaries: sumsD,
-    rotationSignals: rotD,
-    assetPerformance: perfD,
-  };
-}
-
-export function getFilteredData(
-  timeframe: string,
-  sourceAssets?: AssetDataPoint[],
-): {
-  assets: AssetDataPoint[];
-  ratios: ClassRatioDataPoint[];
-} {
-  const assets = sourceAssets ?? rawAssets;
-  const months = timeframe === "1Y" ? 12 : timeframe === "3Y" ? 36 : timeframe === "5Y" ? 60 : timeframe === "10Y" ? 120 : assets.length;
-  const sliced = assets.slice(-months);
-  return {
-    assets: sliced,
-    ratios: computeRatios(sliced),
-  };
 }
 
 const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -690,25 +259,6 @@ export function formatRatio(value: number): string {
   if (value >= 0.01) return value.toFixed(4);
   if (value >= 0.0001) return value.toFixed(6);
   return value.toExponential(2);
-}
-
-// Compute SMA series for a given ratio key over filtered data
-export function computeRatioSMAs(
-  data: ClassRatioDataPoint[],
-  key: keyof ClassRatioDataPoint,
-): { sma50: (number | null)[]; sma200: (number | null)[]; isLogScale: boolean } {
-  const allValues = data.map((d) => d[key] as number);
-  const useLog = needsLogScale(allValues);
-  // Con hueco al final, el punto en vivo no entra en las medias móviles (queda null).
-  const gap = findTrailingGap(data.map((d) => d.date));
-  const values = gap ? allValues.slice(0, -1) : allValues;
-  const sma50 = computeSMA(values, Math.min(SMA_SHORT, values.length), useLog);
-  const sma200 = computeSMA(values, Math.min(SMA_LONG, values.length), useLog);
-  if (gap) {
-    sma50.push(null);
-    sma200.push(null);
-  }
-  return { sma50, sma200, isLogScale: useLog };
 }
 
 export { SMA_LONG, SMA_SHORT };

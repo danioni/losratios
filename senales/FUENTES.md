@@ -1,6 +1,6 @@
 # Fuentes de precios para los ratios
 
-> **APROBADO CON CONDICIONES (2026-10-04).** Todo lo que figura acá se leyó de
+> **APROBADO CON CONDICIONES (2026-10-04).** Todo lo que figura aquí se leyó de
 > la fuente el 2026-10-04, en dos pasadas: la primera desde un entorno con
 > proxy (10:43–11:00 UTC) y la segunda desde una máquina con salida directa
 > (13:39–15:30 UTC). Cada cifra dice de cuál pasada sale cuando importa. Nada
@@ -219,7 +219,7 @@ la primera pasada tuvo la misma causa.
 | Cboe, `https://cdn.cboe.com/api/global/us_indices/daily_prices/SPX_History.csv` | leída, **(c)** | Diaria, columnas `DATE,SPX`, 13.047 filas del 1975-01-02 al 2026-10-02; 293.010 bytes. La página de datos históricos de Cboe enlaza los CSV de la familia VIX en esa misma ruta, pero no este: no está documentado. Términos de cboe.com: una copia para *"personal non-commercial use"* y prohibición de publicar sin consentimiento escrito. **Se usó solo como contraste.** |
 | Nasdaq (api.nasdaq.com), símbolo SPX | **no sirve** | Responde `"Symbol not exists."`. |
 | Stooq `^spx` | **no sirve** | Ver sección 7. |
-| Yahoo Finance `^GSPC` | leída, **(c)** | Responde desde la máquina con salida directa. Es lo que usa hoy el sitio: ver sección 8. |
+| Yahoo Finance `^GSPC` | leída, **(c)** | Responde desde la máquina con salida directa. Es lo que usaba el sitio hasta la fase 3: ver sección 8.2. |
 
 ---
 
@@ -265,7 +265,7 @@ la primera pasada tuvo la misma causa.
 | Nasdaq (api.nasdaq.com), `/api/quote/COMP/historical?assetclass=index`, originador | leída, **(c)** | Diaria, cierre. Con `fromdate=1971-01-01` devuelve 10.849 filas y la más antigua es del **1984-10-11**. API sin documentación pública; exige cabeceras de navegador. Términos de nasdaq.com: licencia *"solely for your personal, non-commercial use"* y prohibición de copiar o publicar el contenido sin aprobación escrita. **Se usó solo como contraste.** |
 | indexes.nasdaqomx.com | parcial, **(c)** | La página "History for COMP" existe; no se exploró. Mismo dueño y mismos términos. |
 | Nasdaq Data Link (data.nasdaq.com) | **no sirve** | Ver sección 7. |
-| Yahoo Finance `^IXIC` | **(c)** | Es lo que usa hoy el sitio: ver sección 8. |
+| Yahoo Finance `^IXIC` | **(c)** | Es lo que usaba el sitio hasta la fase 3: ver sección 8.2. |
 
 ---
 
@@ -428,7 +428,7 @@ los dos metales.
   literal: *"USGS-authored or produced data and information are considered to
   be in the U.S. Public Domain."* La misma página dice que el material de
   terceros con copyright suele ir marcado; la tabla de precios no lleva ninguna
-  marca. De todos modos acá no se copia el documento: se transcriben ocho
+  marca. De todos modos aquí no se copia el documento: se transcriben ocho
   cifras, con su cita.
 
 ### 4.7 FMI, Primary Commodity Prices — leída, (b), control mensual
@@ -517,8 +517,8 @@ oro es **marzo de 1985**: 313.5 en el Pink Sheet y 303.94 en el FMI, a 3.1 %.
 - Es una cotización **independiente** de las otras dos: la de un comerciante de
   Estados Unidos, no el fixing de Londres. Es la misma cotización contra la que
   cierra el gate anual (4.6).
-- Licencia: es una publicación del gobierno federal de Estados Unidos. Acá no se
-  copia: se transcriben cifras, con su cita.
+- Licencia: es una publicación del gobierno federal de Estados Unidos. Aquí no
+  se copia: se transcriben cifras, con su cita.
 
 | Mes | Pink Sheet | FMI | Engelhard | Pink Sheet contra Engelhard | FMI contra Engelhard |
 | --- | --- | --- | --- | --- | --- |
@@ -590,7 +590,7 @@ y fuera de las métricas. Lo que corresponde es reportarlo al Banco Mundial
 | Candidata | Estado | Lo verificado |
 | --- | --- | --- |
 | Deutsche Bundesbank | **no sirve** | La consulta `BBEX3/.XAG....` responde HTTP 404: no publica plata. |
-| Yahoo Finance `SI=F` | **(c)** | Futuro de COMEX, no spot. Es lo que usa hoy el sitio: ver sección 8. |
+| Yahoo Finance `SI=F` | **(c)** | Futuro de COMEX, no spot. Es lo que usaba el sitio hasta la fase 3: ver sección 8.2. |
 
 No apareció ninguna fuente diaria de plata que se pueda publicar. La única
 fuente (a) es mensual.
@@ -823,7 +823,72 @@ Fijar la fecha de "confiable" es un supuesto (A-R0-10), no un dato.
 
 ---
 
-## 8. Fuentes que usa hoy el sitio
+## 8. Fuentes que usa el sitio
+
+**Actualizada el 2026-10-05, con la fase 3.** El sitio ya no consulta ninguna
+fuente externa: ni Yahoo, ni CoinGecko, ni FRED. Lee los archivos de
+`data/series/` cuando se construye y no vuelve a pedir datos: no hay precios en
+vivo ni API propia. La sección 8.1 dice qué usa ahora; la 8.2 conserva, sin
+cambios, la lectura del 2026-10-04 de lo que usaba antes; la 8.3 dice qué pasó
+con cada cosa.
+
+### 8.1 Lo que usa desde la fase 3
+
+Leído el 2026-10-05 del código de la fase 3: `src/lib/series.ts`,
+`src/app/page.tsx` y `src/app/fuentes/page.tsx`.
+
+| Archivo de `data/series/` | Qué muestra el sitio con él |
+| --- | --- |
+| `ratios.csv` | El nivel mensual de los pares publicados (hoy Oro / Plata y BTC / Oro), su error máximo por redondeo y qué meses son aptos para métricas. |
+| `pares.csv` | Los cinco pares. De los publicados: el estado, el rango de meses y el último dato. De los demás: solo el nombre y el estado NO MEDIDO, sin gráfico ni valor. |
+| `series.csv` | De cada serie: fuente, unidad, licencia, **atribución** y validación, tal cual. Van bajo cada gráfico y en la página `/fuentes`. |
+| `precios_mensuales.csv` | Solo las columnas `oro_contraste_fmi` y `plata_contraste_fmi`: los dos valores de un mes en disputa y qué meses están "sin comparar" (A-R0-20). |
+| `descargas_ratios.csv` | La tabla de descargas de `/fuentes`: fuente, fecha, URL y SHA-256. |
+
+Si uno de los cinco falta, está mal formado o contradice a otro, el sitio no se
+construye. No hay respaldo.
+
+Las fuentes de origen son las de la sección 9.2: el Pink Sheet para el oro y la
+plata, y Coin Metrics community para BTC. Del FMI el sitio muestra los valores
+de los meses en disputa, con su atribución, que viene en la columna `validacion`
+de `series.csv`. Del S&P 500 y del Nasdaq Composite no muestra ningún nivel.
+
+**Una fuente citada que no es una serie.** La portada dice que la plata es un
+metal "de uso mayormente industrial", y `/fuentes` cita de dónde sale. Leído el
+2026-10-05, a las 12:23 UTC: la página "Silver Supply & Demand" del Silver
+Institute (`https://silverinstitute.org/silver-supply-demand/`), que dice estar
+adaptada en parte del *World Silver Survey 2025*, y su tabla "Silver Supply and
+Demand", en millones de onzas, con el pie "Source: Metals Focus"
+(`https://silverinstitute.org/wp-content/uploads/2025/06/Silver-S-D-2025.jpg`).
+
+- Para 2024: *Industrial (total)* 680.5 y *Total Demand* 1164.1, el 58.5 %.
+- De 2016 a 2024 la partida industrial pasa de la mitad del total en siete de
+  los nueve años. En 2016 (491.0 de 993.3, 49.4 %) y en 2022 (592.3 de 1284.2,
+  46.1 %), no.
+- Las cifras se transcribieron de la imagen de la tabla. Las de 2024 cierran
+  con la suma de sus partidas y con el texto de la misma página (*"Total
+  silver demand fell by 3 percent to 1.16 billion ounces (Boz) in 2024"*).
+- Es una sola fuente: no se contrastó con una segunda.
+- Licencia: el aviso legal del sitio
+  (`https://silverinstitute.org/legal-disclaimer/`) no trae una cláusula sobre
+  reutilizar los datos. Aquí no se copia la tabla: se transcriben seis cifras,
+  con su cita.
+- **No leído:** el *World Silver Survey 2026*, que la página de publicaciones
+  ya lista.
+
+**Las tablas de CAGR y de poder adquisitivo ya no están en el código.** El
+sitio las nombra con el estado NO MEDIDO y nada más. Sus cifras eran valores de
+referencia escritos a mano, sin procedencia verificada, y entre ellos había
+niveles anuales del S&P 500 y del Nasdaq Composite. Se eliminaron del código
+el 2026-10-05, con los componentes que solo existían para mostrarlas: las
+anclas de `src/lib/data.ts` y `src/lib/currency.ts` entero. Si esas tablas se
+publican, leerán de `data/series/`, como los ratios.
+
+### 8.2 Lo que usaba hasta la fase 3: lectura del 2026-10-04
+
+Lo que sigue se conserva como se escribió ese día, en presente. Describe un
+código que la fase 3 eliminó (`src/lib/market-api.ts` y la ruta
+`/api/market-data`) y un pie de página que ya no nombra esas fuentes.
 
 Leído del código en `origin/main` (`1823a93`), archivo `src/lib/market-api.ts`,
 y del pie de página (`src/components/Footer.tsx`). Sirve para saber qué hay que
@@ -867,12 +932,23 @@ de forma destacada el aviso *"This product uses the FRED® API but is not
 endorsed or certified by the Federal Reserve Bank of St. Louis."* Ese aviso no
 aparece en `src/`.
 
+### 8.3 Qué pasó con cada una en la fase 3
+
+| Lo que usaba | Qué pasó |
+| --- | --- |
+| Yahoo `GC=F`, `SI=F` | Se dejó de consultar. El oro y la plata salen del Pink Sheet. |
+| Yahoo `^GSPC`, `^IXIC` | Se dejó de consultar. El S&P 500 y el Nasdaq Composite se calculan en el pipeline y no se muestran: sus pares figuran como NO MEDIDO. |
+| CoinGecko, historia y precio actual | Se dejó de consultar. BTC sale de Coin Metrics community. El sitio no muestra un precio del momento. |
+| `BTC_STATIC_ANCHORS` y la serie mensual interpolada entre anclas | Eliminadas. Las anclas anuales que quedaban en `src/lib/data.ts` para la tabla de CAGR se eliminaron después, el 2026-10-05, con la tabla (8.1). |
+| FRED `M2SL` | Se dejó de consultar. El dato se pedía y se nombraba en el pie, pero ningún gráfico ni tabla lo mostraba. La sección 9.8 preveía conservarlo y agregar el aviso de la API; sin la API, el aviso no hace falta. Ningún código lee ya `FRED_API_KEY`. |
+
+El pipeline de S2 sigue leyendo FRED por CSV, sin clave: eso no es el sitio.
 ---
 
 ## 9. Decisiones
 
 **Aprobadas el 2026-10-04, con condiciones.** Los supuestos que las sostienen
-están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-20; acá va la decisión y la
+están en `SUPUESTOS.md`, numerados A-R0-1 a A-R0-20; aquí va la decisión y la
 evidencia.
 
 ### 9.1 Regla de publicación
@@ -1104,7 +1180,7 @@ publicado, la corrida se detiene (A-R0-15).
 | Yahoo `^IXIC` | (c); cierre de fin de mes | FRED `NASDAQCOM`, sin publicar hasta tener permiso |
 | CoinGecko, historia | No responde; el sitio muestra anclas interpoladas | Coin Metrics community, (b) |
 | CoinGecko, precio actual | Falta la atribución exigida | Fuera de la convención mensual; sin decidir |
-| FRED `M2SL` | (a); falta el aviso de la API | Se conserva; agregar el aviso |
+| FRED `M2SL` | (a); falta el aviso de la API | Ya no se usa: el sitio dejó de consultarla en la fase 3 (8.3). La decisión del 2026-10-04 era conservarla y agregar el aviso. |
 
 ---
 
@@ -1246,3 +1322,19 @@ Están en `SUPUESTOS.md`. Índice:
    Kraken, los términos del Bundesbank, la exportación de S&P DJI, y la
    documentación técnica del FMI (se leyó la descripción de cada serie en la
    planilla).
+12. **Bajar S2 directamente de los dueños de los datos.** Pendiente, sin
+   implementar. Hoy S2 baja `WALCL`, `WDTGAL` y `RRPONTSYD` de FRED, y los
+   términos completos de FRED reservan la redistribución de su contenido al
+   permiso escrito del banco. Los crudos se quedan versionados por lo que
+   declara el dueño de cada serie (`data/raw/ATRIBUCION.md`). Las dos fuentes
+   de origen, leídas el 2026-10-05:
+   - El H.4.1, del programa de descarga de datos de la Junta
+     (`https://www.federalreserve.gov/datadownload/`), que lista "Factors
+     Affecting Reserve Balances (H.4.1)".
+   - El ON RRP, de la API de datos de mercados del Federal Reserve Bank of New
+     York (`https://markets.newyorkfed.org/static/docs/markets-api.html`),
+     que tiene una sección "Repo and Reverse Repo Operations".
+
+   Se leyó que las dos existen. **No verificado:** que entreguen las mismas
+   series que hoy se bajan de FRED, ni con qué unidad y convención. Cambiar la
+   fuente de S2 es un cambio de supuesto y va con su caso de validación.

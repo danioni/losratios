@@ -1,7 +1,7 @@
 """Configuración central del marco de señales.
 
 Todo parámetro que afecte un número publicado vive en este archivo, no en el
-código de cálculo. Cambiar un valor de acá obliga a registrar el cambio en
+código de cálculo. Cambiar un valor de aquí obliga a registrar el cambio en
 SUPUESTOS.md y en data/series/CHANGELOG.md.
 """
 
@@ -138,7 +138,7 @@ FECHA_INICIO = date(2020, 1, 1)
 VENTANA_VARIACION_SEMANAS = 13
 
 # A-S2-3: umbral para declarar expansión o contracción. NO DEFINIDO a propósito.
-# Mientras sea None, la salida reporta "NO MEDIDO". No inventar un valor acá.
+# Mientras sea None, la salida reporta "NO MEDIDO". No inventar un valor aquí.
 UMBRAL_EXPANSION_CONTRACCION: float | None = None
 
 # A-S2-5: cuántos días como máximo se arrastra el último ON RRP disponible cuando
@@ -202,7 +202,7 @@ COLUMNAS_REVISABLES = ["walcl", "tga", "rrp", "s2_1_liquidez_neta"]
 # ---------------------------------------------------------------------------
 # Fase R: precios mensuales y ratios.
 #
-# Todo lo de acá sale de FUENTES.md (qué se leyó de cada fuente) y de los
+# Todo lo de aquí sale de FUENTES.md (qué se leyó de cada fuente) y de los
 # supuestos A-R0-1 a A-R0-16 de SUPUESTOS.md (qué se decidió con eso).
 # ---------------------------------------------------------------------------
 

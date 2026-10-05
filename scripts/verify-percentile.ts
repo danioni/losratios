@@ -3,13 +3,7 @@
 // Ejecutar: npm run verify
 // Requiere Node ≥ 22.18 (type stripping nativo). Sale con código 1 si falla.
 // ============================================================
-import {
-  computeEmpiricalPercentile,
-  needsLogScale,
-  ratios,
-  PAIR_DEFS,
-  SMA_LONG,
-} from "../src/lib/data.ts";
+import { computeEmpiricalPercentile } from "../src/lib/data.ts";
 
 let failures = 0;
 
@@ -70,38 +64,6 @@ console.log(
   `     z lineal = ${zLin.toFixed(2)} → percentil normal ${(normalPercentile(zLin) * 100).toFixed(1)}% ` +
   `vs empírico ${(r.below * 100).toFixed(1)}%`,
 );
-
-// Sobre los datos reales del sitio (serie de respaldo): la misma ventana que
-// usa el z-score (últimas min(200, n) observaciones; en log, solo positivas).
-console.log("\n── Datos reales (serie de respaldo), ventana del z-score ──");
-for (const def of PAIR_DEFS) {
-  const values = ratios.map((d) => d[def.key] as number);
-  const current = values[values.length - 1];
-  const windowValues = values.slice(-Math.min(SMA_LONG, values.length));
-  const useLog = needsLogScale(windowValues);
-  const zValues = useLog ? windowValues.filter((v) => v > 0) : windowValues;
-
-  // Conteo manual independiente
-  const manualBelow = zValues.filter((v) => v < current).length / zValues.length;
-  const res = computeEmpiricalPercentile(zValues, current);
-  check(`${def.pair}: empírico == conteo manual`, res.below, manualBelow);
-
-  let z: number;
-  if (useLog) {
-    const logs = zValues.map((v) => Math.log(v));
-    const m = logs.reduce((s, v) => s + v, 0) / logs.length;
-    const sd = Math.sqrt(logs.reduce((s, v) => s + (v - m) ** 2, 0) / logs.length);
-    z = sd > 0 ? (Math.log(current) - m) / sd : 0;
-  } else {
-    const m = zValues.reduce((s, v) => s + v, 0) / zValues.length;
-    const sd = Math.sqrt(zValues.reduce((s, v) => s + (v - m) ** 2, 0) / zValues.length);
-    z = sd > 0 ? (current - m) / sd : 0;
-  }
-  console.log(
-    `     ${def.pair.padEnd(18)} n=${res.n} ${useLog ? "log" : "lin"} z=${z >= 0 ? "+" : ""}${z.toFixed(2)} ` +
-    `normal=${(normalPercentile(z) * 100).toFixed(0)}% empírico(below)=${(res.below * 100).toFixed(0)}% (above=${(res.above * 100).toFixed(0)}%)`,
-  );
-}
 
 console.log(failures === 0 ? "\nTodo OK" : `\n${failures} verificación(es) fallida(s)`);
 process.exit(failures === 0 ? 0 : 1);

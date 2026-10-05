@@ -1,6 +1,6 @@
 """Utilidades compartidas por todas las señales.
 
-Este módulo es la base sobre la que se apoyan los módulos hermanos (S2.x acá,
+Este módulo es la base sobre la que se apoyan los módulos hermanos (S2.x aquí,
 S3.x flujos a ETFs y S4.x decaimiento de TQQQ más adelante). Cualquier serie
 nueva debería escribir en data/series/ usando estas funciones, para que el
 formato de salida y la idempotencia sean iguales en todo el marco.

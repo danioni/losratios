@@ -99,7 +99,7 @@ def leer_csv_crudo(ruta: Path, serie: SerieFRED) -> pd.Series:
     """Lee un CSV crudo de FRED y lo devuelve en miles de millones de USD.
 
     FRED marca los datos faltantes con un punto. Esos quedan afuera: un hueco es
-    un hueco y se reporta más adelante, no se rellena acá.
+    un hueco y se reporta más adelante, no se rellena aquí.
     """
     tabla = pd.read_csv(ruta)
     if tabla.shape[1] < 2:

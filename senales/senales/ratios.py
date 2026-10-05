@@ -675,7 +675,7 @@ def tabla_ratios(
     validadas: set[str],
     disputas: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Los pares que se publican, en formato largo. Los demás no tienen filas acá.
+    """Los pares que se publican, en formato largo. Los demás no tienen filas aquí.
 
     Cada fila lleva el error máximo del ratio por redondeo, qué lado tiene el
     valor en disputa, si alguno, y si el mes es apto para métricas (A-R0-17,
@@ -751,7 +751,7 @@ def tabla_series(
     """Las cinco series y lo que hay que decir junto a cada una.
 
     Es donde va la atribución que exigen las licencias, el estado de cada serie
-    y con qué se validó. Los valores de las que no se publican no están acá.
+    y con qué se validó. Los valores de las que no se publican no están aquí.
     """
     filas = []
     for serie in SERIES_PRECIO:
@@ -869,7 +869,7 @@ def _hace_anios(fecha: date, anios: int) -> date:
 def obtener_referencias(fecha_descarga: date) -> dict[str, pd.Series]:
     """Baja las tres fuentes de contraste y las lleva a la misma convención.
 
-    Nada de lo que se baja acá se guarda. Los dos lados del contraste pasan por
+    Nada de lo que se baja aquí se guarda. Los dos lados del contraste pasan por
     `promedio_mensual`, para comparar promedios mensuales con promedios mensuales.
     """
     sp500 = fuentes_precios.contraste_fred_diario(CONTRASTE_SP500, "SP500")

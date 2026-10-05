@@ -1,6 +1,7 @@
 "use client";
 
-import { METRICAS_VERIFICADAS, NO_MEDIDO } from "@/lib/data";
+import Link from "next/link";
+import { METRICAS_VERIFICADAS, NO_MEDIDO, NO_MEDIDO_TABLAS } from "@/lib/data";
 
 const ECOSYSTEM_LINKS = [
   { label: "El Denominador", href: "https://eldenominador.com", desc: "Por qué el dinero se encoge" },
@@ -58,19 +59,25 @@ export default function Footer() {
           <div className="px-4 pb-4 space-y-3 text-[10px] sm:text-[11px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Fuentes de precios</p>
-              <ul className="space-y-0.5 pl-3">
-                <li>BTC: CoinGecko (historia + precio actual)</li>
-                <li>Oro (GC=F), Plata (SI=F), S&amp;P 500 (^GSPC), Nasdaq (^IXIC): Yahoo Finance</li>
-                <li>M2 EE.UU. (M2SL): FRED (Federal Reserve Economic Data)</li>
-              </ul>
+              <p>
+                Cada serie, con su fuente, su licencia, su atribuci&oacute;n y c&oacute;mo se valida, est&aacute; en{" "}
+                <Link href="/fuentes" className="transition-opacity hover:opacity-80" style={{ color: "var(--text-secondary)", textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                  Fuentes y metodolog&iacute;a
+                </Link>
+                , junto con las descargas (URL, fecha y SHA-256).
+              </p>
             </div>
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Frecuencia de datos</p>
-              <p>Series mensuales interpoladas entre puntos de anclaje anuales (1971&ndash;2026). El &uacute;ltimo punto se actualiza con precios en vivo cada hora.</p>
+              <p>Series mensuales, le&iacute;das de los archivos publicados en el repositorio cuando se construye el sitio. No se interpola: un mes sin dato queda vac&iacute;o. No hay precios en vivo.</p>
             </div>
             <div>
-              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>CAGR hist&oacute;rico</p>
-              <p>El periodo de c&aacute;lculo var&iacute;a por activo seg&uacute;n disponibilidad de datos. BTC desde 2009, acciones individuales desde su IPO, Oro/Plata/S&amp;P/Nasdaq desde 1971. La columna &ldquo;Desde&rdquo; en la tabla muestra el a&ntilde;o de inicio de cada c&aacute;lculo.</p>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Pares no publicados</p>
+              <p>Un par cuya serie no se puede publicar aparece con su nombre y su estado, sin gr&aacute;fico ni valor.</p>
+            </div>
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Tablas de CAGR y poder adquisitivo</p>
+              <p>{NO_MEDIDO_TABLAS}</p>
             </div>
             {METRICAS_VERIFICADAS ? (<>
             <div>
@@ -84,7 +91,7 @@ export default function Footer() {
             </>) : (
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Z-scores, percentiles, bandas y se&ntilde;ales</p>
-              <p>{NO_MEDIDO} Todo el historial mostrado es interpolaci&oacute;n entre valores de referencia y solo el &uacute;ltimo punto es observado; sobre esa base esas m&eacute;tricas no son defendibles. El c&oacute;digo de c&aacute;lculo se conserva (flag METRICAS_VERIFICADAS) y se reactivar&aacute; con series observadas.</p>
+              <p>{NO_MEDIDO} Usar&aacute;n solo los meses aptos para m&eacute;tricas; los dem&aacute;s se muestran en el gr&aacute;fico con otro estilo y con su motivo.</p>
             </div>
             )}
           </div>
