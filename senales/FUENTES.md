@@ -1299,3 +1299,19 @@ Están en `SUPUESTOS.md`. Índice:
    Kraken, los términos del Bundesbank, la exportación de S&P DJI, y la
    documentación técnica del FMI (se leyó la descripción de cada serie en la
    planilla).
+12. **Bajar S2 directamente de los dueños de los datos.** Pendiente, sin
+   implementar. Hoy S2 baja `WALCL`, `WDTGAL` y `RRPONTSYD` de FRED, y los
+   términos completos de FRED reservan la redistribución de su contenido al
+   permiso escrito del banco. Los crudos se quedan versionados por lo que
+   declara el dueño de cada serie (`data/raw/ATRIBUCION.md`). Las dos fuentes
+   de origen, leídas el 2026-10-05:
+   - El H.4.1, del programa de descarga de datos de la Junta
+     (`https://www.federalreserve.gov/datadownload/`), que lista "Factors
+     Affecting Reserve Balances (H.4.1)".
+   - El ON RRP, de la API de datos de mercados del Federal Reserve Bank of New
+     York (`https://markets.newyorkfed.org/static/docs/markets-api.html`),
+     que tiene una sección "Repo and Reverse Repo Operations".
+
+   Se leyó que las dos existen. **No verificado:** que entreguen las mismas
+   series que hoy se bajan de FRED, ni con qué unidad y convención. Cambiar la
+   fuente de S2 es un cambio de supuesto y va con su caso de validación.
