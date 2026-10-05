@@ -6,9 +6,10 @@ repositorio.
 
 ## Idioma
 
-- Todo va en español neutro, sin voseo ni regionalismos: código, comentarios,
-  documentación, mensajes de commit, descripciones de PR y respuestas en el
-  chat.
+- Todo va en español neutro, sin voseo ni regionalismos (por ejemplo, "aquí"
+  y no "acá"; "pequeño" y no "chico"): textos, comentarios, documentación,
+  mensajes de commit, descripciones de PR y respuestas en el chat.
+- Los identificadores en inglés del código existente se quedan como están.
 
 ## Datos e integridad
 
