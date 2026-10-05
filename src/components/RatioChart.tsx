@@ -75,7 +75,12 @@ function TooltipMes({ fila, nombre }: { fila: FilaGrafico; nombre: string }) {
             <div className="mt-1.5" style={{ color: "var(--accent-amber)" }}>
               <p className="font-medium">Fuera de las métricas:</p>
               {punto.motivos.map((motivo) => (
-                <p key={motivo}>· {motivo}</p>
+                <p key={motivo.etiqueta + motivo.detalle}>
+                  · {motivo.etiqueta}
+                  {motivo.detalle && (
+                    <span className="block pl-2.5" style={{ color: "var(--text-secondary)" }}>{motivo.detalle}</span>
+                  )}
+                </p>
               ))}
             </div>
           )}

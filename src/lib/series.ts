@@ -21,9 +21,10 @@ const ARCHIVO_DESCARGAS = "descargas_ratios.csv";
 // Acá no decide nada: qué meses son aptos lo dice la columna apto_metricas. Solo
 // sirve para nombrar el motivo de un mes que ratios.csv ya marca como no apto.
 const UMBRAL_ERROR_REDONDEO_PCT = 0.5;
-// A-R0-17: abril de 1968 es el primer mes completo sin el London Gold Pool.
+// A-R0-17: hasta marzo de 1968 el oro de Londres no era un precio libre. Abril
+// de 1968 es el primer mes completo sin el London Gold Pool.
 const SERIE_ORO = "oro";
-const PRIMER_MES_SIN_GOLD_POOL = "1968-04";
+const PRIMER_MES_ORO_LIBRE = "1968-04";
 // A-R0-20: lo que precios_mensuales.csv dice del control mensual de cada metal.
 const SUFIJO_CONTRASTE = "_contraste_fmi";
 const CONTRASTE_DENTRO = "dentro del umbral";
@@ -32,7 +33,9 @@ const CONTRASTE_DISPUTA = "valor en disputa: ";
 
 const MOTIVO_REDONDEO = "precisión insuficiente por redondeo";
 const MOTIVO_DISPUTA = "valor en disputa";
-const MOTIVO_GOLD_POOL = "oro con precio administrado (London Gold Pool)";
+const MOTIVO_ANTES_ORO_LIBRE = "antes del mercado libre del oro (marzo de 1968)";
+const DETALLE_ANTES_ORO_LIBRE =
+  "Hasta marzo de 1968 el precio del oro en Londres estaba condicionado por el sistema de Bretton Woods y, desde 1961, por el London Gold Pool (A-R0-17).";
 const NOTA_SIN_SEGUNDA_FUENTE = "sin segunda fuente";
 
 // ── Tipos ──────────────────────────────────────────────────
@@ -54,6 +57,12 @@ export interface Serie {
   meses: number;
 }
 
+/** Por qué un mes queda fuera de las métricas: la etiqueta y lo que la explica. */
+export interface Motivo {
+  etiqueta: string;
+  detalle: string;
+}
+
 /** Un mes de un par publicado (una fila de ratios.csv). */
 export interface PuntoRatio {
   mes: string;
@@ -63,7 +72,7 @@ export interface PuntoRatio {
   apto: boolean;
   enDisputa: boolean;
   /** Por qué el mes queda fuera de las métricas. Vacío si es apto. */
-  motivos: string[];
+  motivos: Motivo[];
   /** Reservas que no lo sacan de las métricas. */
   notas: string[];
 }
@@ -445,29 +454,31 @@ export function cargarSeries(dir: string = DIR_SERIES): SeriesSitio {
 
         // A-R0-20: el mes en disputa se publica con los dos números a la vista.
         const ladosEnDisputa = fila.valor_en_disputa === "" ? [] : fila.valor_en_disputa.split(" y ");
-        const motivos = ladosEnDisputa.map((clave) => {
+        const motivos = ladosEnDisputa.map((clave): Motivo => {
           const lado = [numerador, denominador].find((serie) => serie.serie === clave);
           if (!lado) fallo(ARCHIVO_RATIOS, `${lugar(fila, "valor_en_disputa")}: "${clave}" no es un lado del par ${par}`);
           const detalle = delControl[clave] ?? "";
           if (!detalle.startsWith(CONTRASTE_DISPUTA)) {
             fallo(ARCHIVO_PRECIOS, `el mes ${delMes} no trae los dos valores de ${clave}, que ${ARCHIVO_RATIOS} marca en disputa`);
           }
-          return `${MOTIVO_DISPUTA} — ${lado.nombre}: ${detalle.slice(CONTRASTE_DISPUTA.length)}`;
+          return { etiqueta: MOTIVO_DISPUTA, detalle: `${lado.nombre}: ${detalle.slice(CONTRASTE_DISPUTA.length)}` };
         });
         if (errorRedondeoPct > UMBRAL_ERROR_REDONDEO_PCT) {
-          motivos.push(`${MOTIVO_REDONDEO} (error máximo ${errorRedondeoPct} %; el umbral es ${UMBRAL_ERROR_REDONDEO_PCT} %)`);
+          motivos.push({ etiqueta: MOTIVO_REDONDEO, detalle: `error máximo ${errorRedondeoPct} %; el umbral es ${UMBRAL_ERROR_REDONDEO_PCT} %` });
         }
         // Las dos reglas de arriba son de senales/ (A-R0-17, A-R0-20): si un mes las
         // incumple y figura como apto, el sitio y el pipeline ya no dicen lo mismo.
         if (apto && motivos.length > 0) {
-          fallo(ARCHIVO_RATIOS, `línea ${fila.__linea}: el mes ${delMes} de ${par} figura como apto y tiene motivos para no serlo (${motivos.join("; ")})`);
+          fallo(ARCHIVO_RATIOS, `línea ${fila.__linea}: el mes ${delMes} de ${par} figura como apto y tiene motivos para no serlo (${motivos.map((motivo) => motivo.etiqueta).join("; ")})`);
         }
-        if (!apto && tieneOro && delMes < PRIMER_MES_SIN_GOLD_POOL) motivos.push(MOTIVO_GOLD_POOL);
+        if (!apto && tieneOro && delMes < PRIMER_MES_ORO_LIBRE) {
+          motivos.push({ etiqueta: MOTIVO_ANTES_ORO_LIBRE, detalle: DETALLE_ANTES_ORO_LIBRE });
+        }
         if (!apto && motivos.length === 0) {
           motivos.push(
             aptoDesde !== "" && delMes < aptoDesde
-              ? `anterior al tramo apto para métricas, que empieza en ${aptoDesde}`
-              : `motivo no declarado en ${ARCHIVO_RATIOS}`,
+              ? { etiqueta: "anterior al tramo apto para métricas", detalle: `el tramo apto empieza en ${aptoDesde}` }
+              : { etiqueta: `motivo no declarado en ${ARCHIVO_RATIOS}`, detalle: "" },
           );
         }
 

@@ -33,12 +33,11 @@ for (const par of pares) {
   check(`${par.nombre}: todo mes no apto dice por qué`, noAptos.every((punto) => punto.motivos.length > 0));
   check(`${par.nombre}: ningún mes apto trae motivos`, par.puntos.every((punto) => !punto.apto || punto.motivos.length === 0));
   check(`${par.nombre}: todo mes en disputa trae los dos valores`,
-    par.puntos.filter((punto) => punto.enDisputa).every((punto) => punto.motivos.some((motivo) => motivo.includes("FMI"))));
+    par.puntos.filter((punto) => punto.enDisputa).every((punto) => punto.motivos.some((motivo) => motivo.detalle.includes("FMI"))));
   const motivos = new Map<string, number>();
   for (const punto of noAptos) {
     for (const motivo of punto.motivos) {
-      const clave = motivo.split(/ — | \(error/)[0];
-      motivos.set(clave, (motivos.get(clave) ?? 0) + 1);
+      motivos.set(motivo.etiqueta, (motivos.get(motivo.etiqueta) ?? 0) + 1);
     }
   }
   for (const [motivo, meses] of motivos) console.log(`       ${String(meses).padStart(3)} meses: ${motivo}`);
