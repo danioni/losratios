@@ -436,10 +436,14 @@ promedio de los cierres diarios de cada mes calendario. Así los dos lados de un
 ratio describen el mismo mes. Mezclar un promedio con un cierre de fin de mes es
 el error de A-S2-13 con otro nombre.
 
-No era la única convención posible. El sitio usa hoy el cierre de fin de mes
-para índices y metales, y el borrador de `FUENTES.md` proponía el cierre semanal
-del viernes. Decidió la licencia: las únicas fuentes abiertas de oro y plata son
-promedios mensuales.
+No era la única convención posible. Hasta la fase 3 el sitio usaba el cierre de
+fin de mes para índices y metales, y el borrador de `FUENTES.md` proponía el
+cierre semanal del viernes. Decidió la licencia: las únicas fuentes abiertas de
+oro y plata son promedios mensuales.
+
+Hoy el sitio lee las series de `senales/` y no tiene otra fuente: lo que muestra
+es esta convención, el promedio mensual de cierres diarios (`FUENTES.md`,
+sección 8.1).
 
 **Solo entran meses completos.** La regla depende de cómo viene la fuente:
 

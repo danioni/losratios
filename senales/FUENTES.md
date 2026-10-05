@@ -1154,7 +1154,7 @@ publicado, la corrida se detiene (A-R0-15).
 | Yahoo `^IXIC` | (c); cierre de fin de mes | FRED `NASDAQCOM`, sin publicar hasta tener permiso |
 | CoinGecko, historia | No responde; el sitio muestra anclas interpoladas | Coin Metrics community, (b) |
 | CoinGecko, precio actual | Falta la atribución exigida | Fuera de la convención mensual; sin decidir |
-| FRED `M2SL` | (a); falta el aviso de la API | Se conserva; agregar el aviso |
+| FRED `M2SL` | (a); falta el aviso de la API | Ya no se usa: el sitio dejó de consultarla en la fase 3 (8.3). La decisión del 2026-10-04 era conservarla y agregar el aviso. |
 
 ---
 

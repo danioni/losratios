@@ -3,7 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Los Ratios — Cross-Asset Ratios · Detección de Pares Desalineados",
+  title: "Los Ratios — Activos medidos contra activos",
   description:
     "Activos medidos contra activos, con datos mensuales observados, fuentes citadas y supuestos declarados.",
   keywords: [
@@ -14,8 +14,6 @@ export const metadata: Metadata = {
     "liquidez global",
     "M2",
     "stock-to-flow",
-    "rotación de capital",
-    "pares desalineados",
   ],
   openGraph: {
     title: "Los Ratios",
