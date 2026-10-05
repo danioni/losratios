@@ -135,7 +135,7 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
             La única forma de saber si un activo está caro o barato es compararlo con otro activo. No con dinero fiat. Aquí medimos activos contra activos.
           </p>
           <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-            Imagina que quieres saber si una persona es alta. Pero tu metro se encoge 7% por año.
+            Imagina que quieres saber si una persona es alta. Pero tu metro se encoge cada año.
             Mañana medirías a la misma persona y dirías que creció. No creció. Tu metro se encogió.
             Así funciona medir activos en dólares. El precio &ldquo;sube&rdquo; — pero ¿el activo vale más, o el dólar vale menos?
           </p>
