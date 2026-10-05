@@ -21,9 +21,13 @@ repositorio.
 - **Ningún supuesto cambia en silencio.** Cada cambio va en la sección "Cambios
   de supuestos" de `senales/data/series/CHANGELOG.md`.
 - **Ninguna serie se publica sin un caso de validación** contra una fuente
-  independiente, con la tolerancia declarada antes de ver el resultado. Si el
-  control falla, la corrida se detiene o la serie se publica como NO MEDIDO;
-  nunca se ajusta el cálculo ni la tolerancia para que cuadre.
+  independiente, con la tolerancia declarada antes de ver el resultado. Nunca
+  se ajusta el cálculo ni la tolerancia para que cuadre. Hay dos clases de
+  control:
+  - **Gate de publicación.** Si falla, la corrida se detiene o la serie se
+    publica como NO MEDIDO.
+  - **Control de consistencia.** No detiene la corrida: marca el mes como
+    valor en disputa y lo excluye de las métricas.
 - **Sin interpolación ni datos sintéticos.** Un hueco es un hueco.
 - **Los dos lados de un ratio usan la misma convención.** Hoy: promedio mensual
   de cierres diarios, y solo de meses completos.
