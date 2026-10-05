@@ -28,6 +28,9 @@ repositorio.
     publica como NO MEDIDO.
   - **Control de consistencia.** No detiene la corrida: marca el mes como
     valor en disputa y lo excluye de las métricas.
+- **La regla de la tolerancia rige desde el 2026-10-05.** Las que se fijaron
+  con lo observado a la vista (A-R0-12 y el umbral de A-R0-20) quedan como
+  están, porque ya lo declaran.
 - **Sin interpolación ni datos sintéticos.** Un hueco es un hueco.
 - **Los dos lados de un ratio usan la misma convención.** Hoy: promedio mensual
   de cierres diarios, y solo de meses completos.
