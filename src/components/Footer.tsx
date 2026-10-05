@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { METRICAS_VERIFICADAS, NO_MEDIDO, NO_MEDIDO_TABLAS, TABLAS_MEDIDAS } from "@/lib/data";
+import { METRICAS_VERIFICADAS, NO_MEDIDO, NO_MEDIDO_TABLAS } from "@/lib/data";
 
 const ECOSYSTEM_LINKS = [
   { label: "El Denominador", href: "https://eldenominador.com", desc: "Por qué el dinero se encoge" },
@@ -75,12 +75,10 @@ export default function Footer() {
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Pares no publicados</p>
               <p>Un par cuya serie no se puede publicar aparece con su nombre y su estado, sin gr&aacute;fico ni valor.</p>
             </div>
-            {!TABLAS_MEDIDAS && (
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Tablas de CAGR y poder adquisitivo</p>
               <p>{NO_MEDIDO_TABLAS}</p>
             </div>
-            )}
             {METRICAS_VERIFICADAS ? (<>
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Z-scores</p>

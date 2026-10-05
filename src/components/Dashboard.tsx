@@ -3,20 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
-  assetPerformance,
   formatDateLabel,
   METRICAS_VERIFICADAS,
   NO_MEDIDO,
   NO_MEDIDO_TABLAS,
-  TABLAS_MEDIDAS,
 } from "@/lib/data";
 import type { Par, ParPublicado } from "@/lib/series";
 import MetricCard from "./MetricCard";
 import NoMedidoCard from "./NoMedidoCard";
 import RatioChart, { type TimeRange } from "./RatioChart";
-import PerformanceTable from "./PerformanceTable";
-import CurrencySelector from "./CurrencySelector";
-import CurrencyDepreciation from "./CurrencyDepreciation";
 
 // Color de cada par en su gráfico. Un par que no esté acá usa el cian.
 const COLOR_DEL_PAR: Record<string, keyof typeof DEFAULT_COLORS> = {
@@ -301,20 +296,12 @@ export default function Dashboard({ pares, ultimoMes }: { pares: Par[]; ultimoMe
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 5 — Tablas de CAGR y poder adquisitivo         */}
-      {/* Ocultas hasta tener series observadas para ellas       */}
+      {/* Sin tabla: NO MEDIDO hasta tener series observadas     */}
       {/* ═══════════════════════════════════════════════════════ */}
-      {TABLAS_MEDIDAS ? (
-        <>
-          <CurrencySelector />
-          <CurrencyDepreciation />
-          <PerformanceTable data={assetPerformance} colors={COLORS} />
-        </>
-      ) : (
-        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-          <NoMedidoCard title="Poder adquisitivo global" estado={NO_MEDIDO_TABLAS} />
-          <NoMedidoCard title="CAGR histórico por activo" estado={NO_MEDIDO_TABLAS} />
-        </div>
-      )}
+      <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+        <NoMedidoCard title="Poder adquisitivo global" estado={NO_MEDIDO_TABLAS} />
+        <NoMedidoCard title="CAGR histórico por activo" estado={NO_MEDIDO_TABLAS} />
+      </div>
 
       {/* ═══════════════════════════════════════════════════════ */}
       {/* DISCLAIMER NARRATIVO                                   */}

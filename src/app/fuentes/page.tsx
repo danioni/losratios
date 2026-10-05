@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { METRICAS_VERIFICADAS, NO_MEDIDO, NO_MEDIDO_TABLAS, TABLAS_MEDIDAS } from "@/lib/data";
+import { METRICAS_VERIFICADAS, NO_MEDIDO, NO_MEDIDO_TABLAS } from "@/lib/data";
 import { cargarSeries } from "@/lib/series";
 
 export const metadata: Metadata = {
@@ -140,12 +140,10 @@ export default function Fuentes() {
                 <p>{NO_MEDIDO}</p>
               </div>
             )}
-            {!TABLAS_MEDIDAS && (
-              <div>
-                <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Tablas de CAGR y poder adquisitivo</p>
-                <p>{NO_MEDIDO_TABLAS}</p>
-              </div>
-            )}
+            <div>
+              <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Tablas de CAGR y poder adquisitivo</p>
+              <p>{NO_MEDIDO_TABLAS}</p>
+            </div>
             <div>
               <p className="font-medium mb-1" style={{ color: "var(--text-secondary)" }}>Pares sin permiso de publicaci&oacute;n</p>
               <p>Aparecen en la portada con su nombre y su estado, sin gr&aacute;fico ni valor.</p>
