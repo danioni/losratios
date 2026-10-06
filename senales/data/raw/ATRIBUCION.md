@@ -195,3 +195,74 @@ traen ninguna línea de copyright: la etiqueta es lo único que lo dice.
   y distribuir con atribución. Los términos completos de FRED siguen diciendo
   lo que dicen arriba. Por eso queda pendiente bajar S2 directamente de los
   dueños de los datos (`FUENTES.md`, sección 12).
+
+
+## `bce_m2_ajustada_<fecha>.csv`, `bce_m2_sin_ajustar_<fecha>.csv`, `bce_balance_eurosistema_<fecha>.csv`
+
+- **Fuente:** Banco Central Europeo, ECB Data Portal. Conjunto BSI, series
+  `BSI.M.U2.Y.V.M20.X.1.U2.2300.Z01.E` y `BSI.M.U2.N.V.M20.X.1.U2.2300.Z01.E`
+  (M2 de la zona del euro, ajustada y sin ajustar); conjunto ILM, serie
+  `ILM.W.U2.C.T000000.Z5.Z01` (total de activos del Eurosistema).
+- **URL:** la de la API que figura en `data/series/denominador_descargas.csv`.
+  **Copias bajadas a mano** (A-D0-29): el `robots.txt` de la API veda al
+  cliente del pipeline, así que una persona abre la URL en el navegador y
+  guarda la respuesta aquí con la fecha. Las copias del 2026-10-05 son las que
+  se bajaron en el paso 0 con `python-requests`, antes de leer ese archivo.
+- **Licencia:** política de reutilización de las estadísticas del SEBC:
+  reutilización gratuita con cita de la fuente y sin modificar las
+  estadísticas; y aviso de copyright del BCE
+  (<https://www.ecb.europa.eu/services/disclaimer/html/index.en.html>). Leídos
+  el 2026-10-05 (`FUENTES.md`, D0.4).
+- **Condiciones:** citar "Source: ECB statistics". Quien redistribuya este
+  archivo tiene que mantener la cita y no modificarlo.
+- **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
+
+## `boj_m2_<fecha>.csv`, `boj_balance_<fecha>.csv`
+
+- **Fuente:** Bank of Japan, BOJ Time-Series Data Search, API `getDataCode`.
+  Base MD02 (Money Stock: M2 y las series anteriores M2+CDs) y base BS01 (Bank
+  of Japan Accounts: total de activos y tres rubros).
+- **URL:** la que figura en `data/series/denominador_descargas.csv`.
+- **Licencia:** aviso de copyright del Banco de Japón
+  (<https://www.boj.or.jp/en/about/copyright.htm>) y del sitio de series
+  (<https://www.stat-search.boj.or.jp/info/notice_en.html>): copia y
+  reproducción permitidas citando al Banco de Japón como fuente, **salvo con
+  fines comerciales**, que exigen permiso previo; el contenido no se altera.
+  Instrucciones de la API (<https://www.stat-search.boj.or.jp/info/api_notice_en.pdf>):
+  aviso por correo al publicar un servicio que la use, y crédito. Leídos el
+  2026-10-05 (`FUENTES.md`, D0.5).
+- **Condiciones:** atribución al Banco de Japón y uso no comercial (A-D0-8).
+  Quien redistribuya este archivo tiene que mantener las dos.
+- **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
+
+## `ocde_china_dinero_amplio_<fecha>.csv`
+
+- **Fuente:** OCDE, conjunto `DSD_STES@DF_MONAGG` (Monetary aggregates), serie
+  `CHN.M.MABM.XDC`, rotulada "M3" por la OCDE. Emisor original: Banco Popular
+  de China.
+- **URL:** la que figura en `data/series/denominador_descargas.csv`.
+- **Licencia:** términos de la OCDE
+  (<https://www.oecd.org/en/about/terms-conditions.html>, sección 3, "Data",
+  "Permitted Use"): extraer, copiar, adaptar y distribuir para cualquier fin
+  con crédito a la OCDE, con la reserva de posibles derechos de terceros que
+  el usuario debe verificar. Los metadatos de la serie no traen ninguna
+  restricción. Leídos el 2026-10-05 (`FUENTES.md`, D0.6.2).
+- **Condiciones:** crédito a la OCDE y mención del emisor original (A-D0-9).
+- **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
+
+## `bis_cbta_cn_<fecha>.csv`
+
+- **Fuente:** Bank for International Settlements, conjunto `WS_CBTA` (Central
+  bank total assets), área CN. Emisor original: Banco Popular de China; serie
+  empalmada por el BIS.
+- **URL:** la que figura en `data/series/denominador_descargas.csv`.
+- **Licencia:** términos de uso de las estadísticas del BIS
+  (<https://data.bis.org/help/legal>): uso sin restricciones citando al BIS
+  como fuente, sin sugerir su respaldo y, en un producto comercial, sin cargo
+  adicional por incluirlas. Leídos el 2026-10-05 (`FUENTES.md`, D0.7.5 y D0.9).
+- **Condiciones:** citar al BIS como fuente.
+- **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
+
+Los demás crudos de la fase D0 (los ZIP de la Junta, que son de dominio público
+pero pesan entre 1.4 y 9 MB, y las fuentes de contraste) no están aquí
+(A-D0-27): su URL, fecha y SHA-256 están en `denominador_descargas.csv`.

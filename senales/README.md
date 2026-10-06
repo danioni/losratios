@@ -393,6 +393,104 @@ tenga vínculo comercial (A-R0-2, A-R0-3, A-R0-4).
 
 ---
 
+## Fase D0 · El Denominador: dinero, balances y tipos de cambio
+
+Las series que alimentan eldenominador.com: el M2 de EE.UU., la Eurozona y
+Japón, el dinero amplio de China, los balances de los cuatro bancos centrales,
+los tipos de cambio del H.10 y un agregado en USD. Qué se leyó de cada fuente
+está en `FUENTES.md`, sección D0; las decisiones, en `SUPUESTOS.md`, A-D0-1 a
+A-D0-29.
+
+### Qué se publica
+
+| Serie | Fuente | Desde | Convención | Unidad |
+| --- | --- | --- | --- | --- |
+| `m2_eeuu`, `m2_eeuu_sin_ajustar` | Junta de la Reserva Federal, H.6 (XML) | 1959-01 | promedio mensual de cifras diarias | miles de millones de USD |
+| `m2_eurozona`, `m2_eurozona_sin_ajustar` | BCE, conjunto BSI (copia a mano) | 1980-01; estimación hasta 1997-08 | saldo a fin de mes | millones de EUR |
+| `m2_japon` | Banco de Japón, Money Stock (API) | 2003-04 | promedio de saldos del mes | 100 millones de JPY |
+| `dinero_amplio_china` | OCDE, DF_MONAGG ("M3" de la OCDE; emisor: PBoC) | 2004-01 | saldo a fin de mes | millones de CNY |
+| `balance_fed` | Junta, H.4.1 (XML), serie consolidada | 2002-12 | último miércoles del mes | millones de USD |
+| `balance_eurosistema` | BCE, conjunto ILM (copia a mano) | 1999-01 | último viernes del mes | millones de EUR |
+| `balance_boj` | Banco de Japón, Accounts (API) | 1998-04 | saldo a fin de mes | 100 millones de JPY |
+| `balance_pboc` | BIS, WS_CBTA (emisor: PBoC) | 2002-01 | saldo a fin de mes | **NO MEDIDO: sin validación externa** |
+| `usd_por_eur`, `jpy_por_usd`, `cny_por_usd` | Junta, H.10 (XML) | 1999-01, 1971-01, 1981-01 | promedio del mes y último día del mes | moneda por USD (el euro, USD por EUR) |
+| Agregado | cálculo propio: EE.UU. + Eurozona + Japón, sin ajustar | 2003-04 | mixta, declarada (A-D0-10) | miles de millones de USD |
+| `oro_m2_eeuu`, `btc_m2_eeuu` | `ratios.py`, con el M2 ajustado en billones de USD | 1960-01, 2013-01 | promedio mensual en los dos lados | USD por onza (o por BTC) por billón de USD de M2 |
+
+China queda fuera del agregado: su definición no es comparable con las otras
+tres (A-D0-9). El Índice Denominador 60/40 del sitio no se reproduce (A-D0-13).
+Lo que no tiene serie —la oferta monetaria de EE.UU. antes de 1959, la riqueza
+por clase de activo— figura en `serie_D0.csv` como NO MEDIDO, con el motivo.
+
+### Cómo correr
+
+Desde `senales/`:
+
+```
+python -m senales.denominador                     # baja, valida, escribe las salidas y el changelog
+python -m senales.denominador --fecha-descarga 2026-10-05   # rehace una corrida con los crudos de ese día
+python -m senales.ratios --solo-denominador       # recalcula Oro / M2 y BTC / M2 sin descargar nada
+```
+
+Antes de pedirle algo a un sitio, el pipeline lee su `robots.txt` (A-D0-29). Si
+el sitio veda al cliente, no pide y la serie queda NO MEDIDO.
+
+**Las tres series del BCE entran por copia bajada a mano.** El `robots.txt` de
+`data-api.ecb.europa.eu` veda a `python-requests`, y el pipeline no se
+disfraza. Una vez al mes, una persona abre cada URL en el navegador y guarda la
+respuesta en `data/raw/` con el nombre de la descarga y la fecha:
+
+| Archivo | URL |
+| --- | --- |
+| `bce_m2_ajustada_<AAAA-MM-DD>.csv` | `https://data-api.ecb.europa.eu/service/data/BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E?format=csvdata` |
+| `bce_m2_sin_ajustar_<AAAA-MM-DD>.csv` | `https://data-api.ecb.europa.eu/service/data/BSI/M.U2.N.V.M20.X.1.U2.2300.Z01.E?format=csvdata` |
+| `bce_balance_eurosistema_<AAAA-MM-DD>.csv` | `https://data-api.ecb.europa.eu/service/data/ILM/W.U2.C.T000000.Z5.Z01?format=csvdata` |
+
+El pipeline usa la copia más reciente que no sea posterior a la fecha de la
+corrida, registra su SHA-256 en el manifiesto y, si en una corrida posterior el
+archivo cambió por debajo del hash publicado, o no hay copia, deja la serie NO
+MEDIDO en esa corrida y sigue con las demás.
+
+### Salidas
+
+| Archivo | Contenido |
+| --- | --- |
+| `data/series/denominador_dinero.csv` | `mes, serie, valor, estado, quiebre`: las series de dinero publicadas, en su unidad nativa. `estado` es dato o estimación; `quiebre` dice qué cambió ese mes (ampliaciones, cambios de definición). |
+| `data/series/denominador_balances.csv` | `mes, serie, valor, fecha_origen, estado, quiebre`: los balances, con la fecha del dato semanal del que sale cada mes. |
+| `data/series/denominador_tipos_de_cambio.csv` | `mes, par, promedio_mensual, fin_de_mes, fecha_fin_de_mes, contraste`: los tres tipos de cambio; `contraste` dice si el mes está dentro del umbral del control contra el BIS o en disputa. |
+| `data/series/denominador_agregado.csv` | El agregado en USD, por economía y total, a tipo de cambio de cada mes y a tipo de cambio constante de 2003-04. |
+| `data/series/serie_D0.csv` | La ficha de cada serie: fuente, emisor, identificador, URL, unidad, convención, licencia, atribución, validación, supuestos, quiebres, rango. Incluye las series NO MEDIDO con su motivo. |
+| `data/series/denominador_descargas.csv` | El manifiesto: URL, fecha, bytes y SHA-256 de cada crudo, de fuente o de contraste. |
+| `data/series/denominador_ratios.csv`, `denominador_pares.csv` | Oro / M2 y BTC / M2 de EE.UU., con el formato de `ratios.csv` y `pares.csv`. |
+| `data/series/citas_terceros.csv` | Cifras puntuales de terceros (Savills, World Gold Council) con año, fuente y URL. Fuera del pipeline (A-D0-28). |
+
+Los crudos del BCE, el BoJ, la OCDE y el BIS (China) se versionan en
+`data/raw/`; los ZIP de la Junta y las fuentes de contraste quedan fuera del
+repositorio, con su hash en el manifiesto (A-D0-27).
+
+### Cómo se valida
+
+Un gate por serie contra una segunda fuente, con la tolerancia fijada por la
+precisión publicada antes de ver el resultado (A-D0-25): la Tabla 1 del H.6 en
+HTML para el M2 de EE.UU.; el BIS para los tres balances publicados; el Banco
+de España para el M2 de la Eurozona; e-Stat para el M2 de Japón; dos lecturas a
+mano de la Oficina Nacional de Estadísticas de China para el dinero amplio. Los
+tipos de cambio se comparan con el BIS como control: el mes que pasa de ±0.5 %
+se publica marcado en disputa. El balance de la Fed lleva además un control
+semana a semana contra FRED.
+
+Lo que estos gates prueban es que el dato publicado es el del emisor, sin
+errores de transporte, unidad ni fecha. Un agregado monetario tiene un solo
+compilador: no hay segunda medición.
+
+### Lo que estas series no dicen
+
+- No hay "M2 global". El agregado suma tres economías con tres definiciones de
+  M2 y dos convenciones, y lo declara.
+- Ningún valor anterior al inicio de cada fuente oficial. La historia de EE.UU.
+  antes de 1959 es otro agregado, y está pendiente de transcribir.
+- El dinero amplio de China no es M2: es lo que la OCDE rotula M3.
+
 ## Estructura
 
 ```

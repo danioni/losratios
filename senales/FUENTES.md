@@ -1343,12 +1343,13 @@ Están en `SUPUESTOS.md`. Índice:
 
 ## D0. Fuentes de El Denominador: agregados monetarios, balances y riqueza
 
-> **BORRADOR, PENDIENTE DE APROBACIÓN (2026-10-05).** Todo lo que figura en
-> esta sección se leyó de la fuente el 2026-10-05, desde una máquina con
-> salida directa. Nada viene de memoria. Lo que no se pudo leer está dicho
-> como tal y no tiene cifras. Las decisiones de D0.10 son **propuestas**: no
-> hay ninguna tomada, y los supuestos A-D0-\* de D0.12 todavía no están en
-> `SUPUESTOS.md`.
+> **APROBADO (2026-10-05), con las decisiones del dueño que están en D0.10.11.**
+> Todo lo que figura en esta sección se leyó de la fuente el 2026-10-05,
+> desde una máquina con salida directa. Nada viene de memoria. Lo que no se
+> pudo leer está dicho como tal y no tiene cifras. Las decisiones de D0.10
+> eran propuestas; las aprobadas y las que el dueño cambió están en D0.10.11,
+> y los supuestos A-D0-1 a A-D0-29 están en `SUPUESTOS.md`. D0.15 registra lo
+> que el paso 1 encontró el 2026-10-06 al escribir el pipeline.
 
 Esta sección es el entregable del paso 0 de la fase D0: evaluar de dónde
 pueden salir, observadas y trazables, las series que hoy muestra
@@ -1394,7 +1395,7 @@ Es una diferencia con las secciones 2 a 8 de este archivo.
 | fred.stlouisfed.org | Leído, un pedido por vez con pausas de 20 s o más: 21 respuestas HTTP 200 y 2 HTTP 404 (identificadores que no existen). Solo como contraste. |
 | fraser.stlouisfed.org | Leído: los dos volúmenes de *Banking and Monetary Statistics* en PDF y los términos de uso. |
 | www.nber.org, data.nber.org | Leído: Macrohistory Database (capítulo 14) y el volumen de 1970 de Friedman y Schwartz. El libro de 1963 no está en línea. |
-| data-api.ecb.europa.eu, data.ecb.europa.eu, www.ecb.europa.eu | Leído. La API devolvió HTTP 504 o 502 en 4 de unos 30 pedidos; el reintento funcionó. |
+| data-api.ecb.europa.eu, data.ecb.europa.eu, www.ecb.europa.eu | Leído. La API devolvió HTTP 504 o 502 en 4 de unos 30 pedidos; el reintento funcionó. **El `robots.txt` de data-api.ecb.europa.eu, leído después, veda a `python-requests`, el cliente con que se hicieron esos pedidos (D0.15).** |
 | www.bde.es, api.statistiken.bundesbank.de | Leído, como contraste. |
 | webstat.banque-france.fr, stat.nbb.be | **No leídos.** El primero no muestra valores sin JavaScript y su API pide iniciar sesión; el segundo reinició la conexión. |
 | www.boj.or.jp, www.stat-search.boj.or.jp | Leído: API, notas, guía, avisos y términos. Los comunicados de 2020 ya no están (HTTP 404); se leyó una copia en web.archive.org. |
@@ -2040,10 +2041,12 @@ Cuatro balances y una segunda fuente común, el BIS.
   coinciden. La diferencia máxima es de 0.42 % (2007-07-11: 873060 en la
   Junta, 869407 en FRED). El título de `WALCL` en FRED dice *"Total Assets
   (Less Eliminations from Consolidation)"*, según el título ya registrado en
-  `data/raw/ATRIBUCION.md`. **No verificado:** que la diferencia sea esa
-  eliminación; en el XML no se localizó una serie total con ese nombre. S2
-  publica desde 2020-01 y no se ve afectado. Para D0, que mostraría el balance
-  desde 2002, hay que elegir una de las dos y declararlo.
+  `data/raw/ATRIBUCION.md`. **Verificado el 2026-10-06 (D0.15, A-D0-15):** la
+  diferencia es exactamente la serie de eliminaciones de consolidación
+  (`RESPPMAX_N.WW`), y el XML sí trae el total consolidado, `RESPPMA_N.WW`,
+  igual a `WALCL` en las 1.242 semanas. **D0 publica `RESPPMA_N.WW`**, no la
+  serie bruta que nombra el primer punto de esta ficha. S2 publica desde
+  2020-01 y no se ve afectado.
 
 #### D0.7.2 Eurosistema: total de activos (estado financiero semanal) — leída, (a)
 
@@ -2372,7 +2375,7 @@ que les asigna D0.12.
   agregado en USD es una serie **derivada**, aparte.
 - **Nombre.** Deja de llamarse "M2 Global". Con China (D0.10.10) es "M2 de
   cuatro economías"; sin China, "M2 de tres economías (EE.UU., Eurozona y
-  Japón)".
+  Japón)". **Quedó en tres (D0.10.11).**
 - **Tipo de cambio.** H.10 de la Junta (D0.8.1): promedio mensual para las
   series que son promedios (EE.UU., Japón) y último dato diario del mes para
   las que son saldos de fin de mes (Eurozona, China).
@@ -2613,6 +2616,43 @@ primera versión; queda como decisión.
 - Si no se aprueba la alternativa: China va como tarjeta NO MEDIDO y el
   agregado es de tres economías.
 
+#### D0.10.11 Lo que decidió el dueño (2026-10-05 y 2026-10-06)
+
+Aprobó el paso 0 con estas decisiones, que mandan sobre las propuestas de
+arriba donde difieren:
+
+1. **China:** publicar vía OCDE (dinero amplio, con el rótulo exacto de la
+   fuente, "M3", nunca como M2) y BIS (balance). Entra al agregado solo si el
+   paso 1 demuestra que su definición es comparable; si no, se muestra aparte.
+   Cero descargas desde el sitio del PBoC. *El paso 1 no lo demostró: lo leído
+   dice lo contrario (A-D0-9). China se muestra aparte y el agregado es de
+   tres economías.*
+2. **EE.UU. antes de 1959:** tres tramos de la Junta, sin empalmar y con
+   quiebres visibles. Transcripción doble e independiente, página de origen
+   por cifra, control de sumas; las discrepancias se listan y se resuelven
+   releyendo la imagen. El NBER no se usa por ahora. *El 2026-10-06 lo dejó
+   fuera de esta entrega: NO MEDIDO, se hace en un PR propio.*
+3. **Eurozona:** desde 1980, tramo hasta 1997-08 con estado "estimación".
+4. **Savills, WGC y similares:** solo como cifra puntual citada (año, fuente,
+   página), fuera del pipeline y de cualquier cálculo, con estado "estimación
+   de terceros" (A-D0-28). McKinsey, excluido.
+5. **Convención nativa por serie,** declarada en su ficha. Oro / M2 EE.UU. y
+   BTC / M2 EE.UU. aprobados; contra el agregado, no.
+6. **Balance de la Fed:** fuente principal el XML de la Junta; FRED como
+   control de consistencia; explicar la diferencia de las 517 semanas antes
+   de publicar. *Explicada: D0.15 y A-D0-15.*
+7. **`CLAUDE.md`:** la regla de leer `robots.txt` y términos antes de
+   cualquier pedido automatizado. *Hecha, en su propio commit.*
+8. **BCE (2026-10-06):** no cambiar el User-Agent. Copias bajadas a mano una
+   vez al mes; el pipeline verifica el hash y, si falta o no coincide, la
+   serie queda NO MEDIDO en esa corrida. Consulta al BCE redactada, sin
+   enviar (D0.13).
+9. **Balance del PBoC (2026-10-06):** NO MEDIDO ("sin validación externa") en
+   esta entrega.
+10. **Riqueza (2026-10-06):** bonos, acciones y BTC entran si alcanzan con
+    calidad; si no, NO MEDIDO con motivo. *Quedaron NO MEDIDO: pendientes de
+    implementar.*
+
 ### D0.11 Validación propuesta
 
 Con la regla de `CLAUDE.md`: una segunda fuente por serie y una tolerancia
@@ -2662,10 +2702,14 @@ lo tiene que decir la ficha de cada serie.
   hace S2 (A-S2-6). El umbral de qué cuenta como revisión es un supuesto por
   declarar.
 
-### D0.12 Supuestos A-D0-\* (índice propuesto)
+### D0.12 Supuestos A-D0-\*
 
-Todavía no están en `SUPUESTOS.md`: se escriben cuando se aprueben las
-decisiones, y pueden cambiar de número.
+Están en `SUPUESTOS.md`, A-D0-1 a A-D0-29, escritos el 2026-10-06 con las
+decisiones de D0.10.11. El índice de abajo es el propuesto en el paso 0; los
+números coinciden hasta el A-D0-26, y se agregaron A-D0-27 (crudos de D0),
+A-D0-28 (cifras puntuales de terceros) y A-D0-29 (`robots.txt` y copias a
+mano). A-D0-9, A-D0-15, A-D0-19, A-D0-20 y A-D0-24 cambiaron de contenido con
+D0.10.11: vale lo que dice `SUPUESTOS.md`.
 
 | N.º | Qué fija | Estado propuesto |
 | --- | --- | --- |
@@ -2715,7 +2759,27 @@ Ninguno se envió.
    la API son las estimaciones descritas en el Boletín de febrero de 1999, y
    cómo concilia su política de reutilización, que pide no modificar las
    estadísticas, con las series derivadas.
-5. **PBoC: permiso de reutilización.** Su aviso legal lo prevé para medios y
+5. **BCE: consulta sobre el cliente de la API.** Borrador, sin enviar:
+
+   > Asunto: ECB Data Portal API, robots.txt y clientes identificados.
+   >
+   > Mantenemos un repositorio público de investigación (danioni/losratios)
+   > que publica series del ECB Data Portal con la cita "Source: ECB
+   > statistics", bajo la política de reutilización del SEBC. La ayuda de la
+   > API ("Useful tips") da ejemplos con Python requests, curl y wget contra
+   > data-api.ecb.europa.eu. El robots.txt del mismo host lista a
+   > python-requests, curl y wget con "Disallow: /", y admite a cualquier
+   > otro agente. Por respeto a ese archivo hoy bajamos los tres archivos a
+   > mano, una vez al mes. ¿Acepta el BCE un cliente automatizado que se
+   > identifique con un User-Agent propio del proyecto y un contacto, con un
+   > pedido mensual por serie? Series: BSI.M.U2.Y.V.M20.X.1.U2.2300.Z01.E,
+   > BSI.M.U2.N.V.M20.X.1.U2.2300.Z01.E e ILM.W.U2.C.T000000.Z5.Z01. Y una
+   > segunda pregunta: ¿los valores de M2 anteriores a septiembre de 1997 que
+   > entrega hoy la API siguen siendo las estimaciones descritas en el
+   > Boletín Mensual de febrero de 1999?
+
+   Destraba la descarga automática del BCE. Mientras tanto rige A-D0-29.
+6. **PBoC: permiso de reutilización.** Su aviso legal lo prevé para medios y
    sitios autorizados. Destraba usar al emisor como fuente. No se leyó a quién
    se le pide.
 
@@ -2731,8 +2795,8 @@ Ninguno se envió.
 5. **Las series se revisan.** M2 de la Eurozona y de Japón, hacia atrás y sin
    versiones anteriores en la API. Solo se conserva lo que cada corrida
    guarde.
-6. **El XML del H.4.1 contra `WALCL`,** antes de 2013-12-11: diferencia sin
-   explicar (D0.7.1).
+6. **El XML del H.4.1 contra `WALCL`:** explicado el 2026-10-06 (D0.15,
+   A-D0-15). Cerrado.
 7. **Las tablas de la Junta anteriores a 1959 solo se leyeron por muestra.**
    Cuatro fechas de la Tabla 9 y de su continuación, y dos meses de la
    Tabla 1.1. La transcripción
@@ -2760,3 +2824,74 @@ Ninguno se envió.
 15. **Los pedidos al PBoC.** Se hicieron unos 70 con un programa antes de leer
     su `robots.txt`, que los veda. No se repite: el PBoC queda como lectura a
     mano.
+16. **Los pedidos al BCE.** Unos 30 con `python-requests` en el paso 0, antes
+    de leer el `robots.txt` de su API, que veda a ese cliente (D0.15). No se
+    repiten: las series del BCE entran por copia a mano (A-D0-29), y la
+    consulta al BCE está redactada en D0.13.
+17. **El aviso al Banco de Japón** por el uso de su API, antes de desplegar el
+    sitio con esas series (A-D0-8).
+
+### D0.15 Lo que encontró el paso 1 (2026-10-06)
+
+El paso 1 escribió `denominador.py` y corrió el pipeline una vez con los crudos
+leídos el 2026-10-05. Lo que cambió respecto de las fichas de arriba:
+
+**Los `robots.txt` de los trece hosts.** Leídos el 2026-10-05 antes de escribir
+una línea de descarga, por la regla nueva de `CLAUDE.md`:
+
+| Host | Qué dice sobre un programa |
+| --- | --- |
+| www.federalreserve.gov, www.stat-search.boj.or.jp, www.boj.or.jp, sdmx.oecd.org, dashboard.e-stat.go.jp, api.worldbank.org, community-api.coinmetrics.io | Sin `robots.txt` (HTTP 404): sin reglas. |
+| stats.bis.org | Devuelve una página HTML en lugar del archivo: sin reglas. |
+| data.bis.org, www.bde.es, www.ecb.europa.eu | `User-agent: *` con exclusiones de buscador y descargas; las rutas usadas están permitidas. www.ecb.europa.eu pide 5 segundos entre pedidos. |
+| fred.stlouisfed.org | `User-agent: *` permitido con 1 segundo de pausa; a GPTBot, ChatGPT-User y Google-Extended les pone una pausa de 30 días. |
+| **data-api.ecb.europa.eu** | **Veda con `Disallow: /` a `python-requests`, `curl`, `Wget`, `Scrapy` y otros clientes genéricos, y a los agentes de Anthropic (`ClaudeBot`, `Claude-Web`, `anthropic-ai`), OpenAI y Common Crawl. Admite a `User-agent: *` salvo rutas de administración.** La ayuda de la misma API ("Useful tips") da ejemplos con `requests`, `curl` y `wget`. Los dos textos se contradicen. |
+| www.pbc.gov.cn | Veda a todo agente salvo Baiduspider (D0.6.1). |
+
+**Consecuencias.** En el paso 0, el agente que leyó la Eurozona hizo unos 30
+pedidos a `data-api.ecb.europa.eu` con `python-requests`, sin haber leído ese
+`robots.txt`; las copias de ese día son las que usa la primera corrida. Desde
+entonces no se le pidió nada más al BCE. Decisión del dueño del 2026-10-06:
+**el pipeline no cambia su User-Agent; las tres series del BCE entran por copia
+bajada a mano** (A-D0-29, README). La consulta al BCE está en D0.13.
+
+**El balance de la Fed: no eran revisiones, era definición (A-D0-15).** El XML
+del H.4.1 trae el total bruto de los doce bancos (`RESPPA_N.WW`) y el total
+consolidado (`RESPPMA_N.WW`, "less eliminations from consolidation"). La
+diferencia es exactamente la serie de eliminaciones de partidas en proceso de
+cobro (`RESPPMAX_N.WW`) en las 1.242 semanas, con ±1 millón de redondeo; vale
+cero desde noviembre de 2012. El consolidado coincide con `WALCL` de FRED en
+las 1.242 semanas. **D0 publica el consolidado.** La ficha D0.7.1 nombra la
+serie bruta: queda corregida en `serie_D0.csv`.
+
+**Una segunda fuente independiente para los tipos de cambio.** El BIS publica
+tipos de cambio contra el USD (`WS_XRU`), promedio del mes y fin de mes, para
+el yen (desde 1957-01), el yuan (1957-01) y el euro (1974-06). Leído el
+2026-10-05; las tres descargas están en el manifiesto. Es el control de los
+tres tipos de cambio (A-D0-25).
+
+**Resultado de la primera corrida (crudos del 2026-10-05):** 12 de 13 series
+publicadas. Todos los gates cerraron: M2 de EE.UU. contra la Tabla 1 en HTML
+(17 meses, diferencia 0); balance de la Fed contra el BIS (284 meses, 0) y
+contra FRED (1.242 semanas, todas iguales); M2 de la Eurozona contra el Banco
+de España (3 meses, 0 y 0.49 millones); balance del Eurosistema contra el BIS
+(332 meses, 0); M2 de Japón contra e-Stat (281 meses, 0); balance del BoJ
+contra el BIS (340 meses, 0); dinero amplio de China contra dos lecturas de la
+NBS (41 millones de diferencia, con 50 de tolerancia). El control de los tipos
+de cambio deja **un mes en disputa: 2008-12 del USD por EUR, 0.68 %** contra el
+BIS; el yen llega a 0.49 % y el yuan a 0.17 %. El agregado va de 2003-04 a
+2026-08, 281 meses. Oro / M2 va de 1960-01 a 2026-08 (800 meses, apto desde
+1968-04) y BTC / M2 de 2013-01 a 2026-08 (164 meses).
+
+**Lo que quedó NO MEDIDO en esta entrega, y por qué.**
+
+- Balance del PBoC: sin validación externa. Las únicas lecturas de su tabla
+  salieron de descargas automáticas de su sitio (paso 0), descartadas por la
+  regla de `robots.txt`. Dos valores leídos a mano por una persona lo
+  destraban (`ANCLAS_BALANCE_PBOC` en `configuracion.py`).
+- EE.UU. antes de 1959, los dos tramos: la transcripción con doble lectura
+  (A-D0-19) se hace en un PR propio.
+- Riqueza por clase: bonos, acciones y BTC quedan pendientes de implementar;
+  inmuebles, cantidad de oro y total no tienen serie (A-D0-22 a A-D0-24). Las
+  cifras de Savills y del World Gold Council van en
+  `data/series/citas_terceros.csv` como "estimación de terceros" (A-D0-28).
