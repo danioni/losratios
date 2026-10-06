@@ -2883,6 +2883,17 @@ BIS; el yen llega a 0.49 % y el yuan a 0.17 %. El agregado va de 2003-04 a
 2026-08, 281 meses. Oro / M2 va de 1960-01 a 2026-08 (800 meses, apto desde
 1968-04) y BTC / M2 de 2013-01 a 2026-08 (164 meses).
 
+**Lo que la revisión del PR encontró (2026-10-06).**
+
+- `denominador_pares.csv` y `denominador_ratios.csv` estaban publicados con
+  datos de prueba: `ratios.py` escribía esos archivos en `data/series/`
+  aunque los tests redirigieran las demás salidas, y la suite los pisó después
+  de la corrida real. Se regeneraron desde un estado limpio; las salidas de D0
+  de `ratios.py` siguen ahora al directorio de los ratios; un fixture hace
+  fallar a cualquier test que escriba en `data/`; y
+  `tests/test_salidas_publicadas.py` recalcula cada salida derivada desde los
+  archivos del repositorio y exige igualdad byte a byte (A-D0-30).
+
 **Lo que quedó NO MEDIDO en esta entrega, y por qué.**
 
 - Balance del PBoC: sin validación externa. Las únicas lecturas de su tabla

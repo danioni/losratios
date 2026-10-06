@@ -827,16 +827,22 @@ def tabla_cambio(
     return pd.DataFrame(filas, columns=COLUMNAS_D0_CAMBIO)
 
 
+def _publicado(serie: pd.Series) -> pd.Series:
+    """Los valores tal como quedan en el CSV (FORMATO_D0): una derivada sale de lo publicado."""
+    patron = FORMATO_D0.replace("%", "")
+    return serie.map(lambda valor: valor if pd.isna(valor) else float(format(valor, patron)))
+
+
 def _en_usd(nombre: str, dinero: str, valores: pd.Series, tipo: SerieConstruida | None, tasa_fija=None):
     """Una serie de dinero en miles de millones de USD, con su convención de tipo de cambio."""
     if tipo is None:
         return valores  # ya está en miles de millones de USD, promedio mensual
     if dinero == "m2_eurozona_sin_ajustar":
         # Saldo de fin de mes en millones de EUR, por USD/EUR del último día del mes.
-        tasa = tipo.fin_de_mes["fin_de_mes"] if tasa_fija is None else tasa_fija
+        tasa = _publicado(tipo.fin_de_mes["fin_de_mes"]) if tasa_fija is None else tasa_fija
         return valores * (tasa.reindex(valores.index) if tasa_fija is None else tasa) / 1000.0
     # Promedio de saldos en 100 millones de JPY, por el promedio mensual de JPY por USD.
-    tasa = tipo.valores if tasa_fija is None else tasa_fija
+    tasa = _publicado(tipo.valores) if tasa_fija is None else tasa_fija
     return valores / (tasa.reindex(valores.index) if tasa_fija is None else tasa) / 10.0
 
 
@@ -858,7 +864,9 @@ def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[
         return pd.DataFrame(columns=COLUMNAS_D0_AGREGADO), notas
 
     en_usd = {
-        nombre: _en_usd(nombre, dinero, series[dinero].valores.dropna(), None if cambio is None else series[cambio])
+        nombre: _en_usd(
+            nombre, dinero, _publicado(series[dinero].valores.dropna()), None if cambio is None else series[cambio]
+        )
         for nombre, dinero, cambio in ECONOMIAS_AGREGADO
     }
     tabla = pd.DataFrame(en_usd).dropna()
@@ -868,15 +876,15 @@ def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[
     primero = tabla.index[0]
     constante = {}
     for nombre, dinero, cambio in ECONOMIAS_AGREGADO:
-        valores = series[dinero].valores.reindex(tabla.index)
+        valores = _publicado(series[dinero].valores.reindex(tabla.index))
         if cambio is None:
             constante[nombre] = valores
             continue
         tipo = series[cambio]
-        fija = (
-            float(tipo.fin_de_mes["fin_de_mes"].loc[primero])
+        fija = float(
+            _publicado(tipo.fin_de_mes["fin_de_mes"]).loc[primero]
             if dinero == "m2_eurozona_sin_ajustar"
-            else float(tipo.valores.loc[primero])
+            else _publicado(tipo.valores).loc[primero]
         )
         constante[nombre] = _en_usd(nombre, dinero, valores, tipo, tasa_fija=fija)
     constante = pd.DataFrame(constante)
@@ -896,6 +904,31 @@ def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[
         f"tipo de cambio constante del {_mes(primero)} (A-D0-11)"
     )
     return salida, notas
+
+
+def series_desde_publicadas(dinero: pd.DataFrame, cambio: pd.DataFrame) -> dict[str, SerieConstruida]:
+    """Reconstruye las series que usa el agregado a partir de los CSV publicados.
+
+    Es lo que permite comprobar, sin red y sin crudos, que denominador_agregado.csv
+    sale de denominador_dinero.csv y denominador_tipos_de_cambio.csv.
+    """
+    series: dict[str, SerieConstruida] = {}
+    for clave, grupo in dinero.groupby("serie"):
+        indice = pd.DatetimeIndex(pd.to_datetime(grupo["mes"] + "-01"), name="mes")
+        series[clave] = SerieConstruida(pd.Series(grupo["valor"].to_numpy(dtype=float), index=indice))
+    for clave, grupo in cambio.groupby("par"):
+        indice = pd.DatetimeIndex(pd.to_datetime(grupo["mes"] + "-01"), name="mes")
+        promedio = pd.Series(grupo["promedio_mensual"].to_numpy(dtype=float), index=indice).dropna()
+        fines = pd.DataFrame(
+            {
+                "fin_de_mes": grupo["fin_de_mes"].to_numpy(dtype=float),
+                "fecha_fin_de_mes": pd.to_datetime(grupo["fecha_fin_de_mes"], errors="coerce").to_numpy(),
+            },
+            index=indice,
+        ).dropna(subset=["fin_de_mes"])
+        fines.index.name = "mes"
+        series[clave] = SerieConstruida(promedio, fin_de_mes=fines)
+    return series
 
 
 def tabla_fichas(

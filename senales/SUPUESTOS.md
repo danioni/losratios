@@ -1589,6 +1589,33 @@ por ese mes; se corrigió a lo aprobado, no la tolerancia.
 gates validan que el dato publicado sea el del emisor, sin errores de
 transporte, unidad ni fecha, no la medición.
 
+## A-D0-30 · Una salida derivada se calcula desde lo publicado, y un test lo comprueba
+
+**Estado: supuesto.** Fijado el 2026-10-06, en la revisión del PR #4.
+
+El agregado en USD se calcula desde los valores de dinero y de tipo de cambio
+tal como quedan en sus CSV (doce cifras significativas), y los pares contra M2
+desde los precios tal como quedan en `precios_mensuales.csv` (diez), no desde
+los decimales que los archivos no llevan. Así `tests/test_salidas_publicadas.py`
+recalcula cada salida derivada desde los archivos del repositorio y exige que
+sea idéntica byte a byte: `liquidez_neta.csv` desde sus tres crudos de FRED,
+`denominador_agregado.csv`, `denominador_ratios.csv` y `denominador_pares.csv`
+desde los CSV publicados, y los crudos versionados contra el hash de su
+manifiesto. Para `ratios.csv` de la fase R la igualdad es exacta salvo en la
+décima cifra del valor, porque esa fase todavía divide los precios sin
+redondear; llevarla a esta regla exige una corrida completa y va en un PR
+propio. Lo que no se puede recalcular sin red ni sin crudos privados
+(`precios_mensuales.csv`, `denominador_dinero.csv`, los balances, los tipos de
+cambio y la ficha) queda dicho en el docstring del test.
+
+**Por qué existe.** La primera corrida del PR #4 publicó `denominador_pares.csv`
+y `denominador_ratios.csv` calculados con datos de prueba: `ratios.py` escribía
+esos dos archivos en `data/series/` aunque los tests redirigieran las demás
+salidas a un directorio temporal, y la suite los pisó después de la corrida
+real. Se arregló en dos lugares: las salidas de D0 de `ratios.py` siguen al
+directorio de salida de los ratios, y un fixture de `conftest.py` hace fallar
+a cualquier test que escriba en `data/`.
+
 ## A-D0-26 · Un cambio en un mes ya publicado es una revisión y se reporta
 
 **Estado: supuesto.**

@@ -815,14 +815,42 @@ SERIE_M2_EEUU_RATIOS = SeriePrecio(
 SERIES_POR_CLAVE[SERIE_M2_EEUU_RATIOS.clave] = SERIE_M2_EEUU_RATIOS
 
 
+def como_publicado(tabla: pd.DataFrame, formato: str) -> pd.DataFrame:
+    """Los valores tal como quedan en el CSV: pasados por el formato con que se escriben.
+
+    Una salida derivada se calcula desde lo que se publica, no desde los
+    decimales que el CSV no lleva: así cualquiera la recalcula byte a byte
+    desde los archivos del repositorio (tests/test_salidas_publicadas.py).
+    """
+    patron = formato.replace("%", "")
+
+    def redondear(valor):
+        return valor if pd.isna(valor) else float(format(valor, patron))
+
+    return tabla.map(redondear)
+
+
+def _salida_d0(nombre: str) -> Path:
+    """Un archivo de la fase D0, en el mismo directorio que las salidas de los ratios.
+
+    Se resuelve al usarlo, no al importar: cuando un test redirige ARCHIVO_RATIOS
+    a un directorio temporal, estos archivos van al mismo lugar y nada toca
+    data/series/. La primera corrida del PR #4 no hacía esto y la suite de tests
+    pisó denominador_pares.csv y denominador_ratios.csv con datos de prueba.
+    """
+    return Path(ARCHIVO_RATIOS).parent / nombre
+
+
 def cargar_m2_publicado(
-    ruta_fichas: Path = ARCHIVO_D0_FICHAS, ruta_dinero: Path = ARCHIVO_D0_DINERO
+    ruta_fichas: Path | None = None, ruta_dinero: Path | None = None
 ) -> tuple[pd.Series | None, str]:
     """El M2 de EE.UU. que publicó la fase D0, en billones de USD, o por qué no está.
 
     Si la fase D0 no corrió, o publicó el M2 como NO MEDIDO, los pares heredan
     ese estado: un par no es más firme que su lado más débil.
     """
+    ruta_fichas = ruta_fichas or _salida_d0(ARCHIVO_D0_FICHAS.name)
+    ruta_dinero = ruta_dinero or _salida_d0(ARCHIVO_D0_DINERO.name)
     if not ruta_fichas.exists() or not ruta_dinero.exists():
         return None, "la fase D0 no publicó todavía (python -m senales.denominador)"
     fichas = pd.read_csv(ruta_fichas, dtype=str, keep_default_na=False)
@@ -917,13 +945,17 @@ class EntradaParesDenominador:
 
 
 def precios_publicados(
-    ruta_precios: Path = ARCHIVO_PRECIOS, ruta_series: Path = ARCHIVO_SERIES_INFO
+    ruta_precios: Path | None = None, ruta_series: Path | None = None
 ) -> tuple[pd.DataFrame, pd.DataFrame, set[str], pd.DataFrame]:
-    """Oro y BTC tal como quedaron publicados, para recalcular los pares contra M2 sin red.
+    """Oro, plata y BTC tal como quedaron publicados, para recalcular pares sin red.
 
     El medio paso de redondeo se reconstruye del error publicado junto a cada
-    valor (A-R0-17), y los meses en disputa, de la columna de contraste (A-R0-20).
+    valor (A-R0-17), y los meses en disputa, de la columna de contraste
+    (A-R0-20). Sirve para --solo-denominador y para el test que comprueba que
+    ratios.csv y pares.csv salen de precios_mensuales.csv.
     """
+    ruta_precios = ruta_precios or Path(ARCHIVO_PRECIOS)
+    ruta_series = ruta_series or Path(ARCHIVO_SERIES_INFO)
     if not ruta_precios.exists() or not ruta_series.exists():
         raise ErrorDeFuente(
             f"faltan {ruta_precios.name} o {ruta_series.name}: hay que correr la fase R completa "
@@ -931,24 +963,22 @@ def precios_publicados(
         )
     tabla = pd.read_csv(ruta_precios, dtype={"mes": str})
     indice = pd.DatetimeIndex(pd.to_datetime(tabla["mes"] + "-01"), name="mes")
-    precios = pd.DataFrame(
-        {"oro": tabla["oro_usd_oz"].to_numpy(dtype=float), "btc": tabla["btc_usd"].to_numpy(dtype=float)},
-        index=indice,
-    )
-    pasos = pd.DataFrame(
-        {
-            "oro": (tabla["oro_error_redondeo_pct"].to_numpy(dtype=float) / 100.0) * precios["oro"].to_numpy(),
-            "btc": 0.0,
-        },
-        index=indice,
-    ).fillna(0.0)
-    disputas = pd.DataFrame(
+    columnas = {"oro": "oro_usd_oz", "plata": "plata_usd_oz", "btc": "btc_usd"}
+    precios = pd.DataFrame(float("nan"), index=indice, columns=[serie.clave for serie in SERIES_PRECIO])
+    for clave, columna in columnas.items():
+        precios[clave] = tabla[columna].to_numpy(dtype=float)
+    # El medio paso se reconstruye como lo hace la corrida completa (A-R0-9, A-R0-19):
+    # de la precisión declarada en la edición vigente y de los decimales publicados
+    # en la congelada. Reconstruirlo del error publicado, ya redondeado, no da lo mismo.
+    pasos = medios_pasos(precios, PINK_SHEET_CONGELADA.ultimo_mes)
+    disputas = pd.DataFrame(False, index=indice, columns=list(precios.columns))
+    for metal in ("oro", "plata"):
         # La columna dice "valor en disputa: Pink Sheet x, FMI y, diferencia z %".
-        {"oro": tabla["oro_contraste_fmi"].astype(str).str.startswith(VALOR_EN_DISPUTA).to_numpy(), "btc": False},
-        index=indice,
-    )
+        disputas[metal] = (
+            tabla[f"{metal}_contraste_fmi"].astype(str).str.startswith(VALOR_EN_DISPUTA).to_numpy()
+        )
     series = pd.read_csv(ruta_series, dtype=str, keep_default_na=False)
-    validadas = set(series.loc[series["publicada"] == "sí", "serie"]) & {"oro", "btc"}
+    validadas = set(series.loc[series["publicada"] == "sí", "serie"]) & set(columnas)
     return precios, pasos, validadas, disputas
 
 
@@ -960,8 +990,9 @@ def main_denominador(fecha_corrida: date) -> int:
         print(f"ERROR DE FUENTE: {error}", file=sys.stderr)
         return CODIGO_ERROR_FUENTE
     ratios_d0, pares_d0, lineas = pares_denominador(precios, pasos, validadas, disputas)
-    escribir_csv_determinista(ratios_d0, ARCHIVO_D0_RATIOS, COLUMNAS_RATIOS, FORMATO_RATIOS)
-    escribir_csv_determinista(pares_d0, ARCHIVO_D0_PARES, COLUMNAS_PARES, FORMATO_RATIOS)
+    ruta_ratios_d0, ruta_pares_d0 = _salida_d0(ARCHIVO_D0_RATIOS.name), _salida_d0(ARCHIVO_D0_PARES.name)
+    escribir_csv_determinista(ratios_d0, ruta_ratios_d0, COLUMNAS_RATIOS, FORMATO_RATIOS)
+    escribir_csv_determinista(pares_d0, ruta_pares_d0, COLUMNAS_PARES, FORMATO_RATIOS)
     entrada = EntradaParesDenominador(
         fecha_corrida=fecha_corrida,
         pares=lineas,
@@ -972,8 +1003,8 @@ def main_denominador(fecha_corrida: date) -> int:
     for linea in lineas:
         print(f"  {linea}")
     print("Salidas")
-    print(f"  {ARCHIVO_D0_RATIOS} ({len(ratios_d0)} filas)")
-    print(f"  {ARCHIVO_D0_PARES}")
+    print(f"  {ruta_ratios_d0} ({len(ratios_d0)} filas)")
+    print(f"  {ruta_pares_d0}")
     print(f"  {ARCHIVO_CHANGELOG} ({'actualizado' if cambio else 'sin cambios'})")
     return 0
 
@@ -1649,10 +1680,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     escribir_csv_determinista(interna, ARCHIVO_INTERNO, COLUMNAS_INTERNO, FORMATO_RATIOS)
 
-    # A-D0-21: los dos pares contra el M2 de EE.UU., con la misma lógica.
-    ratios_d0, pares_d0, lineas_d0 = pares_denominador(precios, pasos, validadas, disputas)
-    escribir_csv_determinista(ratios_d0, ARCHIVO_D0_RATIOS, COLUMNAS_RATIOS, FORMATO_RATIOS)
-    escribir_csv_determinista(pares_d0, ARCHIVO_D0_PARES, COLUMNAS_PARES, FORMATO_RATIOS)
+    # A-D0-21: los dos pares contra el M2 de EE.UU., con la misma lógica, calculados
+    # desde los precios tal como quedan publicados en precios_mensuales.csv.
+    ratios_d0, pares_d0, lineas_d0 = pares_denominador(
+        como_publicado(precios, FORMATO_RATIOS), pasos, validadas, disputas
+    )
+    escribir_csv_determinista(ratios_d0, _salida_d0(ARCHIVO_D0_RATIOS.name), COLUMNAS_RATIOS, FORMATO_RATIOS)
+    escribir_csv_determinista(pares_d0, _salida_d0(ARCHIVO_D0_PARES.name), COLUMNAS_PARES, FORMATO_RATIOS)
 
     lineas_pares = [
         f"{fila.nombre}: {fila.estado}"
@@ -1709,7 +1743,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  {ARCHIVO_SERIES_INFO}")
     print(f"  {ARCHIVO_DESCARGAS}")
     print(f"  {ARCHIVO_INTERNO} (fuera del repositorio)")
-    print(f"  {ARCHIVO_D0_RATIOS} ({len(ratios_d0)} filas) y {ARCHIVO_D0_PARES}")
+    print(f"  {_salida_d0(ARCHIVO_D0_RATIOS.name)} ({len(ratios_d0)} filas) y {_salida_d0(ARCHIVO_D0_PARES.name)}")
     print(f"  {ARCHIVO_CHANGELOG} ({'actualizado' if cambio else 'sin cambios'})")
     print("Resumen")
     print(f"  Meses agregados: {len(agregados)}")

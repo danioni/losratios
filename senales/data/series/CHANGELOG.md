@@ -11,6 +11,14 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-06 · A-D0-30 · Supuesto nuevo: las salidas derivadas se calculan
+  desde lo publicado, y `test_salidas_publicadas.py` lo comprueba.**
+  `denominador_pares.csv` y `denominador_ratios.csv` se regeneran: los que
+  estaban publicados salían de datos de prueba, porque la suite de tests
+  escribía en `data/series/`. `denominador_agregado.csv` cambia en la
+  undécima o duodécima cifra de los meses en que los insumos tenían más
+  decimales que los que publica el CSV.
+
 - **2026-10-06 · A-D0-1 a A-D0-29 · Supuestos nuevos de la fase D0 (El
   Denominador).** Trece series de dinero, balances y tipos de cambio, y un
   agregado en USD de tres economías, con la convención nativa de cada emisor
@@ -278,7 +286,7 @@ cita.
   - M2 de la Eurozona: se publica, 1980-01 a 2026-08, 560 meses (millones de EUR; saldo a fin de mes; A-D0-1 A-D0-4 A-D0-5 A-D0-7)
   - M2 de la Eurozona, sin ajustar: se publica, 1980-01 a 2026-08, 560 meses (millones de EUR; saldo a fin de mes; A-D0-1 A-D0-4 A-D0-5 A-D0-7)
   - M2 de Japón: se publica, 2003-04 a 2026-08, 281 meses (100 millones de JPY; promedio de saldos del mes; A-D0-1 A-D0-6 A-D0-8)
-  - Dinero amplio de China (M3 de la OCDE): se publica, 2004-01 a 2026-07, 271 meses (millones de CNY; saldo a fin de mes; A-D0-1 A-D0-9)
+  - Dinero amplio de China (M3 de la OCDE): no se publica: NO MEDIDO: sin validación externa
   - Balance de la Reserva Federal: total de activos, consolidado: se publica, 2002-12 a 2026-09, 286 meses (millones de USD; nivel del último miércoles del mes; A-D0-1 A-D0-14 A-D0-15)
   - Balance del Eurosistema: total de activos: se publica, 1999-01 a 2026-09, 333 meses (millones de EUR; cierre del último viernes del mes; A-D0-1 A-D0-7 A-D0-14 A-D0-16)
   - Balance del Banco de Japón: total de activos: se publica, 1998-04 a 2026-08, 341 meses (100 millones de JPY; saldo a fin de mes; A-D0-1 A-D0-8 A-D0-16)
@@ -303,14 +311,15 @@ cita.
   - balance_eurosistema: gate contra BIS WS_CBTA (zona del euro), viernes de la última semana hábil cerró: 332 meses, tolerancia ±0.5 millones de EUR, diferencia máxima 0.0000
   - m2_japon: gate contra e-Stat Statistics Dashboard cerró: 281 meses, tolerancia ±0.5 100 millones de JPY, diferencia máxima 0.0000
   - balance_boj: gate contra BIS WS_CBTA (Japón) cerró: 340 meses, tolerancia ±0.5 100 millones de JPY, diferencia máxima 0.0000
-  - dinero_amplio_china: gate contra Oficina Nacional de Estadísticas de China, 国家数据, 货币和准货币 (M2) 供应量_期末值 (leída el 2026-10-05) cerró: 2 meses, tolerancia ±50 por ancla, diferencia máxima 41.0000
-  - balance_pboc: sin comparar contra lecturas a mano de una segunda fuente (hay 0 anclas y hacen falta 2)
+  - dinero_amplio_china: sin comparar contra lecturas a mano de una segunda fuente (hay 2 anclas y hacen falta 3)
+  - balance_pboc: sin comparar contra lecturas a mano de una segunda fuente (hay 0 anclas y hacen falta 3)
   - usd_por_eur: control contra BIS WS_XRU, promedio mensual cerró: 332 meses, tolerancia ±0.5 %, diferencia máxima 0.6841; en disputa (control): 1 meses
   - jpy_por_usd: control contra BIS WS_XRU, promedio mensual cerró: 668 meses, tolerancia ±0.5 %, diferencia máxima 0.4879
   - cny_por_usd: control contra BIS WS_XRU, promedio mensual cerró: 548 meses, tolerancia ±0.5 %, diferencia máxima 0.1687
 - Agregado:
   - M2 de tres economías (EE.UU., Eurozona y Japón), en USD: 2003-04 a 2026-08, 281 meses; tipo de cambio constante del 2003-04 (A-D0-11)
 - Revisiones de datos históricos: ninguna
+- Nota: primera publicación de las series: no hay corrida anterior con que comparar
 - Nota: las series del BCE entran por copia bajada a mano (A-D0-29); los ZIP de la Junta y las fuentes de contraste quedan fuera del repositorio, con su hash en el manifiesto (A-D0-27)
 
 ## 2026-10-04 · ratios
