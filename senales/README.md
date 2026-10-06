@@ -408,7 +408,7 @@ A-D0-29.
 | `m2_eeuu`, `m2_eeuu_sin_ajustar` | Junta de la Reserva Federal, H.6 (XML) | 1959-01 | promedio mensual de cifras diarias | miles de millones de USD |
 | `m2_eurozona`, `m2_eurozona_sin_ajustar` | BCE, conjunto BSI (copia a mano) | 1980-01; estimación hasta 1997-08 | saldo a fin de mes | millones de EUR |
 | `m2_japon` | Banco de Japón, Money Stock (API) | 2003-04 | promedio de saldos del mes | 100 millones de JPY |
-| `dinero_amplio_china` | OCDE, DF_MONAGG ("M3" de la OCDE; emisor: PBoC) | 2004-01 | saldo a fin de mes | millones de CNY |
+| `dinero_amplio_china` | OCDE, DF_MONAGG ("M3" de la OCDE; emisor: PBoC) | 2004-01 | saldo a fin de mes | millones de CNY; **NO MEDIDO hasta una tercera lectura a mano** (A-D0-25) |
 | `balance_fed` | Junta, H.4.1 (XML), serie consolidada | 2002-12 | último miércoles del mes | millones de USD |
 | `balance_eurosistema` | BCE, conjunto ILM (copia a mano) | 1999-01 | último viernes del mes | millones de EUR |
 | `balance_boj` | Banco de Japón, Accounts (API) | 1998-04 | saldo a fin de mes | 100 millones de JPY |
@@ -473,8 +473,9 @@ repositorio, con su hash en el manifiesto (A-D0-27).
 Un gate por serie contra una segunda fuente, con la tolerancia fijada por la
 precisión publicada antes de ver el resultado (A-D0-25): la Tabla 1 del H.6 en
 HTML para el M2 de EE.UU.; el BIS para los tres balances publicados; el Banco
-de España para el M2 de la Eurozona; e-Stat para el M2 de Japón; dos lecturas a
-mano de la Oficina Nacional de Estadísticas de China para el dinero amplio. Los
+de España para el M2 de la Eurozona; e-Stat para el M2 de Japón; tres lecturas
+a mano de la Oficina Nacional de Estadísticas de China para el dinero amplio
+(hay dos: la serie espera la tercera). Los
 tipos de cambio se comparan con el BIS como control: el mes que pasa de ±0.5 %
 se publica marcado en disputa. El balance de la Fed lleva además un control
 semana a semana contra FRED.

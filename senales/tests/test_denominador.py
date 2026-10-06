@@ -194,15 +194,17 @@ def test_un_control_marca_en_disputa_y_no_decide():
     assert control.ok and control.clase == "control" and control.en_disputa == ["2026-03"]
 
 
-def test_las_anclas_exigen_dos_y_cierran_dentro_del_medio_paso():
+def test_las_anclas_exigen_tres_y_cierran_dentro_del_medio_paso():
     serie = _serie([100.0, 200.0, 300.0])
     anclas = (
         AnclaMensual("s", "2026-01", 100.4, 0.5, "f", "u", FECHA),
+        AnclaMensual("s", "2026-02", 200.0, 0.5, "f", "u", FECHA),
         AnclaMensual("s", "2026-03", 300.0, 0.5, "f", "u", FECHA),
     )
     assert denominador.comparar_anclas("s", serie, anclas).ok
-    assert not denominador.comparar_anclas("s", serie, anclas[:1]).ok
-    lejos = (anclas[0], AnclaMensual("s", "2026-03", 301.0, 0.5, "f", "u", FECHA))
+    # Con dos anclas no se decide (A-D0-25): es lo que deja a China NO MEDIDO hoy.
+    assert not denominador.comparar_anclas("s", serie, anclas[:2]).ok
+    lejos = anclas[:2] + (AnclaMensual("s", "2026-03", 301.0, 0.5, "f", "u", FECHA),)
     assert denominador.comparar_anclas("s", serie, lejos).fuera == ["2026-03"]
 
 
@@ -259,6 +261,7 @@ def entorno(tmp_path, monkeypatch):
         "ANCLAS_CHINA",
         (
             AnclaMensual("dinero_amplio_china", "2026-08", float(china.iloc[-1]) + 20.0, 50.0, "prueba", "u", FECHA),
+            AnclaMensual("dinero_amplio_china", "2025-12", float(china.loc["2025-12-01"]), 50.0, "prueba", "u", FECHA),
             AnclaMensual("dinero_amplio_china", "2025-06", float(china.loc["2025-06-01"]), 50.0, "prueba", "u", FECHA),
         ),
     )

@@ -11,6 +11,13 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-06 · A-D0-25 · El mínimo de anclas pasa de 2 a 3, y el dinero amplio
+  de China pasa de publicado a NO MEDIDO.** El 2 se había fijado después de ver
+  que China tenía dos lecturas de la NBS: no era una tolerancia declarada a
+  ciegas. Ahora rige el mismo mínimo que el gate anual de oro y plata.
+  `denominador_dinero.csv` pierde las 271 filas de `dinero_amplio_china`
+  hasta que haya una tercera lectura en pantalla.
+
 - **2026-10-06 · A-D0-30 · Supuesto nuevo: las salidas derivadas se calculan
   desde lo publicado, y `test_salidas_publicadas.py` lo comprueba.**
   `denominador_pares.csv` y `denominador_ratios.csv` se regeneran: los que

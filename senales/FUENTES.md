@@ -2870,8 +2870,9 @@ el yen (desde 1957-01), el yuan (1957-01) y el euro (1974-06). Leído el
 2026-10-05; las tres descargas están en el manifiesto. Es el control de los
 tres tipos de cambio (A-D0-25).
 
-**Resultado de la primera corrida (crudos del 2026-10-05):** 12 de 13 series
-publicadas. Todos los gates cerraron: M2 de EE.UU. contra la Tabla 1 en HTML
+**Resultado de la primera corrida (crudos del 2026-10-05), antes de la
+revisión del PR:** 12 de 13 series publicadas; después de la revisión, 11
+(China pasa a NO MEDIDO, abajo). Todos los gates cerraron: M2 de EE.UU. contra la Tabla 1 en HTML
 (17 meses, diferencia 0); balance de la Fed contra el BIS (284 meses, 0) y
 contra FRED (1.242 semanas, todas iguales); M2 de la Eurozona contra el Banco
 de España (3 meses, 0 y 0.49 millones); balance del Eurosistema contra el BIS
@@ -2893,9 +2894,13 @@ BIS; el yen llega a 0.49 % y el yuan a 0.17 %. El agregado va de 2003-04 a
   fallar a cualquier test que escriba en `data/`; y
   `tests/test_salidas_publicadas.py` recalcula cada salida derivada desde los
   archivos del repositorio y exige igualdad byte a byte (A-D0-30).
+- `MINIMO_ANCLAS = 2` se había fijado después de ver que China tenía dos
+  lecturas. Pasó a tres, y el dinero amplio de China queda **NO MEDIDO hasta
+  una tercera lectura en pantalla** (A-D0-25).
 
 **Lo que quedó NO MEDIDO en esta entrega, y por qué.**
 
+- Dinero amplio de China: dos anclas, y hacen falta tres (A-D0-25).
 - Balance del PBoC: sin validación externa. Las únicas lecturas de su tabla
   salieron de descargas automáticas de su sitio (paso 0), descartadas por la
   regla de `robots.txt`. Dos valores leídos a mano por una persona lo

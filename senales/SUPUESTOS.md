@@ -1402,10 +1402,11 @@ columna `atribucion` de `serie_D0.csv`.
   (desde 2011-10) y las participaciones en fondos del mercado monetario (desde
   2018-01) sin los topes de monto y plazo del M2 del H.6, y la OCDE lo
   clasifica en la misma categoría que el M3 del BoJ, no que su M2.
-- El gate del dinero amplio son dos lecturas en pantalla de la Oficina
-  Nacional de Estadísticas de China, que republica al PBoC (2026-07 y 2020-03),
-  con tolerancia de 50 millones de yuanes: el medio paso del redondeo de la
-  OCDE.
+- El gate del dinero amplio son lecturas en pantalla de la Oficina Nacional
+  de Estadísticas de China, que republica al PBoC, con tolerancia de 50
+  millones de yuanes: el medio paso del redondeo de la OCDE. Hay dos (2026-07
+  y 2020-03) y hacen falta tres (A-D0-25): **la serie queda NO MEDIDO hasta
+  tener una tercera lectura**, que el dueño hace en pantalla.
 
 **Lo que lo haría cambiar.** Un permiso escrito del PBoC, o una lectura de las
 definiciones que muestre comparabilidad.
@@ -1576,9 +1577,16 @@ implementar en esta entrega.
 | Balance del PBoC | lecturas a mano del PBoC | gate | sin anclas: NO MEDIDO |
 | Tipos de cambio (los tres) | BIS `WS_XRU`, promedio mensual | control | ±0.5 % |
 
-Un gate necesita al menos tres comparaciones (dos, el de anclas). Un gate que
-no cierra deja la serie como "NO MEDIDO: sin validación externa"; un control
-marca el mes como valor en disputa y no decide. **La comparación de los tipos
+Un gate necesita al menos tres comparaciones, también el de anclas. Un gate
+que no cierra deja la serie como "NO MEDIDO: sin validación externa"; un
+control marca el mes como valor en disputa y no decide.
+
+**El mínimo de anclas se corrigió el 2026-10-06, y hay que decirlo entero.** La
+primera versión del código fijó `MINIMO_ANCLAS = 2`, y lo fijó después de saber
+que China tenía exactamente dos lecturas de la NBS: no fue una tolerancia
+declarada antes de ver el resultado. La revisión del PR lo detectó. Quedó en
+tres, el mismo mínimo que el gate anual de oro y plata (A-R0-16), y con eso el
+dinero amplio de China pasa a NO MEDIDO hasta que haya una tercera lectura. **La comparación de los tipos
 de cambio es un control, como quedó en `FUENTES.md` D0.11:** dos fijaciones a
 horas distintas no son el mismo dato. En la primera corrida, el único mes
 fuera del umbral es 2008-12 del USD por EUR (0.68 %), que se publica marcado.

@@ -1380,7 +1380,12 @@ ANCLAS_CHINA = (
 # descarga automática de su sitio. Mientras esta lista esté vacía, la serie se
 # calcula y se publica como NO MEDIDO: sin validación externa.
 ANCLAS_BALANCE_PBOC: tuple[AnclaMensual, ...] = ()
-MINIMO_ANCLAS = 2
+# Cuántas anclas hacen falta para que el gate decida: las mismas que el gate
+# anual de oro y plata (MINIMO_ANIOS_GATE). La primera versión decía 2, fijado
+# después de ver que China tenía dos lecturas; se corrigió el 2026-10-06
+# (A-D0-25, changelog). Con dos anclas, el dinero amplio de China queda NO
+# MEDIDO hasta que alguien lea una tercera en pantalla.
+MINIMO_ANCLAS = MINIMO_ANIOS_GATE
 
 # --- Agregado (A-D0-10, A-D0-11, A-D0-12) ------------------------------------
 
