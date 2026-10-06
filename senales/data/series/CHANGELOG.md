@@ -16,7 +16,10 @@ cita.
   que China tenía dos lecturas de la NBS: no era una tolerancia declarada a
   ciegas. Ahora rige el mismo mínimo que el gate anual de oro y plata.
   `denominador_dinero.csv` pierde las 271 filas de `dinero_amplio_china`
-  hasta que haya una tercera lectura en pantalla.
+  hasta que haya una tercera lectura en pantalla. El mismo supuesto registra
+  que el gate del balance de la Fed contra el BIS se definió sabiendo que
+  cerraba, y por qué quedó así (D0.11 lo tenía como control). No cambia
+  ningún valor.
 
 - **2026-10-06 · A-D0-30 · Supuesto nuevo: las salidas derivadas se calculan
   desde lo publicado, y `test_salidas_publicadas.py` lo comprueba.**

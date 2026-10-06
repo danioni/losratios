@@ -1586,7 +1586,21 @@ primera versión del código fijó `MINIMO_ANCLAS = 2`, y lo fijó después de s
 que China tenía exactamente dos lecturas de la NBS: no fue una tolerancia
 declarada antes de ver el resultado. La revisión del PR lo detectó. Quedó en
 tres, el mismo mínimo que el gate anual de oro y plata (A-R0-16), y con eso el
-dinero amplio de China pasa a NO MEDIDO hasta que haya una tercera lectura. **La comparación de los tipos
+dinero amplio de China pasa a NO MEDIDO hasta que haya una tercera lectura.
+
+**El gate del balance de la Fed también cambió de forma, y tampoco se fijó a
+ciegas.** `FUENTES.md` D0.11 (paso 0) proponía como gate la última semana de la
+publicación H.4.1 en HTML y como control el BIS, y anotaba que el BIS no cerraba
+en 118 meses. Ese resultado era contra la serie bruta (`RESPPA_N.WW`). Al
+elegir la serie consolidada (A-D0-15) la diferencia desapareció, y el gate se
+definió como "BIS, último miércoles del mes, ±5 millones" sabiendo que
+cerraba: la comparación ya estaba hecha. Lo que sí es independiente del
+resultado es la tolerancia, que es el redondeo con que publica el BIS. El
+gate del HTML del H.4.1 no se implementó: el BIS es un compilador distinto de
+la Junta y cubre 284 meses, mientras que la tabla en HTML es del mismo emisor
+y cubre una semana. FRED quedó como control semanal por decisión del dueño
+(D0.10.11, punto 6). Si se prefiere la forma de D0.11, es un cambio de
+supuesto, no de código: ambas comparaciones están hechas. **La comparación de los tipos
 de cambio es un control, como quedó en `FUENTES.md` D0.11:** dos fijaciones a
 horas distintas no son el mismo dato. En la primera corrida, el único mes
 fuera del umbral es 2008-12 del USD por EUR (0.68 %), que se publica marcado.

@@ -2897,6 +2897,11 @@ BIS; el yen llega a 0.49 % y el yuan a 0.17 %. El agregado va de 2003-04 a
 - `MINIMO_ANCLAS = 2` se había fijado después de ver que China tenía dos
   lecturas. Pasó a tres, y el dinero amplio de China queda **NO MEDIDO hasta
   una tercera lectura en pantalla** (A-D0-25).
+- El gate del balance de la Fed contra el BIS: D0.11 lo proponía como control
+  y decía que no cerraba en 118 meses; el PR lo informó como gate que cerró.
+  Las dos cosas son ciertas de dos series distintas: la bruta no cierra, la
+  consolidada (A-D0-15) sí, y el gate se definió sabiendo eso. Qué quedó y por
+  qué está en A-D0-25.
 
 **Lo que quedó NO MEDIDO en esta entrega, y por qué.**
 
