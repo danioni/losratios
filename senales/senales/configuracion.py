@@ -242,6 +242,13 @@ class Descarga:
     # Algunas fuentes cambian la URL del archivo en cada publicación. Para esas
     # se baja la página y se busca el enlace: no se asume que la URL es estable.
     patron_enlace: str | None = None
+    # A-D0-27: la licencia es condición necesaria, no suficiente. Un crudo de más
+    # de 1 MB, o el de una fuente que solo sirve de contraste, no se versiona
+    # aunque se pueda: queda fuera del repositorio, con su hash en el manifiesto.
+    versionar: bool = True
+    # A-D0-29: el crudo no se pide nunca con un programa; lo deja una persona en el
+    # directorio de crudos. El pipeline usa la copia más reciente y verifica su hash.
+    manual: bool = False
 
     @property
     def crudo_versionado(self) -> bool:
@@ -250,7 +257,7 @@ class Descarga:
         Eso es CC BY (clase a) y CC BY-NC (clase b), siempre con atribución. Una
         fuente sin licencia declarada, o con dos textos que no coinciden, no.
         """
-        return self.clase_licencia in (CLASE_ABIERTA, CLASE_NO_COMERCIAL)
+        return self.versionar and self.clase_licencia in (CLASE_ABIERTA, CLASE_NO_COMERCIAL)
 
 
 @dataclass(frozen=True)
@@ -812,3 +819,725 @@ COLUMNAS_DESCARGAS = [
     "actualizada",
     "crudo_en_repo",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Fase D0: El Denominador (dinero, balances de bancos centrales y tipos de cambio)
+#
+# Todo lo de aquí sale de FUENTES.md, sección D0 (qué se leyó de cada fuente),
+# y de los supuestos A-D0-* de SUPUESTOS.md (qué se decidió con eso).
+# ---------------------------------------------------------------------------
+
+# A-D0-29: lo que se publica cuando el robots.txt de la fuente veda la descarga
+# y nadie dejó una copia bajada a mano.
+NO_MEDIDO_ACCESO_VEDADO = "NO MEDIDO: el robots.txt de la fuente veda la descarga y no hay copia a mano"
+
+FAMILIA_DINERO = "dinero"
+FAMILIA_BALANCE = "balance"
+FAMILIA_CAMBIO = "tipo de cambio"
+
+_JUNTA = "Board of Governors of the Federal Reserve System (US)"
+_LICENCIA_JUNTA = "Dominio público (Junta de la Reserva Federal)"
+_ATRIBUCION_JUNTA = (
+    _JUNTA + ", {publicacion}. Dominio público; la Junta pide que se la cite como fuente. "
+    "Los valores se publican sin cambios."
+)
+_LICENCIA_BCE = "Gratuita con atribución (política de reutilización de las estadísticas del SEBC)"
+_ATRIBUCION_BCE = (
+    "Source: ECB statistics (ECB Data Portal, {conjunto}). Los valores se publican sin "
+    "cambios; toda serie derivada se rotula como cálculo propio (A-D0-7)."
+)
+_LICENCIA_BOJ = "Reproducción con cita de la fuente, salvo fines comerciales (Banco de Japón)"
+_ATRIBUCION_BOJ = (
+    "Fuente: Bank of Japan, BOJ Time-Series Data Search ({base}). Este servicio usa la API "
+    "de «BOJ Time-Series Data Search»; el Banco de Japón no garantiza su contenido. Los "
+    "valores se publican sin cambios. Válido mientras el sitio no tenga vínculo comercial "
+    "(A-D0-8)."
+)
+_LICENCIA_BIS = "Términos de uso de las estadísticas del BIS: uso libre citando al BIS"
+_LICENCIA_OCDE = "Términos de la OCDE: uso libre con crédito, con reserva por derechos de terceros"
+
+
+def _descarga_junta(clave: str, publicacion: str, archivo: str) -> Descarga:
+    return Descarga(
+        clave=clave,
+        descripcion=f"Junta de la Reserva Federal, {publicacion}, historia completa en XML",
+        clase_licencia=CLASE_ABIERTA,
+        licencia=_LICENCIA_JUNTA,
+        url=f"https://www.federalreserve.gov/releases/{archivo}",
+        extension="zip",
+        atribucion=_ATRIBUCION_JUNTA.format(publicacion=publicacion),
+        versionar=False,  # A-D0-27: entre 1.4 y 9 MB cada uno
+    )
+
+
+def _descarga_bce(clave: str, conjunto: str, serie: str, que: str) -> Descarga:
+    """A-D0-29: el robots.txt de data-api.ecb.europa.eu veda a python-requests.
+
+    La URL es la que una persona abre en el navegador para guardar el archivo;
+    el pipeline nunca la pide.
+    """
+    return Descarga(
+        clave=clave,
+        descripcion=f"BCE, ECB Data Portal, conjunto {conjunto}: {que} (copia bajada a mano)",
+        clase_licencia=CLASE_ABIERTA,
+        licencia=_LICENCIA_BCE,
+        url=f"https://data-api.ecb.europa.eu/service/data/{conjunto}/{serie}?format=csvdata",
+        extension="csv",
+        atribucion=_ATRIBUCION_BCE.format(conjunto=conjunto),
+        manual=True,
+    )
+
+
+def _contraste(clave: str, descripcion: str, url: str, extension: str) -> Descarga:
+    """Una fuente que solo se lee para comparar. Su crudo no se versiona (A-D0-27)."""
+    return Descarga(
+        clave=clave,
+        descripcion=descripcion,
+        clase_licencia=CLASE_ABIERTA,
+        licencia="solo contraste: no alimenta ninguna serie",
+        url=url,
+        extension=extension,
+        atribucion="",
+        versionar=False,
+    )
+
+
+DESCARGA_H6 = _descarga_junta("junta_h6", "H.6 Money Stock Measures", "h6/data/FRB_h6_xml.zip")
+DESCARGA_H10 = _descarga_junta("junta_h10", "H.10 Foreign Exchange Rates", "h10/data/FRB_h10_xml.zip")
+DESCARGA_H41 = _descarga_junta(
+    "junta_h41", "H.4.1 Factors Affecting Reserve Balances", "h41/data/FRB_h41_xml.zip"
+)
+
+BCE_CLAVE_M2_AJUSTADA = "BSI.M.U2.Y.V.M20.X.1.U2.2300.Z01.E"
+BCE_CLAVE_M2_SIN_AJUSTAR = "BSI.M.U2.N.V.M20.X.1.U2.2300.Z01.E"
+BCE_CLAVE_BALANCE = "ILM.W.U2.C.T000000.Z5.Z01"
+DESCARGA_BCE_M2_AJUSTADA = _descarga_bce(
+    "bce_m2_ajustada", "BSI", "M.U2.Y.V.M20.X.1.U2.2300.Z01.E", "M2 de la zona del euro, ajustada"
+)
+DESCARGA_BCE_M2_SIN_AJUSTAR = _descarga_bce(
+    "bce_m2_sin_ajustar", "BSI", "M.U2.N.V.M20.X.1.U2.2300.Z01.E", "M2 de la zona del euro, sin ajustar"
+)
+DESCARGA_BCE_BALANCE = _descarga_bce(
+    "bce_balance_eurosistema", "ILM", "W.U2.C.T000000.Z5.Z01", "total de activos del Eurosistema"
+)
+
+_API_BOJ = "https://www.stat-search.boj.or.jp/api/v1/getDataCode?format=csv&lang=en"
+BOJ_CODIGO_M2 = "MAM1NAM2M2MO"
+BOJ_CODIGO_BALANCE = "MABJMTA"
+DESCARGA_BOJ_M2 = Descarga(
+    clave="boj_m2",
+    descripcion="Banco de Japón, Money Stock (base MD02): M2 y series anteriores",
+    clase_licencia=CLASE_NO_COMERCIAL,
+    licencia=_LICENCIA_BOJ,
+    url=_API_BOJ + "&db=MD02&code=MAM1NAM2M2MO,MAM1XAM2M2MO,MAM1NAM3M3MO,MAM1NEM3M3MO,"
+    "MAMS3ANM2C,MAMS3ENM2C,MAMS1ANM2C,MAMS1ENM2C",
+    extension="csv",
+    atribucion=_ATRIBUCION_BOJ.format(base="Money Stock, MD02"),
+)
+DESCARGA_BOJ_BALANCE = Descarga(
+    clave="boj_balance",
+    descripcion="Banco de Japón, Bank of Japan Accounts (base BS01): total de activos",
+    clase_licencia=CLASE_NO_COMERCIAL,
+    licencia=_LICENCIA_BOJ,
+    url=_API_BOJ + "&db=BS01&code=MABJMTA,MABJMA5,MABJML1,MABJML11",
+    extension="csv",
+    atribucion=_ATRIBUCION_BOJ.format(base="Bank of Japan Accounts, BS01"),
+)
+
+OCDE_AREA_CHINA = "CHN"
+OCDE_MEDIDA_DINERO_AMPLIO = "MABM"
+DESCARGA_OCDE_CHINA = Descarga(
+    clave="ocde_china_dinero_amplio",
+    descripcion="OCDE, Monetary aggregates (DF_MONAGG): dinero amplio de China, serie CHN.M.MABM.XDC",
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_OCDE,
+    url="https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_MONAGG,"
+    "/CHN.M.MABM.XDC.....?format=csvfilewithlabels",
+    extension="csv",
+    atribucion=(
+        "OECD (2026), Monetary aggregates, serie CHN.M.MABM.XDC. Emisor original: Banco "
+        "Popular de China. La serie lleva el rótulo que le pone la OCDE (A-D0-9). Los "
+        "valores se publican sin cambios."
+    ),
+)
+
+
+def _descarga_bis_activos(area: str, versionar: bool) -> Descarga:
+    return Descarga(
+        clave=f"bis_cbta_{area.lower()}",
+        descripcion=f"BIS, Central bank total assets (WS_CBTA), área {area}",
+        clase_licencia=CLASE_ABIERTA,
+        licencia=_LICENCIA_BIS,
+        url=f"https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBTA/1.0/M.{area}?format=csv",
+        extension="csv",
+        atribucion=(
+            "Fuente: BIS, Central bank total assets (WS_CBTA). Emisor original: Banco "
+            "Popular de China. Serie empalmada por el BIS. Los valores se publican sin cambios."
+            if versionar
+            else ""
+        ),
+        versionar=versionar,
+    )
+
+
+DESCARGA_BIS_ACTIVOS_CN = _descarga_bis_activos("CN", versionar=True)
+DESCARGA_BIS_ACTIVOS_US = _descarga_bis_activos("US", versionar=False)
+DESCARGA_BIS_ACTIVOS_XM = _descarga_bis_activos("XM", versionar=False)
+DESCARGA_BIS_ACTIVOS_JP = _descarga_bis_activos("JP", versionar=False)
+
+# Fuentes que solo se leen para comparar.
+CONTRASTE_H6_HTML = _contraste(
+    "junta_h6_html",
+    "Junta de la Reserva Federal, H.6, Tabla 1 de la publicación vigente en HTML",
+    "https://www.federalreserve.gov/releases/h6/current/default.htm",
+    "html",
+)
+CONTRASTE_FRED_WALCL = _contraste(
+    "fred_walcl",
+    "FRED, serie WALCL (Federal Reserve Bank of St. Louis)",
+    "https://fred.stlouisfed.org/graph/fredgraph.csv?id=WALCL",
+    "csv",
+)
+BDE_CODIGO_M2_AJUSTADA = "D_MU2YVM20X1U22300Z01E"
+BDE_CODIGO_M2_SIN_AJUSTAR = "D_MUM200LIPBIF"  # "Agregados monetarios de la UEM. M2. Saldos", sin ajustar
+CONTRASTE_BDE_AJUSTADA = _contraste(
+    "bde_m2_ajustada",
+    "Banco de España, Boletín Estadístico, cuadro 1.12 (agregados de la UEM, ajustados)",
+    "https://www.bde.es/webbe/es/estadisticas/compartido/datos/csv/be0112.csv",
+    "csv",
+)
+CONTRASTE_BDE_SIN_AJUSTAR = _contraste(
+    "bde_m2_sin_ajustar",
+    "Banco de España, Boletín Estadístico, cuadro 1.10 (agregados de la UEM, sin ajustar)",
+    "https://www.bde.es/webbe/es/estadisticas/compartido/datos/csv/be0110.csv",
+    "csv",
+)
+ESTAT_INDICADOR_M2 = "0702010200000010010"
+CONTRASTE_ESTAT = _contraste(
+    "estat_m2_japon",
+    "e-Stat Statistics Dashboard (gobierno de Japón), indicador Money stock (M2)",
+    "https://dashboard.e-stat.go.jp/api/1.0/Json/getData?Lang=EN&IndicatorCode=" + ESTAT_INDICADOR_M2,
+    "json",
+)
+
+
+def _contraste_cambio(area: str) -> Descarga:
+    return _contraste(
+        f"bis_xru_{area.lower()}",
+        f"BIS, US dollar exchange rates (WS_XRU), área {area}",
+        f"https://stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/M.{area}?format=csv",
+        "csv",
+    )
+
+
+CONTRASTE_BIS_CAMBIO_XM = _contraste_cambio("XM")
+CONTRASTE_BIS_CAMBIO_JP = _contraste_cambio("JP")
+CONTRASTE_BIS_CAMBIO_CN = _contraste_cambio("CN")
+
+
+@dataclass(frozen=True)
+class Quiebre:
+    """Un cambio de definición o de perímetro que la fuente declara, con su mes."""
+
+    mes: str  # "AAAA-MM"
+    texto: str
+
+
+@dataclass(frozen=True)
+class SerieD0:
+    """Una serie de la fase D0 y lo que va en su ficha."""
+
+    clave: str
+    nombre: str
+    familia: str
+    descarga: Descarga
+    identificador: str  # el nombre de la serie en la fuente
+    emisor: str
+    unidad: str
+    convencion: str
+    frecuencia_nativa: str
+    ajuste: str
+    estado: str
+    supuestos: tuple[str, ...]
+    banda_plausible: tuple[float, float]  # control de orden de magnitud, en la unidad de la serie
+    quiebres: tuple[Quiebre, ...] = ()
+    # A-D0-5: hasta este mes inclusive, la serie es una estimación de su emisor.
+    estimacion_hasta: str | None = None
+    # Primer mes que se publica, si la fuente trae historia que no se usa.
+    desde: str | None = None
+
+    @property
+    def publicable(self) -> bool:
+        """A-R0-14: se publica lo que la licencia permite publicar sin interpretarla."""
+        return self.descarga.clase_licencia in (CLASE_ABIERTA, CLASE_NO_COMERCIAL)
+
+
+# A-D0-4: las ampliaciones de la zona del euro, leídas del manual de las
+# estadísticas BSI del BCE (sección 5.7.3) y de su comunicado del 1 de enero de
+# 2026. Cada una es un salto de nivel que la serie de saldos no marca.
+AMPLIACIONES_EUROZONA = (
+    Quiebre("2001-01", "ampliación de la zona del euro: Grecia"),
+    Quiebre("2007-01", "ampliación de la zona del euro: Eslovenia"),
+    Quiebre("2008-01", "ampliación de la zona del euro: Chipre y Malta"),
+    Quiebre("2009-01", "ampliación de la zona del euro: Eslovaquia"),
+    Quiebre("2011-01", "ampliación de la zona del euro: Estonia"),
+    Quiebre("2014-01", "ampliación de la zona del euro: Letonia"),
+    Quiebre("2015-01", "ampliación de la zona del euro: Lituania"),
+    Quiebre("2023-01", "ampliación de la zona del euro: Croacia"),
+    Quiebre("2026-01", "ampliación de la zona del euro: Bulgaria"),
+)
+EUROZONA_ESTIMACION_HASTA = "1997-08"
+
+_SUP_EEUU = ("A-D0-1", "A-D0-2", "A-D0-3")
+_SUP_EUROZONA = ("A-D0-1", "A-D0-4", "A-D0-5", "A-D0-7")
+_EMISOR_JUNTA = "Junta de Gobernadores del Sistema de la Reserva Federal"
+_EMISOR_BCE = "BCE y bancos centrales nacionales del Eurosistema"
+
+SERIE_M2_EEUU = SerieD0(
+    clave="m2_eeuu",
+    nombre="M2 de EE.UU.",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_H6,
+    identificador="M2.M",
+    emisor=_EMISOR_JUNTA,
+    unidad="miles de millones de USD",
+    convencion="promedio mensual de cifras diarias",
+    frecuencia_nativa="mensual",
+    ajuste="ajustada por estacionalidad",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_EEUU,
+    banda_plausible=(200.0, 200_000.0),
+)
+SERIE_M2_EEUU_SIN_AJUSTAR = SerieD0(
+    clave="m2_eeuu_sin_ajustar",
+    nombre="M2 de EE.UU., sin ajustar",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_H6,
+    identificador="M2_N.M",
+    emisor=_EMISOR_JUNTA,
+    unidad="miles de millones de USD",
+    convencion="promedio mensual de cifras diarias",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_EEUU,
+    banda_plausible=(200.0, 200_000.0),
+)
+SERIE_M2_EUROZONA = SerieD0(
+    clave="m2_eurozona",
+    nombre="M2 de la Eurozona",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BCE_M2_AJUSTADA,
+    identificador=BCE_CLAVE_M2_AJUSTADA,
+    emisor=_EMISOR_BCE,
+    unidad="millones de EUR",
+    convencion="saldo a fin de mes",
+    frecuencia_nativa="mensual",
+    ajuste="ajustada por estacionalidad y días hábiles",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_EUROZONA,
+    banda_plausible=(500_000.0, 200_000_000.0),
+    quiebres=AMPLIACIONES_EUROZONA,
+    estimacion_hasta=EUROZONA_ESTIMACION_HASTA,
+)
+SERIE_M2_EUROZONA_SIN_AJUSTAR = SerieD0(
+    clave="m2_eurozona_sin_ajustar",
+    nombre="M2 de la Eurozona, sin ajustar",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BCE_M2_SIN_AJUSTAR,
+    identificador=BCE_CLAVE_M2_SIN_AJUSTAR,
+    emisor=_EMISOR_BCE,
+    unidad="millones de EUR",
+    convencion="saldo a fin de mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_EUROZONA,
+    banda_plausible=(500_000.0, 200_000_000.0),
+    quiebres=AMPLIACIONES_EUROZONA,
+    estimacion_hasta=EUROZONA_ESTIMACION_HASTA,
+)
+SERIE_M2_JAPON = SerieD0(
+    clave="m2_japon",
+    nombre="M2 de Japón",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BOJ_M2,
+    identificador=BOJ_CODIGO_M2,
+    emisor="Banco de Japón",
+    unidad="100 millones de JPY",
+    convencion="promedio de saldos del mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=("A-D0-1", "A-D0-6", "A-D0-8"),
+    banda_plausible=(1_000_000.0, 100_000_000.0),
+)
+# A-D0-9: no se llama M2. El nombre lleva el rótulo que le pone la OCDE, que
+# se lee del archivo en cada corrida. Se publica desde el primer mes en que el
+# PBoC tiene una tabla de oferta monetaria contra la cual se la comparó.
+SERIE_DINERO_AMPLIO_CHINA = SerieD0(
+    clave="dinero_amplio_china",
+    nombre="Dinero amplio de China ({rotulo} de la OCDE)",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_OCDE_CHINA,
+    identificador="CHN.M.MABM.XDC",
+    emisor="Banco Popular de China, republicado por la OCDE",
+    unidad="millones de CNY",
+    convencion="saldo a fin de mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=("A-D0-1", "A-D0-9"),
+    banda_plausible=(1_000_000.0, 5_000_000_000.0),
+    quiebres=(
+        Quiebre(
+            "2011-10",
+            "cambio de definición declarado por el PBoC: entran los depósitos de instituciones "
+            "financieras no depositarias y del fondo de vivienda",
+        ),
+        Quiebre(
+            "2018-01",
+            "cambio de definición declarado por el PBoC (fondos del mercado monetario); la "
+            "OCDE no revisó 2017 y el salto le cae en este mes",
+        ),
+    ),
+    desde="2004-01",
+)
+SERIE_BALANCE_FED = SerieD0(
+    clave="balance_fed",
+    nombre="Balance de la Reserva Federal: total de activos, consolidado",
+    familia=FAMILIA_BALANCE,
+    descarga=DESCARGA_H41,
+    identificador="RESPPMA_N.WW",
+    emisor=_EMISOR_JUNTA,
+    unidad="millones de USD",
+    convencion="nivel del último miércoles del mes",
+    frecuencia_nativa="semanal",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=("A-D0-1", "A-D0-14", "A-D0-15"),
+    banda_plausible=(500_000.0, 50_000_000.0),
+)
+SERIE_BALANCE_EUROSISTEMA = SerieD0(
+    clave="balance_eurosistema",
+    nombre="Balance del Eurosistema: total de activos",
+    familia=FAMILIA_BALANCE,
+    descarga=DESCARGA_BCE_BALANCE,
+    identificador=BCE_CLAVE_BALANCE,
+    emisor=_EMISOR_BCE,
+    unidad="millones de EUR",
+    convencion="cierre del último viernes del mes",
+    frecuencia_nativa="semanal",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=("A-D0-1", "A-D0-7", "A-D0-14", "A-D0-16"),
+    banda_plausible=(500_000.0, 50_000_000.0),
+    quiebres=AMPLIACIONES_EUROZONA,
+)
+SERIE_BALANCE_BOJ = SerieD0(
+    clave="balance_boj",
+    nombre="Balance del Banco de Japón: total de activos",
+    familia=FAMILIA_BALANCE,
+    descarga=DESCARGA_BOJ_BALANCE,
+    identificador=BOJ_CODIGO_BALANCE,
+    emisor="Banco de Japón",
+    unidad="100 millones de JPY",
+    convencion="saldo a fin de mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=("A-D0-1", "A-D0-8", "A-D0-16"),
+    banda_plausible=(500_000.0, 50_000_000.0),
+    quiebres=(
+        Quiebre(
+            "2001-04",
+            "cambio contable de las operaciones repo: el total no es comparable con los "
+            "meses anteriores",
+        ),
+    ),
+)
+SERIE_BALANCE_PBOC = SerieD0(
+    clave="balance_pboc",
+    nombre="Balance del Banco Popular de China: total de activos (BIS)",
+    familia=FAMILIA_BALANCE,
+    descarga=DESCARGA_BIS_ACTIVOS_CN,
+    identificador="WS_CBTA, M.CN, moneda local",
+    emisor="Banco Popular de China, republicado por el BIS",
+    unidad="miles de millones de CNY",
+    convencion="saldo a fin de mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=("A-D0-1", "A-D0-9"),
+    banda_plausible=(1_000.0, 500_000.0),
+    # El BIS declara que usa el balance mensual del PBoC desde enero de 2002.
+    desde="2002-01",
+)
+
+
+def _serie_cambio(clave: str, nombre: str, identificador: str, unidad: str, banda) -> SerieD0:
+    return SerieD0(
+        clave=clave,
+        nombre=nombre,
+        familia=FAMILIA_CAMBIO,
+        descarga=DESCARGA_H10,
+        identificador=identificador,
+        emisor=_EMISOR_JUNTA,
+        unidad=unidad,
+        convencion="tipo comprador del mediodía en Nueva York: promedio del mes y último día del mes",
+        frecuencia_nativa="diaria",
+        ajuste="no aplica",
+        estado=ESTADO_DATO,
+        supuestos=("A-D0-1", "A-D0-10"),
+        banda_plausible=banda,
+    )
+
+
+SERIE_USD_POR_EUR = _serie_cambio(
+    "usd_por_eur", "Tipo de cambio: USD por EUR", "RXI$US_N.M.EU y RXI$US_N.B.EU", "USD por EUR", (0.5, 2.5)
+)
+SERIE_JPY_POR_USD = _serie_cambio(
+    "jpy_por_usd", "Tipo de cambio: JPY por USD", "RXI_N.M.JA y RXI_N.B.JA", "JPY por USD", (50.0, 500.0)
+)
+SERIE_CNY_POR_USD = _serie_cambio(
+    "cny_por_usd", "Tipo de cambio: CNY por USD", "RXI_N.M.CH y RXI_N.B.CH", "CNY por USD", (1.0, 20.0)
+)
+
+SERIES_DINERO = (
+    SERIE_M2_EEUU,
+    SERIE_M2_EEUU_SIN_AJUSTAR,
+    SERIE_M2_EUROZONA,
+    SERIE_M2_EUROZONA_SIN_AJUSTAR,
+    SERIE_M2_JAPON,
+    SERIE_DINERO_AMPLIO_CHINA,
+)
+SERIES_BALANCE = (SERIE_BALANCE_FED, SERIE_BALANCE_EUROSISTEMA, SERIE_BALANCE_BOJ, SERIE_BALANCE_PBOC)
+SERIES_CAMBIO = (SERIE_USD_POR_EUR, SERIE_JPY_POR_USD, SERIE_CNY_POR_USD)
+SERIES_D0 = SERIES_DINERO + SERIES_BALANCE + SERIES_CAMBIO
+
+# Las series de la Junta, por su nombre en el XML, y su multiplicador de unidad.
+JUNTA_SERIES_H6 = {"m2_eeuu": "M2.M", "m2_eeuu_sin_ajustar": "M2_N.M"}
+JUNTA_MULTIPLICADOR_H6 = 1e9
+JUNTA_SERIE_BALANCE = "RESPPMA_N.WW"  # A-D0-15: total de activos menos eliminaciones
+JUNTA_SERIE_BALANCE_SIN_CONSOLIDAR = "RESPPA_N.WW"
+JUNTA_SERIE_ELIMINACIONES = "RESPPMAX_N.WW"
+JUNTA_MULTIPLICADOR_H41 = 1e6
+# clave de la serie -> (serie mensual, serie diaria)
+JUNTA_SERIES_H10 = {
+    "usd_por_eur": ("RXI$US_N.M.EU", "RXI$US_N.B.EU"),
+    "jpy_por_usd": ("RXI_N.M.JA", "RXI_N.B.JA"),
+    "cny_por_usd": ("RXI_N.M.CH", "RXI_N.B.CH"),
+}
+JUNTA_MULTIPLICADOR_H10 = 1.0
+
+# --- Validación (A-D0-25) ----------------------------------------------------
+#
+# Las tolerancias salen de la precisión con que cada fuente publica el dato, no
+# de lo observado. Están en la unidad de la serie salvo las que dicen "_PCT".
+TOLERANCIA_H6_HTML = 0.05  # la Tabla 1 publica un decimal
+TOLERANCIA_BDE = 0.5  # el Banco de España publica en millones enteros
+TOLERANCIA_ESTAT = 0.5  # e-Stat publica el mismo entero que el BoJ
+TOLERANCIA_BIS_FED = 5.0  # el BIS publica dos decimales en miles de millones: medio paso, 5 millones
+TOLERANCIA_BIS_EUROSISTEMA = 0.5  # tres decimales: medio paso, 0.5 millones
+TOLERANCIA_BIS_BOJ = 0.5  # un decimal en miles de millones de JPY: 0.5 en la unidad del BoJ
+TOLERANCIA_FRED_WALCL = 0.5  # FRED publica en millones enteros
+# Dos fijaciones distintas del mismo tipo de cambio. El 0.5 % se fijó en el
+# paso 0 con el euro a la vista (máximo observado: 0.31 %) y se extendió al yen
+# y al yuan antes de compararlos.
+TOLERANCIA_CAMBIO_PCT = 0.5
+# La comparación de los tipos de cambio es un control (FUENTES.md, D0.11): el
+# mes que pasa del umbral se publica marcado como valor en disputa.
+# Cuántas comparaciones hacen falta, como mínimo, para que un gate cuente.
+MINIMO_COMPARACIONES_GATE = 3
+MESES_GATE_BDE = 3  # el Banco de España no recarga las revisiones viejas (FUENTES.md, D0.4)
+
+
+@dataclass(frozen=True)
+class AnclaMensual:
+    """Un valor de un mes leído a mano de una segunda fuente, con su cita."""
+
+    serie: str
+    mes: str
+    valor: float  # en la unidad de la serie
+    tolerancia: float  # medio paso del redondeo de la serie, en su unidad
+    fuente: str
+    fuente_url: str
+    fecha_lectura: date
+
+
+# A-D0-9: el contraste del dinero amplio de China no puede ser una descarga del
+# PBoC. Son valores leídos en pantalla de la Oficina Nacional de Estadísticas
+# de China, que republica al PBoC en cien millones de yuanes; aquí van en
+# millones. La OCDE publica redondeado a cien millones: medio paso son 50.
+_NBS = "Oficina Nacional de Estadísticas de China, 国家数据, 货币和准货币 (M2) 供应量_期末值"
+_NBS_URL = "https://data.stats.gov.cn/dg/website/page.html#/pc/national/monthData"
+ANCLAS_CHINA = (
+    AnclaMensual("dinero_amplio_china", "2026-07", 355_507_724.0, 50.0, _NBS, _NBS_URL, date(2026, 10, 5)),
+    AnclaMensual("dinero_amplio_china", "2020-03", 208_092_341.0, 50.0, _NBS, _NBS_URL, date(2026, 10, 5)),
+)
+# El balance del PBoC no tiene todavía una lectura a mano que no venga de una
+# descarga automática de su sitio. Mientras esta lista esté vacía, la serie se
+# calcula y se publica como NO MEDIDO: sin validación externa.
+ANCLAS_BALANCE_PBOC: tuple[AnclaMensual, ...] = ()
+# Cuántas anclas hacen falta para que el gate decida: las mismas que el gate
+# anual de oro y plata (MINIMO_ANIOS_GATE). La primera versión decía 2, fijado
+# después de ver que China tenía dos lecturas; se corrigió el 2026-10-06
+# (A-D0-25, changelog). Con dos anclas, el dinero amplio de China queda NO
+# MEDIDO hasta que alguien lea una tercera en pantalla.
+MINIMO_ANCLAS = MINIMO_ANIOS_GATE
+
+# --- Agregado (A-D0-10, A-D0-11, A-D0-12) ------------------------------------
+
+# Las economías que entran al agregado en USD: nombre, serie de dinero y tipo
+# de cambio. A-D0-9: China queda fuera mientras no se demuestre que su
+# definición es comparable.
+ECONOMIAS_AGREGADO = (
+    ("eeuu", "m2_eeuu_sin_ajustar", None),
+    ("eurozona", "m2_eurozona_sin_ajustar", "usd_por_eur"),
+    ("japon", "m2_japon", "jpy_por_usd"),
+)
+NOMBRE_AGREGADO = "M2 de tres economías (EE.UU., Eurozona y Japón), en USD"
+
+# --- Salidas -----------------------------------------------------------------
+
+EPSILON_REVISION_D0 = 0.0005
+# Doce cifras significativas: los saldos del BCE traen millones con decimales
+# largos, y con menos cifras la relectura del CSV inventaría revisiones.
+FORMATO_D0 = "%.12g"
+
+ARCHIVO_D0_DINERO = DIR_SERIES / "denominador_dinero.csv"
+ARCHIVO_D0_BALANCES = DIR_SERIES / "denominador_balances.csv"
+ARCHIVO_D0_CAMBIO = DIR_SERIES / "denominador_tipos_de_cambio.csv"
+ARCHIVO_D0_AGREGADO = DIR_SERIES / "denominador_agregado.csv"
+ARCHIVO_D0_FICHAS = DIR_SERIES / "serie_D0.csv"
+ARCHIVO_D0_DESCARGAS = DIR_SERIES / "denominador_descargas.csv"
+ARCHIVO_D0_RATIOS = DIR_SERIES / "denominador_ratios.csv"
+ARCHIVO_D0_PARES = DIR_SERIES / "denominador_pares.csv"
+
+COLUMNAS_D0_DINERO = ["mes", "serie", "valor", "estado", "quiebre"]
+COLUMNAS_D0_BALANCES = ["mes", "serie", "valor", "fecha_origen", "estado", "quiebre"]
+COLUMNAS_D0_CAMBIO = ["mes", "par", "promedio_mensual", "fin_de_mes", "fecha_fin_de_mes", "contraste"]
+COLUMNAS_D0_AGREGADO = [
+    "mes",
+    "m2_eeuu_usd",
+    "m2_eurozona_usd",
+    "m2_japon_usd",
+    "agregado_usd",
+    "agregado_usd_tc_constante",
+    "estado",
+]
+COLUMNAS_D0_FICHAS = [
+    "serie",
+    "nombre",
+    "familia",
+    "publicada",
+    "estado",
+    "unidad",
+    "convencion",
+    "frecuencia_nativa",
+    "ajuste_estacional",
+    "emisor",
+    "fuente",
+    "identificador",
+    "url",
+    "licencia",
+    "atribucion",
+    "validacion",
+    "supuestos",
+    "quiebres",
+    "primer_mes",
+    "ultimo_mes",
+    "meses",
+]
+
+# --- Oro / M2 y BTC / M2 (A-D0-21) --------------------------------------------
+
+# El M2 entra al ratio en billones (10^12) de USD: el archivo lo trae en miles
+# de millones, con un decimal.
+M2_EEUU_A_BILLONES = 1000.0
+M2_EEUU_MEDIO_PASO = 0.05 / M2_EEUU_A_BILLONES
+PARES_D0 = (
+    Par("oro_m2_eeuu", "Oro / M2 de EE.UU.", "oro", "m2_eeuu"),
+    Par("btc_m2_eeuu", "BTC / M2 de EE.UU.", "btc", "m2_eeuu"),
+)
+
+
+@dataclass(frozen=True)
+class SeriePendiente:
+    """Algo que el sitio muestra o mostraría y que no tiene serie: va a la ficha como NO MEDIDO."""
+
+    clave: str
+    nombre: str
+    familia: str
+    estado: str
+    fuente: str
+    supuestos: tuple[str, ...]
+
+
+SERIES_PENDIENTES = (
+    SeriePendiente(
+        "dinero_eeuu_1892_1946",
+        "Efectivo y depósitos en bancos comerciales de EE.UU., fechas de balance (1892–1946)",
+        FAMILIA_DINERO,
+        "NO MEDIDO: transcripción de las tablas de la Junta pendiente; se hace en un PR propio (A-D0-17, A-D0-19)",
+        "Junta de la Reserva Federal, Banking and Monetary Statistics 1914–1941 (Tabla 9) y 1941–1970",
+        ("A-D0-17", "A-D0-18", "A-D0-19"),
+    ),
+    SeriePendiente(
+        "dinero_eeuu_1947_1958",
+        "Efectivo y depósitos en bancos comerciales de EE.UU., mensual (1947–1958)",
+        FAMILIA_DINERO,
+        "NO MEDIDO: transcripción de la Tabla 1.1 de la Junta pendiente; se hace en un PR propio (A-D0-17, A-D0-19)",
+        "Junta de la Reserva Federal, Banking and Monetary Statistics 1941–1970 (Tabla 1.1)",
+        ("A-D0-17", "A-D0-19"),
+    ),
+    SeriePendiente(
+        "riqueza_inmuebles",
+        "Riqueza: valor de los inmuebles",
+        "riqueza",
+        "NO MEDIDO: no hay una serie global con licencia abierta; la estimación de Savills va como cifra citada (A-D0-24, A-D0-28)",
+        "",
+        ("A-D0-24", "A-D0-28"),
+    ),
+    SeriePendiente(
+        "riqueza_oro_cantidad",
+        "Riqueza: oro sobre la superficie (cantidad)",
+        "riqueza",
+        "NO MEDIDO: la única serie de existencias es del World Gold Council, clase (c); su cifra va como cifra citada (A-D0-24, A-D0-28)",
+        "",
+        ("A-D0-24", "A-D0-28"),
+    ),
+    SeriePendiente(
+        "riqueza_total",
+        "Riqueza total",
+        "riqueza",
+        "NO MEDIDO: los informes de riqueza global son (c) o no se pudieron leer (A-D0-24)",
+        "",
+        ("A-D0-24",),
+    ),
+    SeriePendiente(
+        "riqueza_bonos",
+        "Riqueza: títulos de deuda en circulación",
+        "riqueza",
+        "NO MEDIDO: pendiente de implementar la suma de las economías que declaran al BIS (A-D0-22)",
+        "BIS, Debt securities statistics (WS_NA_SEC_DSS)",
+        ("A-D0-22",),
+    ),
+    SeriePendiente(
+        "riqueza_acciones",
+        "Riqueza: capitalización bursátil",
+        "riqueza",
+        "NO MEDIDO: pendiente de implementar la lectura del agregado WLD del Banco Mundial (A-D0-23)",
+        "Banco Mundial, indicador CM.MKT.LCAP.CD, agregado WLD",
+        ("A-D0-23",),
+    ),
+    SeriePendiente(
+        "riqueza_btc",
+        "Riqueza: capitalización de BTC",
+        "riqueza",
+        "NO MEDIDO: pendiente de implementar la lectura de CapMrktCurUSD de Coin Metrics (A-R0-4)",
+        "Coin Metrics, API community, CapMrktCurUSD",
+        ("A-R0-4",),
+    ),
+)

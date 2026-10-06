@@ -1279,3 +1279,410 @@ sitio no tenga vínculo comercial**.
 **Alternativa.** Pedirle permiso al FMI para bajar el archivo en cada corrida
 (`FUENTES.md`, sección 10.4). Con eso el control alcanzaría siempre al último
 mes que el FMI publique.
+
+---
+
+## Fase D0 · El Denominador: los supuestos A-D0-\*
+
+Se fijaron el 2026-10-05 al aprobarse el paso 0 de la fase D0 (`FUENTES.md`,
+sección D0, decisiones D0.10 y las siete del dueño del 2026-10-05), y se
+completaron el 2026-10-06 al escribir `denominador.py`. La evidencia de cada
+cifra está en `FUENTES.md`; aquí va la decisión y lo que la haría cambiar.
+
+Dos de estos supuestos son **condicionales**: A-D0-8 (Banco de Japón) vale
+mientras el sitio no tenga vínculo comercial, como A-R0-4; A-D0-9 (China vía la
+OCDE y el BIS) vale mientras la OCDE y el BIS mantengan sus términos de
+reutilización y no aparezca una restricción de terceros en sus metadatos.
+
+---
+
+## A-D0-1 · Cada serie se publica en su moneda, su unidad y su convención nativas
+
+**Estado: supuesto.** Decisión del 2026-10-05 (D0.10.1 y D0.10.4).
+
+Ninguna serie se convierte de convención: el M2 de EE.UU. y el de Japón son
+promedios del mes porque así los publican la Junta y el BoJ; el de la Eurozona
+y el de China son saldos de fin de mes; el balance de la Fed es el nivel del
+último miércoles del mes y el del Eurosistema, el cierre del último viernes.
+La convención, la unidad y la moneda van en `serie_D0.csv`, fila por fila.
+
+**Lo que lo haría cambiar.** Que un emisor publique la otra convención.
+
+## A-D0-2 · El M2 de EE.UU. es un promedio mensual de cifras diarias; no existe a fin de mes
+
+**Estado: dato.** Leído en el H.6 (`FUENTES.md`, D0.2).
+
+La propuesta de "fin de mes para los saldos" no se puede cumplir para EE.UU. La
+consecuencia útil: Oro / M2 y BTC / M2 cumplen la regla de la convención de
+`CLAUDE.md` sin excepción, porque los dos lados son promedios mensuales.
+
+## A-D0-3 · La titular del M2 de EE.UU. es la ajustada; el agregado usa las series sin ajustar
+
+**Estado: supuesto.**
+
+`m2_eeuu` es `M2.M`, la ajustada por estacionalidad, como en la Tabla 1 del
+H.6. Se publica además `m2_eeuu_sin_ajustar` (`M2_N.M`). El agregado en USD
+suma las series sin ajustar, porque es la única versión que existe en todas
+las economías y porque cada emisor ajusta con su propio método.
+
+## A-D0-4 · El M2 y el balance de la Eurozona son de composición cambiante: cada ampliación es un salto declarado, no corregido
+
+**Estado: dato el salto; supuesto no corregirlo.**
+
+El área de las series es `U2`, "Euro area (changing composition)". Las nueve
+ampliaciones leídas (Grecia 2001-01, Eslovenia 2007-01, Chipre y Malta 2008-01,
+Eslovaquia 2009-01, Estonia 2011-01, Letonia 2014-01, Lituania 2015-01, Croacia
+2023-01, Bulgaria 2026-01) van en la columna `quiebre` del mes que corresponde,
+en `denominador_dinero.csv` y en `denominador_balances.csv`. El valor no se
+toca: el BCE no publica un M2 de composición fija.
+
+**Lo que lo haría cambiar.** Que el BCE publique una serie de composición fija.
+
+## A-D0-5 · El M2 de la Eurozona de 1980-01 a 1997-08 es una estimación del BCE
+
+**Estado: estimación.** Decisión del dueño del 2026-10-05.
+
+El BCE lo describió así en su Boletín de febrero de 1999 (`FUENTES.md`, D0.4);
+la API entrega esos meses sin marca. La columna `estado` de
+`denominador_dinero.csv` dice "estimación" hasta 1997-08 y "dato" desde
+1997-09. Sigue abierta la pregunta al BCE de si los valores actuales de ese
+tramo siguen siendo los de aquel método (`FUENTES.md`, D0.13).
+
+## A-D0-6 · El M2 de Japón empieza en 2003-04; M2+CDs es otra serie y no se empalma
+
+**Estado: dato el inicio; supuesto no empalmar.**
+
+El BoJ no construyó una serie larga enlazada porque no lo considera apropiado
+(`FUENTES.md`, D0.5). Tampoco se hace aquí. Las series anteriores (M2+CDs,
+1967-01 a 2008-04) están en el mismo crudo, y publicarlas aparte queda como
+decisión pendiente.
+
+## A-D0-7 · BCE: el dato se publica tal cual y con fuente; toda serie derivada se rotula como cálculo propio
+
+**Estado: supuesto de licencia.**
+
+La política de reutilización del SEBC permite reutilizar sin modificar; el
+aviso de copyright del BCE admite modificar si se declara. Las series del BCE
+se publican sin cambios con la cita "Source: ECB statistics". Lo que se calcula
+con ellas (la conversión a USD, el agregado) lleva su propia ficha y dice que
+es un cálculo propio. Hay una pregunta al BCE al respecto en `FUENTES.md`, D0.13.
+
+## A-D0-8 · Banco de Japón: uso bajo la cláusula no comercial, con aviso y crédito por la API
+
+**Estado: supuesto condicional.** Vale mientras el sitio no tenga vínculo
+comercial, como A-R0-4.
+
+El aviso de copyright del BoJ permite copiar y reproducir con cita de la
+fuente, salvo con fines comerciales. Las instrucciones de su API piden avisar
+por correo al publicar un servicio que la use y mostrar un crédito. El aviso
+es un paso previo a desplegar el sitio con estas series; el crédito va en la
+columna `atribucion` de `serie_D0.csv`.
+
+## A-D0-9 · China entra por la OCDE y el BIS, con el rótulo de la fuente, fuera del agregado y sin ninguna descarga del PBoC
+
+**Estado: supuesto condicional.** Decisión del dueño del 2026-10-05.
+
+- El PBoC es el emisor, pero su aviso legal reserva los derechos y solo prevé
+  la atribución para medios ya autorizados, y su `robots.txt` veda a todo
+  agente salvo Baiduspider (`FUENTES.md`, D0.6.1). **El pipeline no pide nada a
+  pbc.gov.cn.**
+- El dinero amplio sale de la OCDE (`CHN.M.MABM.XDC`), que lo rotula "M3". La
+  serie se llama como la fuente la llama —"Dinero amplio de China (M3 de la
+  OCDE)"— y **nunca M2**. Se publica desde 2004-01, el primer año con una tabla
+  del PBoC contra la cual se la comparó.
+- El balance sale del BIS (`WS_CBTA`, área CN), desde 2002-01, que es desde
+  cuando el BIS declara usar el balance mensual del PBoC. En esta entrega
+  queda **NO MEDIDO: sin validación externa**, porque las únicas lecturas de
+  la tabla del PBoC salieron de descargas automáticas de su sitio, que se
+  descartaron. Dos valores leídos a mano por una persona (`ANCLAS_BALANCE_PBOC`)
+  lo destraban.
+- **Queda fuera del agregado** mientras no se demuestre que su definición es
+  comparable con las otras tres. Lo leído dice lo contrario: el agregado del
+  PBoC incluye los depósitos de instituciones financieras no depositarias
+  (desde 2011-10) y las participaciones en fondos del mercado monetario (desde
+  2018-01) sin los topes de monto y plazo del M2 del H.6, y la OCDE lo
+  clasifica en la misma categoría que el M3 del BoJ, no que su M2.
+- El gate del dinero amplio son lecturas en pantalla de la Oficina Nacional
+  de Estadísticas de China, que republica al PBoC, con tolerancia de 50
+  millones de yuanes: el medio paso del redondeo de la OCDE. Hay dos (2026-07
+  y 2020-03) y hacen falta tres (A-D0-25): **la serie queda NO MEDIDO hasta
+  tener una tercera lectura**, que el dueño hace en pantalla.
+
+**Lo que lo haría cambiar.** Un permiso escrito del PBoC, o una lectura de las
+definiciones que muestre comparabilidad.
+
+## A-D0-10 · El agregado en USD es una serie derivada; el tipo de cambio es el del H.10, promedio o fin de mes según la convención de cada serie
+
+**Estado: supuesto.**
+
+`denominador_agregado.csv` suma el M2 sin ajustar de EE.UU., la Eurozona y
+Japón en miles de millones de USD. EE.UU. ya está en USD. La Eurozona, saldo
+de fin de mes, se convierte con el USD por EUR del último día hábil del mes.
+Japón, promedio de saldos, se convierte con el promedio mensual de JPY por USD
+(G.5). El agregado empieza en 2003-04, el primer mes del M2 de Japón.
+
+## A-D0-11 · El agregado a tipo de cambio constante usa el del primer mes común
+
+**Estado: supuesto.**
+
+La columna `agregado_usd_tc_constante` convierte cada mes con los tipos de
+cambio de 2003-04. La diferencia con `agregado_usd` es el efecto del tipo de
+cambio, mes a mes, sin estimar nada. Elegir otro mes de referencia cambia los
+niveles de esa columna, no los de la otra.
+
+## A-D0-12 · El agregado mezcla promedios y saldos de fin de mes; no se publica ningún ratio contra él
+
+**Estado: dato la mezcla; supuesto la regla.** Decisión del dueño del 2026-10-05.
+
+`CLAUDE.md` exige la misma convención en los dos lados de un ratio. Oro / M2 y
+BTC / M2 de EE.UU. la cumplen; contra el agregado no se cumpliría, y por eso
+esos pares no existen.
+
+## A-D0-13 · El Índice Denominador 60/40 se elimina
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-05.
+
+La ponderación no tenía fuente, la base 1913 no tiene dato en ninguna de las
+ocho series, y el efectivo está en los dos lados (es parte de M2 y pasivo del
+banco central). Las dos familias se muestran por separado.
+
+## A-D0-14 · De semanal a mensual: el último dato semanal fechado dentro del mes, con su fecha de origen visible
+
+**Estado: supuesto.**
+
+Para el balance de la Fed (miércoles) y el del Eurosistema (viernes), el valor
+del mes es el del último dato semanal fechado dentro del mes, y la columna
+`fecha_origen` de `denominador_balances.csv` dice cuál. Un mes está completo
+cuando el dato siguiente ya cae en otro mes. Coincide con la regla del BIS para
+la Fed, no para el Eurosistema: el BIS toma la semana que contiene el último
+día hábil, cuyo viernes puede caer en el mes siguiente. El gate contra el BIS
+usa la regla del BIS.
+
+## A-D0-15 · El balance de la Fed es la serie consolidada del XML del H.4.1; la diferencia con el total sin consolidar son las eliminaciones
+
+**Estado: dato.** Verificado el 2026-10-06 sobre el XML del H.4.1.
+
+El XML trae dos totales. `RESPPA_N.WW` es la suma bruta de los doce bancos de
+la Reserva; `RESPPMA_N.WW` es el total consolidado, menos las eliminaciones de
+partidas en proceso de cobro entre bancos (`RESPPMAX_N.WW`). Bruto menos
+consolidado es igual a las eliminaciones en las 1.242 semanas, con ±1 millón
+de redondeo; las eliminaciones son distintas de cero en 515 semanas, de
+2002-12-18 a 2012-10-24, y cero después. El consolidado coincide con `WALCL`
+de FRED en las 1.242 semanas. D0 publica el consolidado. Esto cierra la
+pregunta de `FUENTES.md` D0.7.1: no eran revisiones, era definición.
+
+## A-D0-16 · Los balances del Eurosistema y del BoJ llevan sus quiebres declarados, sin corregir
+
+**Estado: dato el quiebre; supuesto no corregirlo.**
+
+Eurosistema: las ampliaciones (A-D0-4) y la revalorización trimestral de oro,
+divisas y títulos, que no se marca mes a mes porque afecta a todos los fines
+de trimestre. BoJ: el cambio contable de las operaciones repo de 2001-04, que
+hace al total no comparable con los meses anteriores. Van en `quiebre` y en
+la ficha.
+
+## A-D0-17 · EE.UU. antes de 1959: tres tramos de publicaciones de la Junta, sin empalmar, y ninguno se llama M2
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-05.
+
+1892-06 a 1946-12 en fechas de balance (anual hasta 1922, semestral desde
+1923), 1947-01 a 1958-12 mensual, y el M2 del H.6 desde 1959-01. Los tres van
+como series separadas, con los dos quiebres a la vista. El concepto de los dos
+primeros es "efectivo y depósitos en bancos comerciales", el que Friedman y
+Schwartz llamaron M2; en la superposición de 1959-01 a 1969-09 el M2 del H.6
+es entre 38 % y 49 % más grande (`FUENTES.md`, D0.3.5). **En esta entrega los
+dos tramos históricos están NO MEDIDO: la transcripción se hace en un PR
+propio.**
+
+## A-D0-18 · Las fechas de balance de 1892 a 1946 son datos estimados en parte por la Junta
+
+**Estado: dato, con esa reserva.**
+
+La propia Junta lo declara: cifras reportadas para los bancos miembros y
+estimadas para los no miembros. Se publican como "dato de fecha de balance,
+estimado en parte", sin interpolar entre fechas.
+
+## A-D0-19 · Las tablas de la Junta anteriores a 1959 se transcriben dos veces, de forma independiente, con página de origen por cifra y control de sumas
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-05.
+
+Protocolo: dos transcripciones independientes comparadas valor por valor; cada
+cifra lleva la página del escaneo de la que sale; cada fila tiene que cumplir
+que los subtotales sumen el total publicado; una discrepancia se lista y se
+resuelve releyendo la imagen, nunca eligiendo una de las dos. Pendiente de
+ejecutar.
+
+## A-D0-20 · La serie mensual del NBER (1907–1946) no se usa por ahora
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-05.
+
+Es una estimación de Friedman y Schwartz con componentes interpolados, y el
+NBER no declara licencia. Si se pidiera y se obtuviera permiso, sería una
+cuarta serie, también sin empalmar, con estado "estimación".
+
+## A-D0-21 · Oro / M2 y BTC / M2 usan el M2 ajustado de EE.UU., en billones de USD
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-05.
+
+`ratios.py` calcula los dos pares con la misma lógica de publicación que los
+cinco de la fase R (A-R0-14, A-R0-17, A-R0-20). El M2 entra como `M2.M` en
+billones (10¹²) de USD: la unidad del ratio es USD por onza troy (o por BTC)
+por cada billón de USD de M2. El medio paso de redondeo del M2 es 0.05 miles
+de millones, y entra al error del ratio (A-R0-17). Oro / M2 va desde 1960-01 y
+es apto para métricas desde 1968-04, por el oro; BTC / M2 desde 2013-01
+(A-R0-10). `python -m senales.ratios --solo-denominador` los recalcula desde
+las salidas publicadas, sin descargar nada.
+
+## A-D0-22 · Bonos: la suma de las economías que declaran al BIS, con panel fijo y valuación mixta
+
+**Estado: supuesto; NO MEDIDO en esta entrega.**
+
+Si se implementa, la serie es la suma de los títulos de deuda de las 49
+economías con total en las estadísticas del BIS, trimestral, desde 2020-Q4,
+rotulada "suma de 49 economías declarantes al BIS" y nunca "global", con la
+valuación mixta declarada. Pendiente de implementar; sin fuente de contraste
+abierta (SIFMA y la WFE son de clase (c)).
+
+## A-D0-23 · Acciones: el agregado `WLD` del Banco Mundial es la suma de los países con dato
+
+**Estado: dato la subcobertura; NO MEDIDO en esta entrega.**
+
+El agregado queda entre 7 % y 13 % por debajo de la WFE en 2024 y 2025 porque
+faltan plazas grandes (`FUENTES.md`, D0.9). Si se publica, lleva esa
+advertencia. Pendiente de implementar; las segundas fuentes leídas (WFE,
+SIFMA) son de clase (c).
+
+## A-D0-24 · Inmuebles, cantidad de oro y riqueza total: NO MEDIDO
+
+**Estado: no medido.**
+
+No hay una serie global con licencia abierta para ninguna de las tres. La
+capitalización de BTC (Coin Metrics, A-R0-4) queda también pendiente de
+implementar en esta entrega.
+
+## A-D0-25 · Las tolerancias de los gates salen de la precisión publicada; los tipos de cambio se comparan con un control
+
+**Estado: supuesto.** Fijado antes de correr el pipeline, el 2026-10-06.
+
+| Serie | Segunda fuente | Clase | Tolerancia |
+| --- | --- | --- | --- |
+| M2 de EE.UU. (las dos) | Tabla 1 del H.6 en HTML, 17 meses | gate | ±0.05 miles de millones (un decimal) |
+| Balance de la Fed | BIS `WS_CBTA`, último miércoles del mes | gate | ±5 millones (dos decimales en miles de millones) |
+| Balance de la Fed | FRED `WALCL`, semana a semana | control | ±0.5 millones |
+| M2 de la Eurozona (las dos) | Banco de España, últimos 3 meses | gate | ±0.5 millones (enteros) |
+| Balance del Eurosistema | BIS `WS_CBTA`, regla de semana del BIS | gate | ±0.5 millones (tres decimales) |
+| M2 de Japón | e-Stat Dashboard | gate | ±0.5 (mismo entero) |
+| Balance del BoJ | BIS `WS_CBTA` | gate | ±0.5 en cien millones de yenes (un decimal) |
+| Dinero amplio de China | dos lecturas a mano de la NBS | gate | ±50 millones de yuanes (redondeo de la OCDE) |
+| Balance del PBoC | lecturas a mano del PBoC | gate | sin anclas: NO MEDIDO |
+| Tipos de cambio (los tres) | BIS `WS_XRU`, promedio mensual | control | ±0.5 % |
+
+Un gate necesita al menos tres comparaciones, también el de anclas. Un gate
+que no cierra deja la serie como "NO MEDIDO: sin validación externa"; un
+control marca el mes como valor en disputa y no decide.
+
+**El mínimo de anclas se corrigió el 2026-10-06, y hay que decirlo entero.** La
+primera versión del código fijó `MINIMO_ANCLAS = 2`, y lo fijó después de saber
+que China tenía exactamente dos lecturas de la NBS: no fue una tolerancia
+declarada antes de ver el resultado. La revisión del PR lo detectó. Quedó en
+tres, el mismo mínimo que el gate anual de oro y plata (A-R0-16), y con eso el
+dinero amplio de China pasa a NO MEDIDO hasta que haya una tercera lectura.
+
+**El gate del balance de la Fed también cambió de forma, y tampoco se fijó a
+ciegas.** `FUENTES.md` D0.11 (paso 0) proponía como gate la última semana de la
+publicación H.4.1 en HTML y como control el BIS, y anotaba que el BIS no cerraba
+en 118 meses. Ese resultado era contra la serie bruta (`RESPPA_N.WW`). Al
+elegir la serie consolidada (A-D0-15) la diferencia desapareció, y el gate se
+definió como "BIS, último miércoles del mes, ±5 millones" sabiendo que
+cerraba: la comparación ya estaba hecha. Lo que sí es independiente del
+resultado es la tolerancia, que es el redondeo con que publica el BIS. El
+gate del HTML del H.4.1 no se implementó: el BIS es un compilador distinto de
+la Junta y cubre 284 meses, mientras que la tabla en HTML es del mismo emisor
+y cubre una semana. FRED quedó como control semanal por decisión del dueño
+(D0.10.11, punto 6). Si se prefiere la forma de D0.11, es un cambio de
+supuesto, no de código: ambas comparaciones están hechas. **La comparación de los tipos
+de cambio es un control, como quedó en `FUENTES.md` D0.11:** dos fijaciones a
+horas distintas no son el mismo dato. En la primera corrida, el único mes
+fuera del umbral es 2008-12 del USD por EUR (0.68 %), que se publica marcado.
+La primera versión del código lo tenía como gate y lo habría dejado NO MEDIDO
+por ese mes; se corrigió a lo aprobado, no la tolerancia.
+
+**Lo que no prueban.** Un agregado monetario tiene un solo compilador; los
+gates validan que el dato publicado sea el del emisor, sin errores de
+transporte, unidad ni fecha, no la medición.
+
+## A-D0-30 · Una salida derivada se calcula desde lo publicado, y un test lo comprueba
+
+**Estado: supuesto.** Fijado el 2026-10-06, en la revisión del PR #4.
+
+El agregado en USD se calcula desde los valores de dinero y de tipo de cambio
+tal como quedan en sus CSV (doce cifras significativas), y los pares contra M2
+desde los precios tal como quedan en `precios_mensuales.csv` (diez), no desde
+los decimales que los archivos no llevan. Así `tests/test_salidas_publicadas.py`
+recalcula cada salida derivada desde los archivos del repositorio y exige que
+sea idéntica byte a byte: `liquidez_neta.csv` desde sus tres crudos de FRED,
+`denominador_agregado.csv`, `denominador_ratios.csv` y `denominador_pares.csv`
+desde los CSV publicados, y los crudos versionados contra el hash de su
+manifiesto. Para `ratios.csv` de la fase R la igualdad es exacta salvo en la
+décima cifra del valor, porque esa fase todavía divide los precios sin
+redondear; llevarla a esta regla exige una corrida completa y va en un PR
+propio. Lo que no se puede recalcular sin red ni sin crudos privados
+(`precios_mensuales.csv`, `denominador_dinero.csv`, los balances, los tipos de
+cambio y la ficha) queda dicho en el docstring del test.
+
+**Por qué existe.** La primera corrida del PR #4 publicó `denominador_pares.csv`
+y `denominador_ratios.csv` calculados con datos de prueba: `ratios.py` escribía
+esos dos archivos en `data/series/` aunque los tests redirigieran las demás
+salidas a un directorio temporal, y la suite los pisó después de la corrida
+real. Se arregló en dos lugares: las salidas de D0 de `ratios.py` siguen al
+directorio de salida de los ratios, y un fixture de `conftest.py` hace fallar
+a cualquier test que escriba en `data/`.
+
+## A-D0-26 · Un cambio en un mes ya publicado es una revisión y se reporta
+
+**Estado: supuesto.**
+
+El umbral es 0.0005 en la unidad de cada serie: cualquier cambio en la
+precisión publicada cuenta. El changelog lista hasta 40 revisiones una por una
+y las resume por serie si hay más. Las series del BCE y del BoJ se revisan
+hacia atrás (`FUENTES.md`, D0.4 y D0.5) y las series del BIS llegan con rezago.
+
+## A-D0-27 · Un crudo de D0 se versiona si su licencia lo permite, pesa hasta 1 MB y alimenta una serie
+
+**Estado: supuesto.**
+
+A-R0-15 pone la condición de licencia; esta agrega dos. Los ZIP de la Junta
+(entre 1.4 y 9 MB) y las fuentes que solo se leen para comparar quedan fuera
+del repositorio, con su URL, fecha y SHA-256 en `denominador_descargas.csv`.
+Los CSV del BCE, del BoJ, de la OCDE y del BIS (China) se versionan en
+`data/raw/`, con su atribución en `data/raw/ATRIBUCION.md`.
+
+## A-D0-28 · Las cifras puntuales de terceros van como "estimación de terceros", citadas y fuera de todo cálculo
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-05.
+
+Savills (valor de los inmuebles) y el World Gold Council (oro sobre la
+superficie) publican estimaciones puntuales, no series, bajo términos de clase
+(c). Se citan en `data/series/citas_terceros.csv` con año, fuente, URL,
+sección y fecha de lectura, con el estado "estimación de terceros". No entran
+al pipeline ni a ningún cálculo, y no se interpolan. McKinsey queda excluido:
+sus términos prohíben extraer datos de su sitio.
+
+## A-D0-29 · El robots.txt se lee antes de cada descarga; el BCE entra por copia bajada a mano
+
+**Estado: supuesto.** Regla de `CLAUDE.md` del 2026-10-05, decisión del dueño
+del 2026-10-06 para el BCE.
+
+`fuentes_denominador.descargar` lee el `robots.txt` del host antes de pedir un
+crudo que no está en disco, con el nombre con que `requests` se presenta. Si
+lo veda, no pide, y la serie queda "NO MEDIDO: el robots.txt de la fuente veda
+la descarga y no hay copia a mano". El `robots.txt` de `data-api.ecb.europa.eu`
+veda a `python-requests` (y a los agentes de Anthropic), aunque la ayuda de la
+API del BCE dé ejemplos con ese cliente. **El pipeline no cambia su
+User-Agent.** Las tres series del BCE entran por copia a mano: una persona
+abre la URL de la API en el navegador, guarda la respuesta como
+`data/raw/<clave>_<AAAA-MM-DD>.csv` (`bce_m2_ajustada`, `bce_m2_sin_ajustar`,
+`bce_balance_eurosistema`) y el pipeline usa la copia más reciente, verifica su
+hash contra el manifiesto, y si falta o no coincide deja la serie NO MEDIDO en
+esa corrida. Las copias del 2026-10-05 son las que se bajaron en el paso 0,
+antes de leer ese `robots.txt`.

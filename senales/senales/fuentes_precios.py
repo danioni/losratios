@@ -70,6 +70,7 @@ FIRMAS = {
     "xlsx": (b"PK",),
     "xls": (b"\xd0\xcf\x11\xe0",),
     "json": (b"{",),
+    "zip": (b"PK",),
 }
 
 MESES_INGLES = {

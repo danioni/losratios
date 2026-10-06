@@ -37,6 +37,10 @@ from senales import bitacora, fuentes_precios
 from senales.configuracion import (
     ANCLAS_USGS,
     ARCHIVO_CHANGELOG,
+    ARCHIVO_D0_DINERO,
+    ARCHIVO_D0_FICHAS,
+    ARCHIVO_D0_PARES,
+    ARCHIVO_D0_RATIOS,
     ARCHIVO_DESCARGAS,
     ARCHIVO_INTERNO,
     ARCHIVO_PARES,
@@ -56,6 +60,7 @@ from senales.configuracion import (
     CONTRASTE_NASDAQ,
     CONTRASTE_SP500,
     DESCARGA_COIN_METRICS,
+    DESCARGA_H6,
     DESCARGA_NASDAQCOM,
     DESCARGA_PINK_SHEET,
     DESCARGA_SHILLER,
@@ -69,6 +74,8 @@ from senales.configuracion import (
     ESTADO_ESTIMACION,
     FMI_COPIA,
     FORMATO_RATIOS,
+    M2_EEUU_A_BILLONES,
+    M2_EEUU_MEDIO_PASO,
     MINIMO_ANIOS_GATE,
     NASDAQ_FECHA_BASE,
     NASDAQ_VALOR_BASE,
@@ -78,6 +85,7 @@ from senales.configuracion import (
     ORO_DEFINICION_DESPUES,
     ORO_QUIEBRE_DEFINICION,
     PARES,
+    PARES_D0,
     PINK_SHEET_CONGELADA,
     SERIES_PRECIO,
     TOLERANCIA_GATE_ORO_PCT,
@@ -250,13 +258,15 @@ def error_redondeo_pct(mensual: pd.Series, medio_paso: pd.Series) -> pd.Series:
     return medio_paso.reindex(mensual.index).fillna(0.0) / mensual * 100.0
 
 
-def errores_de_pares(precios: pd.DataFrame, pasos: pd.DataFrame) -> pd.DataFrame:
+def errores_de_pares(
+    precios: pd.DataFrame, pasos: pd.DataFrame, pares_definidos: tuple[Par, ...] = PARES
+) -> pd.DataFrame:
     """Error máximo de cada ratio por redondeo: la suma de los de sus dos lados.
 
     Es la cota de primer orden del error relativo de un cociente.
     """
     errores = pd.DataFrame(index=precios.index)
-    for par in PARES:
+    for par in pares_definidos:
         errores[par.clave] = sum(
             error_redondeo_pct(precios[lado], pasos[lado])
             for lado in (par.numerador, par.denominador)
@@ -604,10 +614,10 @@ def estado_del_par(par: Par, validadas: set[str]) -> str:
     return ESTADO_DATO
 
 
-def calcular_pares(precios: pd.DataFrame) -> pd.DataFrame:
-    """Los cinco ratios, mes a mes. Donde falta un lado, el ratio queda vacío."""
+def calcular_pares(precios: pd.DataFrame, pares_definidos: tuple[Par, ...] = PARES) -> pd.DataFrame:
+    """Los ratios, mes a mes. Donde falta un lado, el ratio queda vacío."""
     pares = pd.DataFrame(index=precios.index)
-    for par in PARES:
+    for par in pares_definidos:
         denominador = precios[par.denominador].where(precios[par.denominador] != 0.0)
         pares[par.clave] = precios[par.numerador] / denominador
     return pares
@@ -674,6 +684,7 @@ def tabla_ratios(
     errores: pd.DataFrame,
     validadas: set[str],
     disputas: pd.DataFrame | None = None,
+    pares_definidos: tuple[Par, ...] = PARES,
 ) -> pd.DataFrame:
     """Los pares que se publican, en formato largo. Los demás no tienen filas aquí.
 
@@ -684,7 +695,7 @@ def tabla_ratios(
     evidencia de nada.
     """
     bloques = []
-    for par in PARES:
+    for par in pares_definidos:
         if not par_publicado(par, validadas):
             continue
         valores = pares[par.clave].dropna()
@@ -715,6 +726,7 @@ def tabla_pares(
     errores: pd.DataFrame,
     validadas: set[str],
     disputas: pd.DataFrame | None = None,
+    pares_definidos: tuple[Par, ...] = PARES,
 ) -> pd.DataFrame:
     """Los cinco pares, publicados o no, y hasta dónde llega cada uno.
 
@@ -722,7 +734,7 @@ def tabla_pares(
     estado dice qué le falta.
     """
     filas = []
-    for par in PARES:
+    for par in pares_definidos:
         valores = pares[par.clave].dropna()
         error = errores.loc[valores.index, par.clave]
         lados = lados_en_disputa(par, disputas, valores.index)
@@ -783,6 +795,218 @@ def tabla_interna(precios: pd.DataFrame, pares: pd.DataFrame) -> pd.DataFrame:
     for columna in COLUMNAS_INTERNO[1:]:
         tabla[columna] = junta[columna].to_numpy()
     return tabla
+
+
+# --- A-D0-21: Oro / M2 y BTC / M2 de EE.UU. -----------------------------------
+
+# El M2 entra a los pares como una serie más, con la misma lógica de publicación
+# (A-R0-14): licencia abierta, y validado si la fase D0 lo publicó. No se baja
+# aquí: se lee lo que denominador.py dejó en data/series/.
+SERIE_M2_EEUU_RATIOS = SeriePrecio(
+    clave="m2_eeuu",
+    nombre="M2 de EE.UU.",
+    descarga=DESCARGA_H6,
+    unidad="billones (10^12) de USD",
+    estado=ESTADO_DATO,
+    banda_plausible=(0.1, 1_000.0),
+    supuestos=("A-D0-21",),
+    medio_paso_redondeo=M2_EEUU_MEDIO_PASO,
+)
+SERIES_POR_CLAVE[SERIE_M2_EEUU_RATIOS.clave] = SERIE_M2_EEUU_RATIOS
+
+
+def como_publicado(tabla: pd.DataFrame, formato: str) -> pd.DataFrame:
+    """Los valores tal como quedan en el CSV: pasados por el formato con que se escriben.
+
+    Una salida derivada se calcula desde lo que se publica, no desde los
+    decimales que el CSV no lleva: así cualquiera la recalcula byte a byte
+    desde los archivos del repositorio (tests/test_salidas_publicadas.py).
+    """
+    patron = formato.replace("%", "")
+
+    def redondear(valor):
+        return valor if pd.isna(valor) else float(format(valor, patron))
+
+    return tabla.map(redondear)
+
+
+def _salida_d0(nombre: str) -> Path:
+    """Un archivo de la fase D0, en el mismo directorio que las salidas de los ratios.
+
+    Se resuelve al usarlo, no al importar: cuando un test redirige ARCHIVO_RATIOS
+    a un directorio temporal, estos archivos van al mismo lugar y nada toca
+    data/series/. La primera corrida del PR #4 no hacía esto y la suite de tests
+    pisó denominador_pares.csv y denominador_ratios.csv con datos de prueba.
+    """
+    return Path(ARCHIVO_RATIOS).parent / nombre
+
+
+def cargar_m2_publicado(
+    ruta_fichas: Path | None = None, ruta_dinero: Path | None = None
+) -> tuple[pd.Series | None, str]:
+    """El M2 de EE.UU. que publicó la fase D0, en billones de USD, o por qué no está.
+
+    Si la fase D0 no corrió, o publicó el M2 como NO MEDIDO, los pares heredan
+    ese estado: un par no es más firme que su lado más débil.
+    """
+    ruta_fichas = ruta_fichas or _salida_d0(ARCHIVO_D0_FICHAS.name)
+    ruta_dinero = ruta_dinero or _salida_d0(ARCHIVO_D0_DINERO.name)
+    if not ruta_fichas.exists() or not ruta_dinero.exists():
+        return None, "la fase D0 no publicó todavía (python -m senales.denominador)"
+    fichas = pd.read_csv(ruta_fichas, dtype=str, keep_default_na=False)
+    fila = fichas.loc[fichas["serie"] == "m2_eeuu"]
+    if fila.empty:
+        return None, "serie_D0.csv no tiene la fila de m2_eeuu"
+    if fila.iloc[0]["publicada"] != "sí":
+        return None, f"el M2 de EE.UU. no está publicado: {fila.iloc[0]['estado']}"
+    dinero = pd.read_csv(ruta_dinero, dtype={"mes": str})
+    propia = dinero.loc[dinero["serie"] == "m2_eeuu"]
+    if propia.empty:
+        return None, "denominador_dinero.csv no trae filas de m2_eeuu"
+    serie = pd.Series(
+        propia["valor"].to_numpy(dtype=float) / M2_EEUU_A_BILLONES,
+        index=pd.DatetimeIndex(pd.to_datetime(propia["mes"] + "-01"), name="mes"),
+        name="m2_eeuu",
+    )
+    return serie.sort_index(), ""
+
+
+def pares_denominador(
+    precios: pd.DataFrame,
+    pasos: pd.DataFrame,
+    validadas: set[str],
+    disputas: pd.DataFrame | None,
+    m2: pd.Series | None = None,
+    motivo: str = "",
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    """Oro / M2 y BTC / M2 de EE.UU., con la lógica de publicación de los cinco pares.
+
+    Devuelve los ratios en formato largo, la tabla de pares y las líneas para el
+    changelog. `m2` y `motivo` vienen de cargar_m2_publicado; se pueden pasar
+    para probar sin archivos.
+    """
+    if m2 is None and not motivo:
+        m2, motivo = cargar_m2_publicado()
+    lados = ["oro", "btc"]
+    precios_d0 = precios.loc[:, lados].copy()
+    pasos_d0 = pasos.loc[:, lados].copy()
+    validadas_d0 = {clave for clave in validadas if clave in lados}
+    if m2 is None:
+        precios_d0["m2_eeuu"] = float("nan")
+        pasos_d0["m2_eeuu"] = 0.0
+    else:
+        precios_d0 = precios_d0.join(m2.rename("m2_eeuu"), how="outer")
+        pasos_d0 = pasos_d0.reindex(precios_d0.index).fillna(0.0)
+        pasos_d0["m2_eeuu"] = M2_EEUU_MEDIO_PASO
+        validadas_d0.add("m2_eeuu")
+    precios_d0.index.name = "mes"
+    disputas_d0 = None
+    if disputas is not None:
+        disputas_d0 = disputas.reindex(precios_d0.index, fill_value=False).copy()
+        disputas_d0["m2_eeuu"] = False
+    pares = calcular_pares(precios_d0, PARES_D0)
+    errores = errores_de_pares(precios_d0, pasos_d0, PARES_D0)
+    ratios = tabla_ratios(pares, errores, validadas_d0, disputas_d0, PARES_D0)
+    tabla = tabla_pares(pares, errores, validadas_d0, disputas_d0, PARES_D0)
+    if m2 is None:
+        tabla["estado"] = f"NO MEDIDO: {motivo}"
+    lineas = [
+        f"{fila.nombre}: {fila.estado}"
+        + (f", {fila.primer_mes} a {fila.ultimo_mes}, {fila.meses} meses" if fila.meses else "")
+        + (
+            f"; apto para métricas desde {fila.apto_desde or 'ningún mes'} "
+            f"({fila.meses_aptos} meses, menos {fila.meses_en_disputa} con un valor en disputa)"
+            if fila.publicado == "sí"
+            else ""
+        )
+        for fila in tabla.itertuples()
+    ]
+    return ratios, tabla, lineas
+
+
+@dataclass
+class EntradaParesDenominador:
+    """La corrida de --solo-denominador, tal como queda en el changelog."""
+
+    fecha_corrida: date
+    pares: list[str]
+    notas: list[str] = field(default_factory=list)
+
+    @property
+    def titulo(self) -> str:
+        return f"{self.fecha_corrida.isoformat()} · ratios D0"
+
+    def render(self) -> str:
+        lineas = [f"## {self.titulo}", "", "- Pares contra M2 de EE.UU.:"]
+        lineas.extend(f"  - {item}" for item in self.pares)
+        lineas.extend(f"- Nota: {nota}" for nota in self.notas)
+        lineas.append("")
+        return "\n".join(lineas)
+
+
+def precios_publicados(
+    ruta_precios: Path | None = None, ruta_series: Path | None = None
+) -> tuple[pd.DataFrame, pd.DataFrame, set[str], pd.DataFrame]:
+    """Oro, plata y BTC tal como quedaron publicados, para recalcular pares sin red.
+
+    El medio paso de redondeo se reconstruye del error publicado junto a cada
+    valor (A-R0-17), y los meses en disputa, de la columna de contraste
+    (A-R0-20). Sirve para --solo-denominador y para el test que comprueba que
+    ratios.csv y pares.csv salen de precios_mensuales.csv.
+    """
+    ruta_precios = ruta_precios or Path(ARCHIVO_PRECIOS)
+    ruta_series = ruta_series or Path(ARCHIVO_SERIES_INFO)
+    if not ruta_precios.exists() or not ruta_series.exists():
+        raise ErrorDeFuente(
+            f"faltan {ruta_precios.name} o {ruta_series.name}: hay que correr la fase R completa "
+            "(python -m senales.ratios) antes de --solo-denominador"
+        )
+    tabla = pd.read_csv(ruta_precios, dtype={"mes": str})
+    indice = pd.DatetimeIndex(pd.to_datetime(tabla["mes"] + "-01"), name="mes")
+    columnas = {"oro": "oro_usd_oz", "plata": "plata_usd_oz", "btc": "btc_usd"}
+    precios = pd.DataFrame(float("nan"), index=indice, columns=[serie.clave for serie in SERIES_PRECIO])
+    for clave, columna in columnas.items():
+        precios[clave] = tabla[columna].to_numpy(dtype=float)
+    # El medio paso se reconstruye como lo hace la corrida completa (A-R0-9, A-R0-19):
+    # de la precisión declarada en la edición vigente y de los decimales publicados
+    # en la congelada. Reconstruirlo del error publicado, ya redondeado, no da lo mismo.
+    pasos = medios_pasos(precios, PINK_SHEET_CONGELADA.ultimo_mes)
+    disputas = pd.DataFrame(False, index=indice, columns=list(precios.columns))
+    for metal in ("oro", "plata"):
+        # La columna dice "valor en disputa: Pink Sheet x, FMI y, diferencia z %".
+        disputas[metal] = (
+            tabla[f"{metal}_contraste_fmi"].astype(str).str.startswith(VALOR_EN_DISPUTA).to_numpy()
+        )
+    series = pd.read_csv(ruta_series, dtype=str, keep_default_na=False)
+    validadas = set(series.loc[series["publicada"] == "sí", "serie"]) & set(columnas)
+    return precios, pasos, validadas, disputas
+
+
+def main_denominador(fecha_corrida: date) -> int:
+    """Recalcula Oro / M2 y BTC / M2 desde las salidas publicadas, sin descargar nada."""
+    try:
+        precios, pasos, validadas, disputas = precios_publicados()
+    except ErrorDeFuente as error:
+        print(f"ERROR DE FUENTE: {error}", file=sys.stderr)
+        return CODIGO_ERROR_FUENTE
+    ratios_d0, pares_d0, lineas = pares_denominador(precios, pasos, validadas, disputas)
+    ruta_ratios_d0, ruta_pares_d0 = _salida_d0(ARCHIVO_D0_RATIOS.name), _salida_d0(ARCHIVO_D0_PARES.name)
+    escribir_csv_determinista(ratios_d0, ruta_ratios_d0, COLUMNAS_RATIOS, FORMATO_RATIOS)
+    escribir_csv_determinista(pares_d0, ruta_pares_d0, COLUMNAS_PARES, FORMATO_RATIOS)
+    entrada = EntradaParesDenominador(
+        fecha_corrida=fecha_corrida,
+        pares=lineas,
+        notas=["recalculados desde precios_mensuales.csv y denominador_dinero.csv, sin descargas"],
+    )
+    cambio = bitacora.actualizar_changelog(ARCHIVO_CHANGELOG, entrada)
+    print("Pares contra M2 de EE.UU.")
+    for linea in lineas:
+        print(f"  {linea}")
+    print("Salidas")
+    print(f"  {ruta_ratios_d0} ({len(ratios_d0)} filas)")
+    print(f"  {ruta_pares_d0}")
+    print(f"  {ARCHIVO_CHANGELOG} ({'actualizado' if cambio else 'sin cambios'})")
+    return 0
 
 
 # --- Contrastes mensuales (A-R0-12) -------------------------------------------
@@ -1008,6 +1232,7 @@ class EntradaRatios:
     empalme: list[str] = field(default_factory=list)
     fmi: list[str] = field(default_factory=list)
     notas: list[str] = field(default_factory=list)
+    denominador: list[str] = field(default_factory=list)
 
     @property
     def titulo(self) -> str:
@@ -1039,6 +1264,8 @@ class EntradaRatios:
         bloque("Pink Sheet contra FMI", self.fmi, "sin control")
         bloque("Contrastes", self.contrastes, "ninguno")
         bloque("Oro y plata", self.metales, "sin controles")
+        if self.denominador:
+            bloque("Pares contra M2 de EE.UU.", self.denominador, "ninguno")
         for nota in self.notas:
             lineas.append(f"- Nota: {nota}")
         lineas.append("")
@@ -1269,9 +1496,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Fecha de la descarga a usar (AAAA-MM-DD). Permite rehacer una corrida "
         "anterior a partir de los crudos ya guardados.",
     )
-    fecha_descarga = analizador.parse_args(argv).fecha_descarga
+    analizador.add_argument(
+        "--solo-denominador",
+        action="store_true",
+        help="Solo recalcula Oro / M2 y BTC / M2 de EE.UU. desde las salidas ya publicadas, "
+        "sin descargar nada (A-D0-21).",
+    )
+    argumentos = analizador.parse_args(argv)
+    fecha_descarga = argumentos.fecha_descarga
 
     asegurar_directorios(DIR_CRUDO, DIR_CRUDO_PRIVADO, DIR_SERIES, DIR_SERIES_PRIVADO)
+    if argumentos.solo_denominador:
+        return main_denominador(fecha_descarga)
 
     try:
         fuentes = cargar_fuentes(fecha_descarga)
@@ -1444,6 +1680,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     escribir_csv_determinista(interna, ARCHIVO_INTERNO, COLUMNAS_INTERNO, FORMATO_RATIOS)
 
+    # A-D0-21: los dos pares contra el M2 de EE.UU., con la misma lógica, calculados
+    # desde los precios tal como quedan publicados en precios_mensuales.csv.
+    ratios_d0, pares_d0, lineas_d0 = pares_denominador(
+        como_publicado(precios, FORMATO_RATIOS), pasos, validadas, disputas
+    )
+    escribir_csv_determinista(ratios_d0, _salida_d0(ARCHIVO_D0_RATIOS.name), COLUMNAS_RATIOS, FORMATO_RATIOS)
+    escribir_csv_determinista(pares_d0, _salida_d0(ARCHIVO_D0_PARES.name), COLUMNAS_PARES, FORMATO_RATIOS)
+
     lineas_pares = [
         f"{fila.nombre}: {fila.estado}"
         + (f", {fila.primer_mes} a {fila.ultimo_mes}, {fila.meses} meses" if fila.meses else "")
@@ -1482,6 +1726,7 @@ def main(argv: list[str] | None = None) -> int:
         empalme=lineas_empalme,
         fmi=lineas_fmi,
         notas=notas,
+        denominador=lineas_d0,
     )
     cambio = bitacora.actualizar_changelog(ARCHIVO_CHANGELOG, entrada)
 
@@ -1498,6 +1743,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  {ARCHIVO_SERIES_INFO}")
     print(f"  {ARCHIVO_DESCARGAS}")
     print(f"  {ARCHIVO_INTERNO} (fuera del repositorio)")
+    print(f"  {_salida_d0(ARCHIVO_D0_RATIOS.name)} ({len(ratios_d0)} filas) y {_salida_d0(ARCHIVO_D0_PARES.name)}")
     print(f"  {ARCHIVO_CHANGELOG} ({'actualizado' if cambio else 'sin cambios'})")
     print("Resumen")
     print(f"  Meses agregados: {len(agregados)}")
