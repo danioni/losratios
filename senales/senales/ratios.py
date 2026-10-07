@@ -47,6 +47,7 @@ from senales.configuracion import (
     ARCHIVO_PRECIOS,
     ARCHIVO_RATIOS,
     ARCHIVO_SERIES_INFO,
+    CLAVE_ORO_OFICIAL,
     BANDAS_LBMA,
     COLUMNAS_INTERNO,
     COLUMNAS_PARES,
@@ -757,14 +758,36 @@ def tabla_pares(
     return pd.DataFrame(filas, columns=COLUMNAS_PARES)
 
 
+# Fichas que escribe otro módulo y que cada corrida de la fase R conserva tal cual:
+# el precio oficial del oro (oro_oficial.py, A-R0-21).
+FICHAS_CONSERVADAS = (CLAVE_ORO_OFICIAL,)
+
+
+def fichas_conservadas(previas: pd.DataFrame | None) -> list[dict]:
+    """Las filas de series.csv que no salen de esta corrida y hay que dejar en su lugar."""
+    if previas is None or previas.empty:
+        return []
+    return [
+        fila
+        for fila in previas.fillna("").astype(str).to_dict("records")
+        if fila["serie"] in FICHAS_CONSERVADAS
+    ]
+
+
 def tabla_series(
-    precios: pd.DataFrame, validadas: set[str], validaciones: dict[str, str]
+    precios: pd.DataFrame,
+    validadas: set[str],
+    validaciones: dict[str, str],
+    previas: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Las cinco series y lo que hay que decir junto a cada una.
 
     Es donde va la atribución que exigen las licencias, el estado de cada serie
     y con qué se validó. Los valores de las que no se publican no están aquí.
+    Las fichas de otros módulos (el precio oficial del oro) se conservan después
+    de la del oro.
     """
+    conservadas = fichas_conservadas(previas)
     filas = []
     for serie in SERIES_PRECIO:
         valores = precios[serie.clave].dropna()
@@ -785,6 +808,8 @@ def tabla_series(
                 "meses": len(valores),
             }
         )
+        if serie.clave == "oro":
+            filas.extend(conservadas)
     return pd.DataFrame(filas, columns=COLUMNAS_SERIES_INFO)
 
 
@@ -1672,8 +1697,11 @@ def main(argv: list[str] | None = None) -> int:
     escribir_csv_determinista(publicada_precios, ARCHIVO_PRECIOS, COLUMNAS_PRECIOS, FORMATO_RATIOS)
     escribir_csv_determinista(publicada_ratios, ARCHIVO_RATIOS, COLUMNAS_RATIOS, FORMATO_RATIOS)
     escribir_csv_determinista(publicada_pares, ARCHIVO_PARES, COLUMNAS_PARES, FORMATO_RATIOS)
+    previas_series = (
+        pd.read_csv(ARCHIVO_SERIES_INFO, dtype=str, keep_default_na=False) if Path(ARCHIVO_SERIES_INFO).exists() else None
+    )
     escribir_csv_determinista(
-        tabla_series(precios, validadas, validaciones),
+        tabla_series(precios, validadas, validaciones, previas_series),
         ARCHIVO_SERIES_INFO,
         COLUMNAS_SERIES_INFO,
         FORMATO_RATIOS,

@@ -11,6 +11,18 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-07 · A-R0-21 a A-R0-26 · Supuestos nuevos: el precio oficial del
+  oro en EE.UU., 1900-03 a 1959-12, como serie de contexto.** Decisión del
+  dueño. `oro_precio_oficial.csv` nace con 718 meses: 20,6718 USD por onza
+  troy hasta 1934-01 (ley del 14 de marzo de 1900) y 35,00 desde 1934-02
+  (proclamación del 31 de enero de 1934), derivados de la fracción legal,
+  con la etiqueta "precio oficial fijado por ley, no precio de mercado",
+  la convertibilidad fila por fila, el precio administrado de 1933–34
+  declarado y `apto_metricas = no`. Gate de nivel y fecha contra Tesoro,
+  Casa de Moneda, Junta y FMI con ±0,005 USD: cerró. Antes de 1900, NO
+  MEDIDO; en 1960-01 empieza el Pink Sheet y no se empalma. `series.csv`
+  suma la ficha `oro_precio_oficial_usd`. No cambia ningún valor anterior.
+
 - **2026-10-07 · A-D0-6, A-D0-10, A-D0-11, A-D0-34 a A-D0-36 · Las series
   antiguas de Japón (M2+CDs) se publican aparte y el agregado en USD empieza
   en 1999-01.** Decisión del dueño. `m2cd_japon_1967_1999` (`MAMS1ANM2C`) y
@@ -311,6 +323,21 @@ cita.
   - Oro / M2 de EE.UU.: dato, 1960-01 a 2026-08, 800 meses; apto para métricas desde 1968-04 (691 meses, menos 10 con un valor en disputa)
   - BTC / M2 de EE.UU.: dato, 2013-01 a 2026-08, 164 meses; apto para métricas desde 2013-01 (164 meses, menos 0 con un valor en disputa)
 - Nota: recalculados desde precios_mensuales.csv y denominador_dinero.csv, sin descargas
+
+## 2026-10-07 · oro oficial
+
+- Tramos:
+  - 1900-03 a 1934-01: 20.6718 USD por onza troy = 480 ÷ (129/5 × 9/10) = 8000/387; Gold Standard Act, ley del 14 de marzo de 1900, sección 1 (dólar de 25,8 granos de oro de 9/10 de fino); vigente desde 1900-03-14
+  - 1934-02 a 1959-12: 35.0000 USD por onza troy = 480 ÷ (320/21 × 9/10) = 35; Proclamación presidencial del 31 de enero de 1934 (sección 43(b)(2) del Título III de la ley del 12 de mayo de 1933, reformada por la sección 12 de la Gold Reserve Act del 30 de enero de 1934): dólar de 15 5/21 granos de oro de 9/10 de fino; vigente desde 1934-01-31 15:10, hora del Este
+- Serie:
+  - Oro: precio oficial en EE.UU. (fijado por ley), 1900-03 a 1959-12: se publica, 1900-03 a 1959-12, 718 meses (USD por onza troy de oro fino; precio oficial fijado por ley, no precio de mercado; fuera de apto_metricas; A-R0-21 A-R0-22 A-R0-23 A-R0-24 A-R0-25 A-R0-26)
+  - el mes en que cambia la norma lleva el precio vigente al cierre del mes anterior, como la Junta: '$20.67 ... through January 1934 and $35 ... thereafter' (Banking and Monetary Statistics 1914-1941, p. 522)
+  - antes de 1900-03: NO MEDIDO hasta verificar la base legal (sección 3511 de los Revised Statutes y las leyes de 1834, 1837 y 1873, no leídas: loc.gov exige una verificación humana)
+  - 1960-01: termina esta serie y empieza el oro del Pink Sheet (promedio mensual del fixing de Londres, A-R0-7); son dos series distintas y no se empalman
+- Validación:
+  - oro_precio_oficial_usd: gate de nivel y fecha contra cifras publicadas por el Tesoro, la Casa de Moneda, la Junta y el FMI cerró: 6 cifras, tolerancia ±0.005 USD, diferencia máxima 0.0018; primer mes a 35: 1934-02
+- Revisiones de datos históricos: ninguna
+- Nota: primera publicación de la serie: no hay corrida anterior con que comparar
 
 ## 2026-10-07 · dinero histórico
 

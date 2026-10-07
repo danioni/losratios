@@ -1296,6 +1296,85 @@ reutilización y no aparezca una restricción de terceros en sus metadatos.
 
 ---
 
+## A-R0-21 · El precio oficial del oro es una serie de contexto: fijado por ley, no observado; fuera de las métricas y sin empalme
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07 (`FUENTES.md`, 4.8).
+
+`oro_precio_oficial.csv` publica, de 1900-03 a 1959-12, el precio del oro en
+USD por onza troy que fijaba la ley: el dólar de 25,8 granos de oro de 9/10 de
+fino (ley del 14 de marzo de 1900, sección 1) y, desde el 31 de enero de 1934,
+el de 15 5/21 granos (proclamación presidencial). Cada fila lleva la etiqueta
+"precio oficial fijado por ley, no precio de mercado", la norma, su fecha de
+vigencia, la cita y `apto_metricas = no`. No es lado de ningún ratio, no entra
+a percentiles ni tendencias, y no se empalma con el oro del Pink Sheet: en
+1960-01 termina esta serie y empieza otra (A-R0-7); en el sitio son dos series.
+La ficha va en `series.csv` y la conserva cada corrida de `ratios.py`.
+
+## A-R0-22 · El mes en que cambia la norma lleva el precio anterior, con la convención publicada por la Junta
+
+**Estado: dato la convención; supuesto adoptarla.**
+
+La proclamación rige desde las 15:10 del 31 de enero de 1934. La Junta valúa
+sus propias tablas *"at the rate of $20.67 per fine ounce of gold through
+January 1934 and $35 per fine ounce thereafter"* (*Banking and Monetary
+Statistics 1914–1941*, p. 522). Se adopta esa convención: enero de 1934 =
+20,6718; febrero de 1934 = 35,00. No se promedia por días: sería un valor que
+ninguna fuente publica.
+
+## A-R0-23 · El precio se deriva de la fracción legal y se publica a cuatro decimales
+
+**Estado: supuesto los decimales; dato la derivación.**
+
+480 granos por onza troy ÷ (granos del dólar × ley de fino), con fracciones
+exactas en el código: 480 ÷ (129/5 × 9/10) = 8000/387 = 20,671835…, y 480 ÷
+(320/21 × 9/10) = 480 ÷ (96/7) = 35 exactos. Se publican cuatro decimales,
+como la Casa de Moneda ("$20.6718", "$35.0000"); el error de redondeo es de
+0,00005 USD y no importa porque la serie queda fuera de las métricas.
+
+## A-R0-24 · La serie empieza el 14 de marzo de 1900; antes queda NO MEDIDO hasta leer la base legal
+
+**Estado: no medido lo anterior a 1900.**
+
+La ley de 1900 remite a la sección 3511 de los *Revised Statutes*, que
+codifica las leyes de 1834, 1837 y 1873. Esas leyes están en los *Statutes at
+Large* en loc.gov, que el 2026-10-07 exigía una verificación humana y no se
+pudo leer. La serie se publica desde 1900-03 y la ficha dice que lo anterior
+es NO MEDIDO. Extenderla hacia atrás exige leer esas leyes u otra reimpresión
+oficial, y un supuesto nuevo.
+
+## A-R0-25 · El gate del precio oficial es de nivel y de fecha, contra cuatro instituciones, con ±0,005 USD
+
+**Estado: supuesto.** Tolerancia declarada el 2026-10-07 antes de comparar.
+
+Para una serie escalonada de dos valores no hay una segunda medición; lo que
+se valida es que el precio derivado de la norma sea el que publican otras
+instituciones y que el cambio caiga en el mes que dicen. Cifras leídas a mano,
+con página: Tesoro ("$20.67+" y "$35", informe de 1934, p. 120), Casa de
+Moneda ("$20.6718" y "$35.0000", ejercicio 1935, p. 91), Junta ("$20.67"
+hasta enero de 1934 y "$35" después, BMS 1914–1941, p. 522) y FMI (0,888671
+gramos de oro fino por dólar = 35,0000, *Federal Reserve Bulletin*, enero de
+1947, p. 12). Tolerancia ±0,005 USD (medio centavo) en cada cifra, mínimo
+tres, y el primer mes a 35 tiene que ser 1934-02. Resultado, después de
+declararla: seis cifras, diferencia máxima 0,0018; cerró. Lo que el gate no
+cubre: la fecha de inicio (A-R0-24) y una norma intermedia que ninguna de las
+cuatro publicaciones mencione, y no se encontró ninguna.
+
+## A-R0-26 · De 1933-03 a 1934-01 rige la paridad legal sin convertibilidad; el precio administrado de 1933–34 es otra cosa y se declara
+
+**Estado: dato.**
+
+El Tesoro lo dice: *"The rate for gold other than newly mined gold ... remained
+at $20.67 an ounce"* (informe de 1934, p. 204), y en el ejercicio 1934 compró
+oro *"at $20.67+ per fine ounce"* y *"at $35 per fine ounce"* (p. 120). Lo que
+cambió fue la convertibilidad (sin pagos en oro desde el 6 de marzo de 1933,
+exportación con licencia desde el 10 de marzo, tenencia privada prohibida
+desde el 5 de abril), y la serie lo dice en la columna `convertibilidad`. Del
+8 de septiembre de 1933 al 31 de enero de 1934 hubo además un precio
+administrado, diario, para el oro recién extraído (29,00 a 34,45 USD por
+onza; informe de 1934, anexo 26, p. 205): no es el precio oficial, no está en
+la serie, y la ficha y las filas de esos meses lo declaran. Si alguna vez se
+publica, va como serie aparte, con su etiqueta.
+
 ## A-D0-1 · Cada serie se publica en su moneda, su unidad y su convención nativas
 
 **Estado: supuesto.** Decisión del 2026-10-05 (D0.10.1 y D0.10.4).
