@@ -1907,6 +1907,163 @@ por estacionalidad.
   series desestacionalizadas del BoJ en las cinco fechas probadas entre 1990 y
   2003. Esa serie de FRED terminó en 2017-02; la de origen OCDE, en 2013-12.
 
+#### D0.5.1 Paso 0 de la serie antigua: M2+CDs del Banco de Japón (2026-10-07)
+
+**Lo que se pidió.** Verificar en el propio BoJ la serie de dinero amplio
+que precede al M2 actual (que empieza en 2003-04): inicio, definición,
+quiebres y superposición con la serie nueva, y detenerse con la propuesta
+antes de implementar nada. Nada de esto está implementado: es una propuesta
+para aprobar o rechazar. Cada pedido de ese día (45, con hora UTC, URL,
+código HTTP, bytes y SHA-256) quedó en un registro fuera del repositorio,
+como los del paso 0 (D0.1). Cliente: `urllib` con un User-Agent propio, un
+pedido por vez, pausas de 2 a 5 s; sin navegador.
+
+**Qué se leyó.** `robots.txt` antes de cualquier otro pedido: `www.boj.or.jp`,
+`www.stat-search.boj.or.jp` y `dashboard.e-stat.go.jp` responden HTTP 404
+(sin reglas, igual que en D0.15); `fred.stlouisfed.org`, `User-agent: *` con
+pausa de 1 s y las rutas usadas permitidas. El aviso de la API del BoJ
+(`api_notice_en.pdf`) tiene el mismo SHA-256 que D0.13 anotó el 2026-10-05
+(`7773abb2…`): los términos no cambiaron. Documentos del BoJ: el *Final Draft
+on the Revision of the Money Stock Statistics* (2008-01-30,
+`https://www.boj.or.jp/en/statistics/outline/notice_2008/data/ntms23.pdf`),
+el aviso de publicación de los datos retroactivos (2008-06-03,
+`.../notice_2008/ntms25.htm`), el aviso de 2008-06-20 (`ntms27.htm`), los
+avisos de 1998-04-16 (`.../notice_1998/ntms01.htm`), 1999-04-16
+(`.../notice_1999/ntms02.htm`) y 2003-04-10 (`.../notice_2003/ntms07.htm`),
+la *Guide to Japan's Money Stock Statistics* de septiembre de 2026
+(`.../outline/exp/data/exms01.pdf`), las notas explicativas
+(`.../outline/note/notest31.htm`), los metadatos de la base `MD02` en inglés
+y japonés, y tres pedidos de datos a la API. Los valores pedidos ese día
+coinciden uno por uno con el crudo `boj_m2_2026-10-05.csv` del repositorio.
+
+**La serie antigua: ficha.** Es "M2+CDs" (Ｍ２＋ＣＤ) de la estadística que el
+BoJ llama en japonés マネーサプライ ("Money Supply") y rotula en inglés
+"(Reference) Money Stock". Base `MD02`, promedio de saldos del mes, sin
+ajustar, en 100 millones de yenes, discontinuada (última actualización
+2017-12-29), en dos tramos con nombres literales del BoJ:
+
+| Código | Nombre en inglés (literal) | Rango | Meses |
+| --- | --- | --- | --- |
+| `MAMS1ANM2C` | (discontinued)M2+CDs/Average Amounts Outstanding/(Reference) Money Stock (Based on excluding Foreign Banks in Japan, etc., through March 1999) | 1967-01 a 1999-03 | 387 |
+| `MAMS3ANM2C` | (discontinued)M2+CDs/Average Amounts Outstanding/(Reference) Money Stock (from April 1998 to April 2008) | 1998-04 a 2008-04 | 121 |
+
+Hay versiones de fin de mes (`MAMS1ENM2C`, desde 1955-01; `MAMS3ENM2C`, hasta
+2008-03), desestacionalizadas (`…X12`) y todos los componentes (M1,
+cuasidinero, CD) en las dos bases. Primeros y últimos valores leídos:
+`MAMS1ANM2C` 1967-01 = 282.500 y 1999-03 = 6.095.137; `MAMS3ANM2C` 1998-04 =
+5.919.793 y 2008-04 = 7.385.144. Sin huecos. La guía (cap. 1, sección 3) dice
+que los promedios de M1 y M2 *"have begun to be compiled since 1971"*, pero el
+tramo trae promedios desde 1967-01: **NO MEDIDO** cómo se obtuvieron los de
+1967 a 1970.
+
+**Definición y diferencias con el M2 actual** (literal, `notest31.htm`):
+M2+CDs, base 1998–2008: *"M2 + CDs = M1 + quasi-money + CDs. Quasi-money: Time
+deposits + fixed savings + installment savings + nonresident yen deposits +
+foreign currency deposits"*, con los mismos emisores que el M2 actual. Base
+hasta 1999-03: *"Foreign banks in Japan, foreign trust banks and Shinkin
+Central Bank are not included in financial institutions surveyed for M1 and
+M2+CDs."* La guía de 2026 (cap. 3, sección 3) resume la diferencia: *"the
+differences between the current and former series mainly derive from the
+differences in the range of money holders (securities companies, tanshi
+companies, and nonresidents are excluded in the current series) and the
+estimation method of some data. Apart from that, M2 and 'M2+CDs' (former
+series) have the same range of money issuers and financial assets (except for
+nonresident yen deposits)."* Y: *"it may be reasonable to analyze M2 from 1967
+onward using data of 'M2+CDs' in the former series"*. El *Final Draft* (sección
+3.6.1) dice lo contrario de un empalme: *"it is not appropriate to prepare
+long-term retrospective data linking the new and present balance figures,
+which have different definitions, using a connected index etc."*; y explica
+(3.6.2) por qué los datos retroactivos empiezan en 2003-04: *"average balance
+data on postal savings are only available since the launch of Japan Post
+(April 2003)"*.
+
+**Quiebres y superposición** (API del BoJ, 2026-10-07):
+
+- Serie antigua termina en 2008-04; la nueva empieza en 2003-04: **61 meses
+  comunes**. El M2 nuevo queda por debajo de M2+CDs entre 0.422 % (2003-04:
+  6.767.067 contra 6.795.761) y 0.590 %, media 0.501 %; 2008-03: 7.299.474
+  contra 7.340.702 (−0.562 %). La diferencia crece con el tiempo.
+- Dentro de la serie antigua, 12 meses comunes entre los dos tramos
+  (1998-04 a 1999-03): el tramo con bancos extranjeros queda entre 0.410 % y
+  0.483 % por encima (1998-04: 5.919.793 contra 5.892.568).
+- 1979-05 nacen los CD (guía, cap. 1): el componente CD empieza ese mes
+  (1.716) y antes no existe. **No es un quiebre de la serie:** es un cambio de
+  nombre del agregado sin cambio de perímetro; lo que D0.5 llama "quiebre de
+  mayo de 1979" debería reescribirse así.
+- 2003-04, giro postal (`ntms07.htm`): afecta a M3+CDs y a la liquidez amplia,
+  no a M2+CDs.
+- Identidad M1 + cuasidinero + CD = M2+CDs: cuadra en los 121 meses del tramo
+  1998–2008 y, en el tramo 1967–1999, desde 1974-10; **falla de 1967-01 a
+  1974-09** (M2+CDs supera a la suma entre 86 y 313, del orden de 0.03 % a
+  0.1 %; por ejemplo 1967-01: 282.500 contra 282.344). **NO MEDIDO** por qué.
+- La tabla de comparación a marzo de 2008 que anuncia el aviso de 2008-06-03
+  ya no está en la página (0 tablas en el HTML): **NO MEDIDO** la cifra
+  oficial; se reemplaza por el cálculo con la API (−0.562 % en 2008-03).
+- El propio BoJ empalma su serie interanual `MAM1YAM2M2MO` (desde 1968-01)
+  usando `MAMS1ANM2C` hasta 1999-03, `MAMS3ANM2C` hasta 2004-03 y el M2 nuevo
+  desde 2004-04, sin ajuste de nivel: cada tramo contra su propio año
+  anterior. Verificado: 0 meses fuera de ±0.05 puntos en 704.
+
+**Segunda fuente.** FRED `MYAGM2JPM189N` ("M2 for Japan", FMI, *International
+Financial Statistics*, 1967-01 a 2017-02, sin ajuste, múltiplos de 10⁸ yenes;
+la ficha dice *"Copyright © 2016, International Monetary Fund. Reprinted with
+permission"*) reproduce exactamente los dos tramos antiguos: con tolerancia
+±0.5 en 100 millones de yenes, declarada antes de comparar, **435 de 435
+meses** iguales (1967-01 a 1998-03 contra `MAMS1ANM2C`; 1998-04 a 2003-03
+contra `MAMS3ANM2C`); coincide con el M2 nuevo hasta 2012-10 y difiere después
+(revisiones del BoJ). **El tablero de e-Stat no tiene M2+CDs** (su API, en
+inglés y en japonés, solo devuelve el M2 actual, su interanual y la liquidez
+amplia). Los términos del FMI para ese crudo: **NO LEÍDOS**.
+
+**Implicaciones para la suma de tres economías.** Verificado en
+`serie_D0.csv`: `m2_eeuu` desde 1959-01, `m2_eurozona` desde 1980-01
+(estimación hasta 1997-08), `jpy_por_usd` desde 1971-01, `usd_por_eur` desde
+1999-01. **El cuello de botella es el tipo de cambio del euro, 1999-01,** no
+Japón: con M2+CDs el agregado podría retroceder de 2003-04 a 1999-01 (51
+meses), todos del tramo `MAMS3ANM2C`, el que comparte emisores con el M2
+actual. El salto que heredaría en 2003-04 es el 0.422 % de la parte japonesa:
+unos 23,8 de los 17.237,89 miles de millones de USD del agregado de ese mes,
+el 0.14 %. Japón solo, en USD, podría ir desde 1971-01.
+
+**Propuesta, para aprobar o rechazar.**
+
+1. Dos series nuevas, separadas y sin empalmar (A-D0-6): `m2cd_japon_1998_2008`
+   (`MAMS3ANM2C`, 1998-04 a 2008-04) y `m2cd_japon_1967_1999` (`MAMS1ANM2C`,
+   1967-01 a 1999-03), con los nombres literales del BoJ en inglés y japonés,
+   el rótulo "M2+CDs (Money Supply)" y nunca "M2" solo; estado **dato**;
+   promedio de saldos del mes, sin ajustar, 100 millones de yenes; quiebres en
+   la ficha: 1979-05 (nombre, sin cambio de perímetro), 1998-04 (perímetro:
+   diferencia de 0.41 % a 0.48 % en 12 meses comunes), 2003-04 (empieza el M2
+   nuevo: 61 meses comunes, de 0.42 % a 0.59 % por debajo). No hace falta
+   ninguna descarga nueva: `DESCARGA_BOJ_M2` ya pide los cuatro códigos y el
+   crudo del 2026-10-05 los trae. Misma licencia (b), mismo crédito de la API
+   y mismo aviso pendiente (A-D0-8, D0.13).
+2. Gate contra FRED `MYAGM2JPM189N`, tolerancia ±0.5 en 100 millones de yenes
+   (la resolución con que FRED publica), con la declaración de que el
+   resultado ya se conoce, como A-D0-25 lo dice del balance de la Fed. El
+   crudo de FRED iría a `data/privado/` mientras no se lean los términos del
+   FMI. Controles, sin detener la corrida: la identidad de componentes (±0.5;
+   marcaría en disputa 1967-01 a 1974-09) y la variación interanual contra
+   `MAM1YAM2M2MO` (±0.05 puntos).
+3. El agregado, tres opciones: (a) no tocarlo; (b) un segundo agregado con
+   nombre propio desde 1999-01, con el quiebre de 2003-04 declarado y sin
+   corregir, como las ampliaciones de la Eurozona (A-D0-4); (c) extender
+   `agregado_usd` hacia atrás con el quiebre declarado y otro nombre para el
+   tramo anterior. En (b) y (c) cambia el mes base del tipo de cambio
+   constante (A-D0-11), lo que mueve toda esa columna: supuesto numerado y
+   changelog obligatorios.
+4. Supuestos nuevos que haría falta escribir: las series separadas y sus
+   nombres; el gate contra FRED con su declaración; qué hace el agregado; el
+   crudo del FMI como privado. Retoques: A-D0-6 (quitar "queda como decisión
+   pendiente") y el "quiebre de mayo de 1979" de D0.5.
+
+**Lo que queda abierto.** La anomalía 1967–1974 (candidata a consulta al BoJ:
+`post.rsd5@boj.or.jp` según la guía); los promedios de 1967–1970; qué cambió
+el 2017-12-29 (FRED, congelado en 2017-07, coincide con lo de hoy: no fueron
+valores del tramo antiguo); los términos del FMI; el tipo de cambio del euro
+antes de 1999 y del yen antes de 1971; y el aviso al BoJ, que vale igual para
+estas series.
+
 ### D0.6 China: M2
 
 La pregunta era si existe una fuente oficial con términos claros y descarga
