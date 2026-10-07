@@ -1666,6 +1666,13 @@ del repositorio, con su URL, fecha y SHA-256 en `denominador_descargas.csv`.
 Los CSV del BCE, del BoJ, de la OCDE y del BIS (China) se versionan en
 `data/raw/`, con su atribución en `data/raw/ATRIBUCION.md`.
 
+**Los bytes de un crudo son los de la fuente, sin conversión** (decisión del
+dueño del 2026-10-07). Todo `data/raw/` lleva `-text` en `.gitattributes`:
+git no normaliza saltos de línea al commitear ni al extraer, en ningún
+sistema, y el SHA-256 del manifiesto es el de esos bytes. Los cuatro crudos
+del 2026-10-05 que la fuente entregó con CRLF (los tres del BCE y el de la
+OCDE) se volvieron a guardar así; ningún hash cambió (changelog, "Cambios de
+supuestos").
 ## A-D0-28 · Las cifras puntuales de terceros van como "estimación de terceros", citadas y fuera de todo cálculo
 
 **Estado: supuesto.** Decisión del dueño del 2026-10-05.

@@ -11,6 +11,20 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-07 · A-D0-27 · Los crudos de `data/raw/` se guardan con los bytes
+  exactos que entregó la fuente; todo el directorio pasa a `-text` en
+  `.gitattributes`.** Decisión del dueño. Hasta hoy git normalizaba los
+  saltos de línea al commitear y los volvía a convertir al extraer en
+  Windows, y el test de los crudos contra el manifiesto (A-D0-30) fallaba.
+  Cambian los bytes versionados de cuatro crudos del 2026-10-05, que la
+  fuente entregó con CRLF y el repositorio guardaba con LF:
+  `bce_m2_ajustada`, `bce_m2_sin_ajustar`, `bce_balance_eurosistema` (copias
+  a mano del BCE) y `ocde_china_dinero_amplio`. **Ningún hash del manifiesto
+  cambia:** los publicados ya eran los de los bytes originales, y los tres
+  crudos del BoJ y el del BIS ya estaban guardados tal cual. Los tres CSV de
+  FRED de S2 no tienen hash publicado (A-S2-10) y quedan como estaban en el
+  repositorio. No cambia ningún valor publicado.
+
 - **2026-10-07 · A-D0-17, A-D0-19, A-D0-31 a A-D0-33 · El dinero de EE.UU.
   antes de 1959 pasa de NO MEDIDO a publicado, en dos series transcritas.**
   `dinero_eeuu_1892_1946` (79 fechas de balance, millones de USD, Tabla 9 de

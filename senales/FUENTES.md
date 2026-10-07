@@ -2992,15 +2992,16 @@ Ninguno se envió.
     consulta al BCE está redactada en D0.13.
 17. **El aviso al Banco de Japón** por el uso de su API, antes de desplegar el
     sitio con esas series (A-D0-8).
-18. **El test de los crudos contra el manifiesto falla en Windows** (visto el
-    2026-10-07, también en `main`): `core.autocrlf=true` convierte los CSV de
-    `data/raw/` a CRLF al extraerlos, y además los hashes publicados de
-    `bce_m2_ajustada`, `bce_m2_sin_ajustar`, `bce_balance_eurosistema` y
-    `ocde_china_dinero_amplio` del 2026-10-05 corresponden al contenido con
-    CRLF que entregó la fuente, mientras que el repositorio los guarda con LF.
-    Con cualquier extracción fallan unos u otros. Arreglarlo cambia hashes
-    publicados o crudos versionados: decisión del dueño. Las transcripciones
-    del tramo histórico ya están protegidas en `.gitattributes`.
+18. **El test de los crudos contra el manifiesto fallaba en Windows** (visto el
+    2026-10-07, también en `main`): `core.autocrlf=true` extraía los CSV de
+    `data/raw/` con CRLF, y los hashes publicados de `bce_m2_ajustada`,
+    `bce_m2_sin_ajustar`, `bce_balance_eurosistema` y
+    `ocde_china_dinero_amplio` del 2026-10-05 correspondían al contenido con
+    CRLF que entregó la fuente, mientras que el repositorio los guardaba con
+    LF. **Cerrado el mismo día por decisión del dueño:** el archivo canónico
+    son los bytes exactos de la fuente; todo `data/raw/` es `-text` y esos
+    cuatro crudos volvieron a sus bytes originales. Ningún hash cambió
+    (A-D0-27, changelog).
 
 ### D0.15 Lo que encontró el paso 1 (2026-10-06)
 
