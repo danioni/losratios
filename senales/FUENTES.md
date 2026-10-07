@@ -2026,11 +2026,13 @@ D0.10.6 proponía publicar y no se transcribió; y por qué la Junta imprimió
 | `MAMS3ANM2C` | M2+CDs, promedio, con bancos extranjeros | 1998-04 a 2008-04 |
 | `MAMS3ENM2C` | M2+CDs, fin de período, con bancos extranjeros | 1998-04 a 2008-03 |
 
-- **Quiebres declarados:** mayo de 1979 (nacen los certificados de depósito:
-  el agregado pasa a ser M2+CDs); abril de 1998 (entran como emisores los
-  bancos extranjeros en Japón y Shinkin Central Bank); junio de 2008, con
-  datos desde 2003-04 (el M2 nuevo cambia los tenedores: salen las sociedades
-  de valores, las compañías tanshi y los no residentes).
+- **Quiebres declarados:** abril de 1998 (entran como emisores los bancos
+  extranjeros en Japón, los fideicomisos extranjeros y Shinkin Central Bank:
+  cambio de tramo); junio de 2008, con datos desde 2003-04 (el M2 nuevo
+  cambia los tenedores: salen las sociedades de valores, las compañías tanshi
+  y los no residentes). Mayo de 1979 (nacen los certificados de depósito y el
+  agregado pasa a llamarse M2+CDs) es un cambio de nombre sin cambio de
+  perímetro, no un quiebre de la serie (D0.5.1).
 - **Superposición medida en la descarga.** M2 nuevo contra M2+CDs (promedio):
   61 meses comunes (2003-04 a 2008-04), con el M2 nuevo entre 0.42 % y 0.59 %
   por debajo. M2+CDs con y sin bancos extranjeros: 12 meses comunes (1998-04 a
@@ -2195,6 +2197,16 @@ el 0.14 %. Japón solo, en USD, podría ir desde 1971-01.
    nombres; el gate contra FRED con su declaración; qué hace el agregado; el
    crudo del FMI como privado. Retoques: A-D0-6 (quitar "queda como decisión
    pendiente") y el "quiebre de mayo de 1979" de D0.5.
+
+**Decisión del dueño (2026-10-07) y lo implementado.** Aprobado como series
+separadas sin empalme: `m2cd_japon_1967_1999` y `m2cd_japon_1998_2008`,
+estado dato, con sus quiebres (A-D0-34); gate contra FRED `MYAGM2JPM189N` con
+±0.5 en 100 millones de yenes, en el rango que la copia del FMI sigue a cada
+tramo, y el resultado declarado como conocido (A-D0-35); el agregado en USD
+de tres economías desde 1999-01, con Japón por tramos y el salto de 2003-04
+en la columna `quiebre`, sin euro sintético antes de esa fecha (A-D0-36). Los
+controles de identidad de componentes y de variación interanual no se
+implementaron: harían falta más códigos en la descarga del BoJ.
 
 **Lo que queda abierto.** La anomalía 1967–1974 (candidata a consulta al BoJ:
 `post.rsd5@boj.or.jp` según la guía); los promedios de 1967–1970; qué cambió
@@ -2973,6 +2985,7 @@ lo tiene que decir la ficha de cada serie.
 | M2 de la Eurozona | API del BCE | Anexo del comunicado mensual, último mes | Gate | ±0.5 miles de millones de EUR (el anexo redondea a la unidad) |
 | | | Banco de España, últimos tres meses | Control | Igualdad |
 | M2 de Japón | API del BoJ | Comunicado mensual en PDF, dos últimos meses | Gate | ±0.05 billones de yenes (el PDF publica un decimal) |
+| M2+CDs de Japón, dos tramos (A-D0-34) | API del BoJ, mismo crudo | FRED `MYAGM2JPM189N` (FMI, IFS), hasta 1998-03 el tramo viejo y de 1998-04 a 2003-03 el nuevo | Gate | ±0.5 en 100 millones de yenes (múltiplos de 10⁸ yenes en FRED); resultado conocido al fijarla (A-D0-35) |
 | | | e-Stat Dashboard, toda la historia | Control | Igualdad |
 | M2 de China (si se aprueba) | API de la OCDE | Tabla del PBoC, leída a mano | Control manual | Igualdad al millón de yuanes. Sin lectura, el mes sale "sin comparar" |
 | Balance del PBoC (si se aprueba) | BIS `WS_CBTA` | Tabla del PBoC, leída a mano | Control manual | Igualdad a 0.1 miles de millones de yuanes |

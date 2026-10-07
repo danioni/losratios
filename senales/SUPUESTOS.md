@@ -1354,8 +1354,9 @@ tramo siguen siendo los de aquel método (`FUENTES.md`, D0.13).
 
 El BoJ no construyó una serie larga enlazada porque no lo considera apropiado
 (`FUENTES.md`, D0.5). Tampoco se hace aquí. Las series anteriores (M2+CDs,
-1967-01 a 2008-04) están en el mismo crudo, y publicarlas aparte queda como
-decisión pendiente.
+1967-01 a 2008-04) están en el mismo crudo y **se publican aparte desde el
+2026-10-07**, en sus dos tramos y sin empalme (A-D0-34); el agregado las usa
+hasta 2003-03 con el quiebre declarado (A-D0-36).
 
 ## A-D0-7 · BCE: el dato se publica tal cual y con fuente; toda serie derivada se rotula como cálculo propio
 
@@ -1419,16 +1420,23 @@ definiciones que muestre comparabilidad.
 Japón en miles de millones de USD. EE.UU. ya está en USD. La Eurozona, saldo
 de fin de mes, se convierte con el USD por EUR del último día hábil del mes.
 Japón, promedio de saldos, se convierte con el promedio mensual de JPY por USD
-(G.5). El agregado empieza en 2003-04, el primer mes del M2 de Japón.
+(G.5). El agregado empezaba en 2003-04, el primer mes del M2 de Japón; desde
+el 2026-10-07 empieza en 1999-01, el primer mes del tipo de cambio del euro,
+con Japón por tramos (A-D0-36).
 
 ## A-D0-11 · El agregado a tipo de cambio constante usa el del primer mes común
 
 **Estado: supuesto.**
 
 La columna `agregado_usd_tc_constante` convierte cada mes con los tipos de
-cambio de 2003-04. La diferencia con `agregado_usd` es el efecto del tipo de
-cambio, mes a mes, sin estimar nada. Elegir otro mes de referencia cambia los
-niveles de esa columna, no los de la otra.
+cambio del primer mes común. La diferencia con `agregado_usd` es el efecto
+del tipo de cambio, mes a mes, sin estimar nada. Elegir otro mes de
+referencia cambia los niveles de esa columna, no los de la otra.
+
+**El mes de referencia cambió el 2026-10-07: de 2003-04 a 1999-01**, porque
+el agregado empieza ahora en 1999-01 (A-D0-36). Toda la columna a tipo de
+cambio constante cambia de nivel por eso; la columna a tipo de cambio de cada
+mes no cambia en los meses que ya existían.
 
 ## A-D0-12 · El agregado mezcla promedios y saldos de fin de mes; no se publica ningún ratio contra él
 
@@ -1778,3 +1786,74 @@ ninguna: la fila se publica con sus cinco valores tal cual y con la columna
 no entra a ninguna métrica, igual que los del control contra el FMI en la
 fase R (A-R0-20). La suma publicada (money stock + plazo) usa el money stock
 impreso, no la suma de componentes.
+
+## A-D0-34 · Las series antiguas de Japón (M2+CDs) se publican aparte, en sus dos tramos, sin empalme y sin llamarse M2
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07 (`FUENTES.md`, D0.5.1).
+
+| Serie | Código del BoJ | Rango | Qué cambia respecto del siguiente tramo |
+| --- | --- | --- | --- |
+| `m2cd_japon_1967_1999` | `MAMS1ANM2C` | 1967-01 a 1999-03 | sin los bancos extranjeros en Japón, los fideicomisos extranjeros ni Shinkin Central Bank; en los 12 meses comunes el tramo siguiente queda 0.41 % a 0.48 % por encima |
+| `m2cd_japon_1998_2008` | `MAMS3ANM2C` | 1998-04 a 2008-04 | el M2 actual (`m2_japon`) cambia los tenedores (salen sociedades de valores, tanshi y no residentes) y saca los depósitos en yenes de no residentes; en los 61 meses comunes queda 0.42 % a 0.59 % por debajo |
+
+- Nombre: "M2+CDs de Japón (Money Supply, …)", con el rótulo japonés
+  マネーサプライ en `FUENTES.md`; nunca "M2" a secas. Estado **dato**: son cifras
+  publicadas por el emisor, hoy congeladas (última actualización 2017-12-29).
+  Promedio de saldos del mes, sin ajustar, 100 millones de yenes (A-D0-1).
+- Quiebres en la ficha: 1979-05 (nacen los CD y el agregado pasa a llamarse
+  M2+CDs, sin cambio de perímetro: es un cambio de nombre, no de la serie),
+  1998-04 (perímetro: cambio de tramo) y 2003-04 (empieza el M2 actual).
+- La superposición se mide en cada corrida y se publica en la validación de la
+  ficha (meses comunes, mínimo, máximo y media de la diferencia); no se corrige.
+- Ninguna descarga nueva: `DESCARGA_BOJ_M2` ya pide los cuatro códigos de
+  M2+CDs. Misma licencia (b), mismo crédito de la API y mismo aviso pendiente
+  al BoJ (A-D0-8, D0.13).
+- Las versiones de fin de mes (`MAMS1ENM2C`, desde 1955-01) no se publican:
+  otra convención, y el agregado usa promedios.
+
+## A-D0-35 · El gate de las series antiguas de Japón es la copia del FMI en FRED, en el tramo que esa copia sigue, con igualdad del entero
+
+**Estado: supuesto.** Tolerancia fijada el 2026-10-07; el resultado se conocía al fijarla, y se dice.
+
+- Segunda fuente: FRED `MYAGM2JPM189N` ("M2 for Japan", FMI, *International
+  Financial Statistics*, 1967-01 a 2017-02, en yenes). Otro compilador que
+  republica el dato del BoJ, como e-Stat para el M2 actual. e-Stat no tiene
+  M2+CDs.
+- Tolerancia: **±0.5 en 100 millones de yenes**, la resolución con que FRED
+  publica (múltiplos de 10⁸ yenes): es exigir el mismo entero. Mínimo tres
+  meses (A-D0-25).
+- Rangos: FRED sigue al tramo sin bancos extranjeros **hasta 1998-03**, al
+  tramo con bancos extranjeros **de 1998-04 a 2003-03**, y al M2 actual desde
+  2003-04. Cada serie se compara solo en su rango; fuera de él no hay
+  contraste (los 12 meses de 1998-04 a 1999-03 de `m2cd_japon_1967_1999` y los
+  61 de 2003-04 a 2008-04 de `m2cd_japon_1998_2008` quedan sin comparar, y lo
+  dice la ficha). El rango es una observación del paso 0 (`FUENTES.md`,
+  D0.5.1), no una elección para que cuadre.
+- **El resultado ya se conocía:** el paso 0 midió 435 de 435 meses iguales.
+  La tolerancia no sale de ahí (es la resolución de FRED), pero la
+  comparación no es a ciegas, como A-D0-25 lo dice del balance de la Fed.
+- El crudo de FRED lleva derechos del FMI ("reprinted with permission") y los
+  términos del FMI no se leyeron: va a `data/privado/`, con URL, fecha y
+  SHA-256 en el manifiesto, como los demás contrastes (A-D0-27).
+
+## A-D0-36 · El agregado en USD empieza en 1999-01: Japón entra con M2+CDs hasta 2003-03 y con el M2 actual desde 2003-04, con el quiebre declarado
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07.
+
+- El primer mes es el del tipo de cambio del euro en el H.10 (1999-01). **No
+  se construye ningún euro sintético** anterior a esa fecha; la historia de la
+  Eurozona desde 1980 y la de Japón desde 1967 quedan como series, no como
+  agregado.
+- Japón entra por tramos (`TRAMOS_AGREGADO`): `m2cd_japon_1998_2008` hasta
+  2003-03 y `m2_japon` desde 2003-04, cada uno tal cual, sin factor. La
+  columna `serie_japon` dice qué serie entró cada mes, y la columna `quiebre`
+  lleva en 2003-04 el salto medido en ese mes: cuánto es el M2 nuevo respecto
+  de M2+CDs en porcentaje y en miles de millones de USD del agregado. Se
+  publica y no se corrige, como las ampliaciones de la Eurozona (A-D0-4).
+- El nombre del agregado deja de decir "M2 de tres economías": "Dinero amplio
+  de tres economías en USD: M2 de EE.UU. y de la Eurozona, y de Japón M2+CDs
+  hasta 2003-03 y M2 desde 2003-04".
+- El mes de referencia del tipo de cambio constante pasa de 2003-04 a 1999-01
+  (A-D0-11): toda esa columna cambia de nivel.
+- El tramo `m2cd_japon_1967_1999` no entra al agregado mientras el euro no
+  tenga tipo de cambio anterior a 1999.

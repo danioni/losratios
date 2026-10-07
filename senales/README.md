@@ -408,13 +408,14 @@ A-D0-29.
 | `m2_eeuu`, `m2_eeuu_sin_ajustar` | Junta de la Reserva Federal, H.6 (XML) | 1959-01 | promedio mensual de cifras diarias | miles de millones de USD |
 | `m2_eurozona`, `m2_eurozona_sin_ajustar` | BCE, conjunto BSI (copia a mano) | 1980-01; estimación hasta 1997-08 | saldo a fin de mes | millones de EUR |
 | `m2_japon` | Banco de Japón, Money Stock (API) | 2003-04 | promedio de saldos del mes | 100 millones de JPY |
+| `m2cd_japon_1967_1999`, `m2cd_japon_1998_2008` | Banco de Japón, Money Supply (M2+CDs, series discontinuadas; mismo crudo) | 1967-01 a 1999-03; 1998-04 a 2008-04 | promedio de saldos del mes; dos tramos sin empalme, no es M2 (A-D0-34) | 100 millones de JPY |
 | `dinero_amplio_china` | OCDE, DF_MONAGG ("M3" de la OCDE; emisor: PBoC) | 2004-01 | saldo a fin de mes | millones de CNY; **NO MEDIDO hasta una tercera lectura a mano** (A-D0-25) |
 | `balance_fed` | Junta, H.4.1 (XML), serie consolidada | 2002-12 | último miércoles del mes | millones de USD |
 | `balance_eurosistema` | BCE, conjunto ILM (copia a mano) | 1999-01 | último viernes del mes | millones de EUR |
 | `balance_boj` | Banco de Japón, Accounts (API) | 1998-04 | saldo a fin de mes | 100 millones de JPY |
 | `balance_pboc` | BIS, WS_CBTA (emisor: PBoC) | 2002-01 | saldo a fin de mes | **NO MEDIDO: sin validación externa** |
 | `usd_por_eur`, `jpy_por_usd`, `cny_por_usd` | Junta, H.10 (XML) | 1999-01, 1971-01, 1981-01 | promedio del mes y último día del mes | moneda por USD (el euro, USD por EUR) |
-| Agregado | cálculo propio: EE.UU. + Eurozona + Japón, sin ajustar | 2003-04 | mixta, declarada (A-D0-10) | miles de millones de USD |
+| Agregado | cálculo propio: EE.UU. + Eurozona + Japón, sin ajustar; Japón con M2+CDs hasta 2003-03 y M2 desde 2003-04, quiebre declarado (A-D0-36) | 1999-01 | mixta, declarada (A-D0-10) | miles de millones de USD |
 | `dinero_eeuu_1892_1946` | Junta, *Banking and Monetary Statistics* 1914–1941 (Tabla 9) y 1941–1970 (su continuación), transcritas dos veces | 1892-06-30 a 1946-12-31 | saldo del día de balance; anual hasta 1922, semestral desde 1923; no es M2 (A-D0-17, A-D0-31) | millones de USD |
 | `dinero_eeuu_1947_1958` | Junta, *Banking and Monetary Statistics* 1941–1970 (Tabla 1.1 A), transcrita dos veces | 1947-01 a 1958-12 | promedio mensual de cifras diarias, ajustada; no es M2 (A-D0-17, A-D0-31) | miles de millones de USD |
 | `dinero_eeuu_1947_1958_sin_ajustar` | la misma, Tabla 1.1 B | 1947-01 a 1958-12 | transcrita y controlada; **NO MEDIDO: sin validación externa** (A-D0-31) | miles de millones de USD |
@@ -463,7 +464,7 @@ MEDIDO en esa corrida y sigue con las demás.
 | `data/series/denominador_dinero.csv` | `mes, serie, valor, estado, quiebre`: las series de dinero publicadas, en su unidad nativa. `estado` es dato o estimación; `quiebre` dice qué cambió ese mes (ampliaciones, cambios de definición). |
 | `data/series/denominador_balances.csv` | `mes, serie, valor, fecha_origen, estado, quiebre`: los balances, con la fecha del dato semanal del que sale cada mes. |
 | `data/series/denominador_tipos_de_cambio.csv` | `mes, par, promedio_mensual, fin_de_mes, fecha_fin_de_mes, contraste`: los tres tipos de cambio; `contraste` dice si el mes está dentro del umbral del control contra el BIS o en disputa. |
-| `data/series/denominador_agregado.csv` | El agregado en USD, por economía y total, a tipo de cambio de cada mes y a tipo de cambio constante de 2003-04. |
+| `data/series/denominador_agregado.csv` | El agregado en USD, por economía y total, a tipo de cambio de cada mes y a tipo de cambio constante de 1999-01; `serie_japon` dice qué serie entró cada mes y `quiebre` declara el salto de 2003-04 (A-D0-36). |
 | `data/series/serie_D0.csv` | La ficha de cada serie: fuente, emisor, identificador, URL, unidad, convención, licencia, atribución, validación, supuestos, quiebres, rango. Incluye las series NO MEDIDO con su motivo. |
 | `data/series/denominador_descargas.csv` | El manifiesto: URL, fecha, bytes y SHA-256 de cada crudo, de fuente o de contraste. |
 | `data/series/denominador_ratios.csv`, `denominador_pares.csv` | Oro / M2 y BTC / M2 de EE.UU., con el formato de `ratios.csv` y `pares.csv`. |
@@ -507,6 +508,10 @@ tramo mensual. Los dos cerraron el 2026-10-07. La serie sin ajustar de
 
 ### Lo que estas series no dicen
 
+- Japón antes de 2003-04 es M2+CDs, otra estadística del BoJ con otro perímetro
+  de tenedores: en los 61 meses comunes el M2 actual queda 0.42 % a 0.59 % por
+  debajo. El agregado la usa hasta 2003-03 y lo declara mes a mes; no la
+  empalma (A-D0-34, A-D0-36).
 - No hay "M2 global". El agregado suma tres economías con tres definiciones de
   M2 y dos convenciones, y lo declara.
 - Ningún valor anterior al inicio de cada fuente oficial. La historia de EE.UU.
