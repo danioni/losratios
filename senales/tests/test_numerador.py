@@ -362,7 +362,13 @@ def _fecha_de_los_crudos() -> str:
 
 
 def test_la_corrida_es_idempotente_y_no_toca_la_red(tmp_path, monkeypatch):
-    """Dos corridas seguidas sobre los mismos crudos dejan los mismos bytes. Ningún pedido sale."""
+    """Dos corridas seguidas sobre los mismos crudos versionados dejan los mismos bytes. Ningún pedido sale.
+
+    Los contrastes (el HTML del Z.1, FRED) no viajan con el repositorio y el
+    pipeline los bajaría si faltan: aquí se desactivan y el directorio privado
+    apunta a uno vacío, para que el test dé lo mismo en cualquier máquina. Las
+    series que dependen de un gate de transporte quedan entonces NO MEDIDO.
+    """
     fecha = date.fromisoformat(_fecha_de_los_crudos())
     salidas = tmp_path / "series"
     salidas.mkdir()
@@ -371,13 +377,14 @@ def test_la_corrida_es_idempotente_y_no_toca_la_red(tmp_path, monkeypatch):
     monkeypatch.setattr(nm, "ARCHIVO_N0_DESCARGAS", salidas / "numerador_descargas.csv")
     monkeypatch.setattr(nm, "ARCHIVO_CHANGELOG", salidas / "CHANGELOG.md")
     monkeypatch.setattr(nm, "DIR_SERIES", salidas)
+    monkeypatch.setattr(nm, "DIR_CRUDO_PRIVADO", tmp_path / "privado")
+    monkeypatch.setattr(nm, "DESCARGAS_N0_CONTRASTE", ())
 
     def sin_red(*args, **kwargs):
         raise AssertionError("la corrida pidió algo a la red")
 
     monkeypatch.setattr(nm.fuentes_denominador, "reglas_de", sin_red)
     monkeypatch.setattr(nm.fuentes_precios, "_pedir", sin_red)
-    # Los contrastes privados pueden no estar en esta máquina: la corrida tiene que seguir igual.
     assert nm.correr(fecha) == 0
     primera = {r.name: r.read_bytes() for r in salidas.iterdir()}
     assert nm.correr(fecha) == 0
@@ -393,6 +400,9 @@ def test_la_corrida_es_idempotente_y_no_toca_la_red(tmp_path, monkeypatch):
     assert set(fichas["serie"]) == {s.clave for s in SERIES_N0} | {p.clave for p in PENDIENTES_N0}
     publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"])
     assert set(series["serie"]) == publicadas
+    # Sin el HTML del Z.1 no hay gate de transporte: esas series no se publican y la ficha dice por qué.
+    assert "acciones_eeuu_emision_neta_total_musd" not in publicadas
+    assert fichas.loc[fichas["serie"] == "acciones_eeuu_emision_neta_total_musd", "estado"].iloc[0] == "NO MEDIDO: sin validación externa"
     # BTC: lo que sale de los crudos del repositorio.
     btc = series.loc[series["serie"] == "btc_oferta_fin_de_anio_btc"].set_index("anio")["valor"]
     assert (btc.diff().dropna() > 0).all() and btc.max() < BTC_MAXIMO
