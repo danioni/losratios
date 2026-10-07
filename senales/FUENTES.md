@@ -4318,6 +4318,10 @@ changelog y README; commits pequeños y PR sin merge.
 
 ### N0.11 Validación propuesta
 
+> **Lo que cambió al implementar (paso 1, 2026-10-07): ver N0.15.** El gate de
+> viviendas pasó a ser la identidad de la propia tabla y FRED quedó como
+> control; la Tabla 7a no cerró y queda NO MEDIDO.
+
 Con la regla de `CLAUDE.md`: una segunda fuente por serie y una tolerancia
 escrita antes de ver el resultado. **Advertencia, como en D0.11:** el paso 0
 exige contrastar una muestra, así que varios resultados ya están a la vista.
@@ -4405,3 +4409,64 @@ Ninguno se envió.
   para alargar esa serie hacia atrás.
 - **El historial del sitio:** las frases que el encargo citó y no están en
   `master` (N0.0) podrían estar en un commit anterior; no se buscó.
+
+### N0.15 Lo que encontró el paso 1 (2026-10-07)
+
+El paso 1 (`numerador.py`, `fuentes_numerador.py`, el bloque N0 de
+`configuracion.py` y sus tests) se corrió el 2026-10-07 con los crudos de ese
+día. Lo que cambió respecto de la propuesta de N0.11, con el porqué, y lo que
+se leyó de más.
+
+**Lo que se leyó de más** (mismos hosts que N0.1, salvo que se diga; cada
+descarga quedó en el registro de `data/privado/n0_paso0/`):
+
+| Fuente | Qué | Resultado |
+| --- | --- | --- |
+| pubs.usgs.gov | *Mineral Commodity Summaries* 2024 y 2025, capítulos de oro y plata (`mcs2024-gold.pdf`, 743.608 bytes, SHA-256 `3b551dcc…`; `mcs2024-silver.pdf`, 808.370, `7c74bb6f…`; `mcs2025-gold.pdf`, 743.291, `d4ec1750…`; `mcs2025-silver.pdf`, 744.783, `1aa6e68c…`) | Fila "World total (rounded)" leída con `pdftotext -raw` y cotejada con la frase del texto: oro 2022 = 3060 y 2023e = 3000 (MCS 2024), 2023 = 3250 y 2024e = 3300 (MCS 2025); plata 2022 = 25600 y 2023e = 26000 (MCS 2024), 2023 = 25500 y 2024e = 25000 (MCS 2025). Con el MCS 2026 (N0.4.1, N0.5.1) completan 2022 a 2025 |
+| www.federalreserve.gov | Las tablas F51.1.s y D3.s en HTML (`F51_1_s.htm`, 159.833 bytes, SHA-256 `0b91363c…`; `D3_s.htm`, 102.357, `dbdd070b…`) | Gate de transporte de las dos series que faltaban. La D3.s viene traspuesta (períodos como filas) y con los `<th>` de los mnemónicos fuera de su `<tr>`; el lector toma el orden de los enlaces "SeriesAnalyzer" |
+| fred.stlouisfed.org | `https://fred.stlouisfed.org/data/ETOTALUSQ176N.txt` (las notas de la serie) | Respondió una página HTML, no el texto. No se usó |
+
+**Las revisiones del USGS entre ediciones.** La *Data Series 140* dice 3160 t
+de oro en 2022 y el MCS 2024 dice 3060; el MCS 2024 estimó 3000 para 2023 y el
+MCS 2025 publicó 3250; el MCS 2025 estimó 3300 para 2024 y el MCS 2026 publicó
+3280. En plata, 26000 estimado y 25500 final para 2023, 25000 estimado y
+25300 final para 2024. La serie toma la DS140 en todo su rango y después cada
+año de la edición más reciente que lo publica como final; nada se corrige y
+cada fila lleva la nota (A-N0-3).
+
+**Lo que cambió respecto de N0.11:**
+
+1. **El gate de viviendas no es FRED: es la identidad de la propia tabla.**
+   Antes de correr, la comparación de la Tabla 7a con la media de los cuatro
+   trimestres de FRED mostró diferencias de hasta 3.75 mil en 2001–2019 (en
+   siete años más que el redondeo de ±1 mil), y de 5 a 58 mil desde 2020 (la
+   Tabla 7a está en la Vintage 2025 y FRED no). FRED no reproduce los promedios
+   de la Tabla 7a y no se sabe por qué. Se fijó entonces, antes de correr, un
+   gate de transporte por construcción: "All housing units" = "Vacant" +
+   "Total occupied" en cada columna, ±1.5 mil (tres cifras redondeadas a
+   miles), y FRED pasó a control. La clase de FRED se decidió con ese resultado
+   a la vista, y queda dicho (A-N0-11).
+2. **La Tabla 7a no cerró su gate y queda NO MEDIDO.** En 2017 el total
+   (137221) difiere en 2 mil de la suma de vacantes (17381) y ocupadas
+   (119842); en 2016 difiere 1 y en 2018, 0. La Tabla 7 cerró en sus 66
+   columnas (máxima 1.0). La tolerancia no se tocó. Si el dueño prefiere que
+   esa identidad sea un control, es un cambio de supuesto (A-N0-11).
+3. **El BGS es control para los dos metales, con ±5 %**, como decidió el
+   dueño; la plata queda en disputa en 2020, 2021, 2022 y 2024 (2023 a 4.9 %)
+   y el oro pasa en los cinco años (máxima 4.92 %, en 2020). No se ajustó la
+   tolerancia (A-N0-4).
+4. **La *Data Series 140* entra por copia a mano.** El host de los xlsx
+   (`d9-wret.s3.us-west-2.amazonaws.com`) responde HTTP 403 al propio
+   `robots.txt`, y `fuentes_denominador.interpretar_robots` lee un 403 como
+   veda total, una lectura más estricta que la de N0.1 ("sin archivo legible,
+   sin reglas"). Se sigue la del código: el pipeline no pide esos archivos;
+   las copias del 2026-10-07 son las que se bajaron en el paso 0 (A-N0-14).
+5. **blockchain.com no entró como control** (alturas distintas, N0.3.3); queda
+   abierto, como la comparación del Z.1 con FRED y con el BIS.
+
+**Resultados de la corrida del 2026-10-07** (`CHANGELOG.md`, entrada
+"2026-10-07 · numerador"): 32 series publicadas de 34. BTC: gate cerrado en
+17 años, diferencia máxima 0.0004 %; 2025 tuvo 53082 bloques y 165881.25 BTC
+emitidos, igual al calendario. Z.1: cuatro gates cerrados (36, 36, 9 y 54
+comparaciones; máxima 0.049 contra 0.05). Tabla 7: cerró. Tabla 7a: no cerró
+(punto 2). Population Estimates contra la Tabla 7a: máxima 0.07 %.
