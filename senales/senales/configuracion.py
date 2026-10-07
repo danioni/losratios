@@ -1174,6 +1174,104 @@ SERIE_M2_JAPON = SerieD0(
     supuestos=("A-D0-1", "A-D0-6", "A-D0-8"),
     banda_plausible=(1_000_000.0, 100_000_000.0),
 )
+
+# A-D0-34: las series antiguas del BoJ (estadística "Money Supply", マネーサプライ;
+# el BoJ las rotula en inglés "(Reference) Money Stock"), separadas y sin
+# empalmar con el M2 actual (A-D0-6). Vienen en el mismo crudo que el M2.
+BOJ_CODIGO_M2CD_1967_1999 = "MAMS1ANM2C"
+BOJ_CODIGO_M2CD_1998_2008 = "MAMS3ANM2C"
+CLAVE_M2CD_1967_1999 = "m2cd_japon_1967_1999"
+CLAVE_M2CD_1998_2008 = "m2cd_japon_1998_2008"
+_SUP_M2CD = ("A-D0-1", "A-D0-6", "A-D0-8", "A-D0-34", "A-D0-35")
+SERIE_M2CD_JAPON_1967_1999 = SerieD0(
+    clave=CLAVE_M2CD_1967_1999,
+    nombre=(
+        "M2+CDs de Japón (Money Supply, sin bancos extranjeros en Japón; serie discontinuada por el "
+        "BoJ, 1967–1999)"
+    ),
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BOJ_M2,
+    identificador=BOJ_CODIGO_M2CD_1967_1999,
+    emisor="Banco de Japón",
+    unidad="100 millones de JPY",
+    convencion="promedio de saldos del mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_M2CD,
+    banda_plausible=(100_000.0, 10_000_000.0),
+    quiebres=(
+        Quiebre(
+            "1979-05",
+            "nacen los certificados de depósito y el agregado pasa a llamarse M2+CDs; el perímetro no cambia",
+        ),
+        Quiebre(
+            "1998-04",
+            "entran los bancos extranjeros en Japón, los fideicomisos extranjeros y Shinkin Central Bank: la "
+            "historia sigue en m2cd_japon_1998_2008, que en los 12 meses comunes queda entre 0.41 % y 0.48 % "
+            "por encima",
+        ),
+    ),
+)
+SERIE_M2CD_JAPON_1998_2008 = SerieD0(
+    clave=CLAVE_M2CD_1998_2008,
+    nombre=(
+        "M2+CDs de Japón (Money Supply, con bancos extranjeros en Japón; serie discontinuada por el "
+        "BoJ, 1998–2008)"
+    ),
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BOJ_M2,
+    identificador=BOJ_CODIGO_M2CD_1998_2008,
+    emisor="Banco de Japón",
+    unidad="100 millones de JPY",
+    convencion="promedio de saldos del mes",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_M2CD,
+    banda_plausible=(1_000_000.0, 100_000_000.0),
+    quiebres=(
+        Quiebre(
+            "2003-04",
+            "empieza el M2 de las Money Stock Statistics (m2_japon), con otro perímetro de tenedores y sin "
+            "los depósitos en yenes de no residentes; en los 61 meses comunes el M2 nuevo queda entre "
+            "0.42 % y 0.59 % por debajo",
+        ),
+    ),
+)
+
+# A-D0-35: la segunda fuente de las series antiguas es la copia del FMI en FRED
+# (International Financial Statistics, en yenes, múltiplos de 10^8). Se lee y se
+# compara; el crudo queda en data/privado mientras no se lean los términos del FMI.
+FRED_SERIE_FMI_M2_JAPON = "MYAGM2JPM189N"
+CONTRASTE_FRED_FMI_JAPON = Descarga(
+    clave="fred_fmi_m2_japon",
+    descripcion=(
+        "FRED, serie MYAGM2JPM189N: M2 de Japón según el FMI (International Financial Statistics), "
+        "sin ajustar, en yenes, 1967-01 a 2017-02"
+    ),
+    clase_licencia=CLASE_SIN_DECLARAR,
+    licencia=(
+        "FMI, derechos reservados; FRED la publica 'reprinted with permission'. Términos del FMI no "
+        "leídos. Solo contraste: no alimenta ninguna serie y su crudo no se versiona"
+    ),
+    url=URL_CSV.format(id=FRED_SERIE_FMI_M2_JAPON),
+    extension="csv",
+    atribucion="",
+    versionar=False,
+)
+# FRED publica múltiplos de 10^8 yenes: medio paso en 100 millones de yenes es
+# exigir el mismo entero. La copia del FMI sigue a cada tramo del BoJ en un
+# rango que se observó en el paso 0 (FUENTES.md, D0.5.1) y se declara aquí:
+# hasta 1998-03 al tramo sin bancos extranjeros, de 1998-04 a 2003-03 al tramo
+# con bancos extranjeros, y desde 2003-04 al M2 actual. Fuera de esos rangos
+# no se compara. El resultado de esta comparación ya se conocía al fijar la
+# tolerancia (435 meses iguales); la tolerancia no depende de él.
+TOLERANCIA_FRED_FMI_JAPON = 0.5
+RANGO_CONTRASTE_M2CD = {
+    CLAVE_M2CD_1967_1999: (None, "1998-03"),
+    CLAVE_M2CD_1998_2008: ("1998-04", "2003-03"),
+}
 # A-D0-9: no se llama M2. El nombre lleva el rótulo que le pone la OCDE, que
 # se lee del archivo en cada corrida. Se publica desde el primer mes en que el
 # PBoC tiene una tabla de oferta monetaria contra la cual se la comparó.
@@ -1306,6 +1404,8 @@ SERIE_CNY_POR_USD = _serie_cambio(
 )
 
 SERIES_DINERO = (
+    SERIE_M2CD_JAPON_1967_1999,
+    SERIE_M2CD_JAPON_1998_2008,
     SERIE_M2_EEUU,
     SERIE_M2_EEUU_SIN_AJUSTAR,
     SERIE_M2_EUROZONA,
@@ -1398,7 +1498,16 @@ ECONOMIAS_AGREGADO = (
     ("eurozona", "m2_eurozona_sin_ajustar", "usd_por_eur"),
     ("japon", "m2_japon", "jpy_por_usd"),
 )
-NOMBRE_AGREGADO = "M2 de tres economías (EE.UU., Eurozona y Japón), en USD"
+# A-D0-36: Japón entra al agregado por tramos, sin empalme: M2+CDs (con bancos
+# extranjeros) hasta 2003-03 y el M2 actual desde 2003-04. El salto de 2003-04
+# se declara en la columna quiebre, no se corrige. Con eso el agregado empieza
+# donde empieza el tipo de cambio del euro (1999-01); no se construye ningún
+# euro sintético anterior.
+TRAMOS_AGREGADO = {"japon": ((CLAVE_M2CD_1998_2008, "2003-03"), ("m2_japon", None))}
+NOMBRE_AGREGADO = (
+    "Dinero amplio de tres economías en USD: M2 de EE.UU. y de la Eurozona, y de Japón M2+CDs hasta "
+    "2003-03 y M2 desde 2003-04"
+)
 
 # --- Salidas -----------------------------------------------------------------
 
@@ -1424,8 +1533,10 @@ COLUMNAS_D0_AGREGADO = [
     "m2_eeuu_usd",
     "m2_eurozona_usd",
     "m2_japon_usd",
+    "serie_japon",
     "agregado_usd",
     "agregado_usd_tc_constante",
+    "quiebre",
     "estado",
 ]
 COLUMNAS_D0_FICHAS = [

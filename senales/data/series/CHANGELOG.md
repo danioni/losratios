@@ -23,6 +23,21 @@ cita.
   MEDIDO; en 1960-01 empieza el Pink Sheet y no se empalma. `series.csv`
   suma la ficha `oro_precio_oficial_usd`. No cambia ningún valor anterior.
 
+- **2026-10-07 · A-D0-6, A-D0-10, A-D0-11, A-D0-34 a A-D0-36 · Las series
+  antiguas de Japón (M2+CDs) se publican aparte y el agregado en USD empieza
+  en 1999-01.** Decisión del dueño. `m2cd_japon_1967_1999` (`MAMS1ANM2C`) y
+  `m2cd_japon_1998_2008` (`MAMS3ANM2C`) entran a `denominador_dinero.csv`
+  como dato, sin empalme, con gate contra la copia del FMI en FRED (±0.5 en
+  100 millones de yenes, igualdad del entero, en el rango que esa copia sigue
+  a cada tramo; resultado conocido al fijarla). `denominador_agregado.csv`
+  retrocede de 2003-04 a 1999-01 con Japón por tramos (M2+CDs hasta 2003-03,
+  M2 desde 2003-04), suma dos columnas (`serie_japon`, `quiebre`) y cambia de
+  nombre; **toda la columna a tipo de cambio constante cambia de nivel**
+  porque el mes de referencia pasa de 2003-04 a 1999-01 (A-D0-11). Los
+  valores a tipo de cambio de cada mes de 2003-04 en adelante no cambian por
+  esta decisión; lo que cambie viene de las revisiones de las fuentes en la
+  corrida del día, listadas en su entrada.
+
 - **2026-10-07 · A-D0-27 · Los crudos de `data/raw/` se guardan con los bytes
   exactos que entregó la fuente; todo el directorio pasa a `-text` en
   `.gitattributes`.** Decisión del dueño. Hasta hoy git normalizaba los
@@ -302,6 +317,13 @@ cita.
   Junto con el cambio se agregaron tests que fallan si el identificador `WDTGAL`
   deja de estar declarado en millones.
 
+## 2026-10-07 · ratios D0
+
+- Pares contra M2 de EE.UU.:
+  - Oro / M2 de EE.UU.: dato, 1960-01 a 2026-08, 800 meses; apto para métricas desde 1968-04 (691 meses, menos 10 con un valor en disputa)
+  - BTC / M2 de EE.UU.: dato, 2013-01 a 2026-08, 164 meses; apto para métricas desde 2013-01 (164 meses, menos 0 con un valor en disputa)
+- Nota: recalculados desde precios_mensuales.csv y denominador_dinero.csv, sin descargas
+
 ## 2026-10-07 · oro oficial
 
 - Tramos:
@@ -338,6 +360,80 @@ cita.
   - dinero_eeuu_1892_1946: gate contra Oficina del Censo de EE.UU., Historical Statistics of the United States, Colonial Times to 1957 (1960), capítulo X, series X 266-274 (PDF), 9 filas de junio leídas a mano cerró: 9 fechas de balance, 61 cifras, tolerancia igualdad en millones de USD
   - dinero_eeuu_1947_1958: gate contra NBER m14144c vía FRED (M1444CUSM027SNBR) cerró: 144 meses, tolerancia ±0.1 miles de millones de USD, diferencia máxima 0.1000; diferencia mediana 0.00
 - Revisiones de datos históricos: ninguna
+
+## 2026-10-07 · denominador
+
+- Descargas:
+  - junta_h6: https://www.federalreserve.gov/releases/h6/data/FRB_h6_xml.zip, sha256 7ab987141ee43c5bc940f917c0c6d14e7ae8b001bea053eba440f2b13e3c0d80, actualizada el 2026-09-23
+  - junta_h10: https://www.federalreserve.gov/releases/h10/data/FRB_h10_xml.zip, sha256 8b0642fb280b73e06eeaa062de7f00eb679ad0c9b508d67f5949557f3c09018d, actualizada el 2026-10-05
+  - junta_h41: https://www.federalreserve.gov/releases/h41/data/FRB_h41_xml.zip, sha256 1eb4daf1ff2966cb3c7083c9703e9cba9163bbb1d41a6e2ad1af6a0c94694fe2, actualizada el 2026-10-01
+  - bce_m2_ajustada: https://data-api.ecb.europa.eu/service/data/BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E?format=csvdata, sha256 b67f33549018ce47bca486a1ccac737429b6b24b3cf78f61dfef9c63b1f364ab, copia del 2026-10-05
+  - bce_m2_sin_ajustar: https://data-api.ecb.europa.eu/service/data/BSI/M.U2.N.V.M20.X.1.U2.2300.Z01.E?format=csvdata, sha256 b8aa09ee2d317382d5793c60774515753299d8eaa932ece9dce9cee067be7363, copia del 2026-10-05
+  - bce_balance_eurosistema: https://data-api.ecb.europa.eu/service/data/ILM/W.U2.C.T000000.Z5.Z01?format=csvdata, sha256 1d911aa8803869fbf5086dbbeb98f561735729eb463c06383cb4e6a69946ee70, copia del 2026-10-05
+  - boj_m2: https://www.stat-search.boj.or.jp/api/v1/getDataCode?format=csv&lang=en&db=MD02&code=MAM1NAM2M2MO,MAM1XAM2M2MO,MAM1NAM3M3MO,MAM1NEM3M3MO,MAMS3ANM2C,MAMS3ENM2C,MAMS1ANM2C,MAMS1ENM2C, sha256 3399258c91441e1a2fbb45a41b9be4124c4d46060f32a6b71f8b41591ef14e28
+  - boj_balance: https://www.stat-search.boj.or.jp/api/v1/getDataCode?format=csv&lang=en&db=BS01&code=MABJMTA,MABJMA5,MABJML1,MABJML11, sha256 56fa6cab48738135cb59a070fb5e7a8f6b221f5eac8bb55196dad648cfc9c158
+  - ocde_china_dinero_amplio: https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_MONAGG,/CHN.M.MABM.XDC.....?format=csvfilewithlabels, sha256 73ec664589151ff2d526d485eeb34de2ee10ac3d61d09b87d1955162bf25c93a
+  - bis_cbta_cn: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBTA/1.0/M.CN?format=csv, sha256 5e58f8aa8cec85e60b5d007585c2203fe0970a79bafe8b2e458c1bf9c4dd9ce3
+  - junta_h6_html: https://www.federalreserve.gov/releases/h6/current/default.htm, sha256 0cb49bc0d836c460a1b3d03471eef522605d617b332f114a2a8c8733b68f0860, actualizada el 2026-09-22
+  - fred_walcl: https://fred.stlouisfed.org/graph/fredgraph.csv?id=WALCL, sha256 1900a650f4256dd3635ca58adf33d7f1889d4777cc8c36a562f20542c24fa6f9, actualizada el 2026-10-01
+  - bis_cbta_us: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBTA/1.0/M.US?format=csv, sha256 f195b26a9bdb862942a0797917fbc2bb40aa8523e4f8f4e6f1baf15560896a21
+  - bde_m2_ajustada: https://www.bde.es/webbe/es/estadisticas/compartido/datos/csv/be0112.csv, sha256 8091dc2855f54594e6737c8a6a9891a235e5a261aa251308ae0f5dbcfd52de8c, actualizada el 2026-09-30
+  - bde_m2_sin_ajustar: https://www.bde.es/webbe/es/estadisticas/compartido/datos/csv/be0110.csv, sha256 d1f4294b5480d600151e7d1ce132929dfa35e0cbd0633508a8441d1521cb3eb6, actualizada el 2026-09-30
+  - bis_cbta_xm: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBTA/1.0/M.XM?format=csv, sha256 80e2e6506782a2acc08b5c453ccdda9f168bca79d33e4cda3d1a3afff30fb7ff
+  - estat_m2_japon: https://dashboard.e-stat.go.jp/api/1.0/Json/getData?Lang=EN&IndicatorCode=0702010200000010010, sha256 0cc907ef81a19f548e9ea5e28d95cceb343a33104a7112e04ec1def3881043b6
+  - fred_fmi_m2_japon: https://fred.stlouisfed.org/graph/fredgraph.csv?id=MYAGM2JPM189N, sha256 f88101d7cb47244df49b70e7581d16f003fb6ea9a29d7ce31a12040721214db2, actualizada el 2020-02-25
+  - bis_cbta_jp: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CBTA/1.0/M.JP?format=csv, sha256 273fa9135a25ebafb412a15ec5432e8f40511f3cd6268eb5c1031019422cf7f9
+  - bis_xru_xm: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/M.XM?format=csv, sha256 5635a8dcb98926b8dea0ac3e2f991e893e9448a4012793a063290be0a5e241dd
+  - bis_xru_jp: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/M.JP?format=csv, sha256 02a7fbcb75b1aafe40bc64af0d3b5b1ae2a9103c2d63445d02e32aced012a8d5
+  - bis_xru_cn: https://stats.bis.org/api/v2/data/dataflow/BIS/WS_XRU/1.0/M.CN?format=csv, sha256 fc45e7fe40ebe05dc69715628d8e872dcababdb9e6b43df82ba964ba3f27b577
+- Series:
+  - M2+CDs de Japón (Money Supply, sin bancos extranjeros en Japón; serie discontinuada por el BoJ, 1967–1999): se publica, 1967-01 a 1999-03, 387 meses (100 millones de JPY; promedio de saldos del mes; A-D0-1 A-D0-6 A-D0-8 A-D0-34 A-D0-35)
+  - M2+CDs de Japón (Money Supply, con bancos extranjeros en Japón; serie discontinuada por el BoJ, 1998–2008): se publica, 1998-04 a 2008-04, 121 meses (100 millones de JPY; promedio de saldos del mes; A-D0-1 A-D0-6 A-D0-8 A-D0-34 A-D0-35)
+  - M2 de EE.UU.: se publica, 1959-01 a 2026-08, 812 meses (miles de millones de USD; promedio mensual de cifras diarias; A-D0-1 A-D0-2 A-D0-3)
+  - M2 de EE.UU., sin ajustar: se publica, 1959-01 a 2026-08, 812 meses (miles de millones de USD; promedio mensual de cifras diarias; A-D0-1 A-D0-2 A-D0-3)
+  - M2 de la Eurozona: se publica, 1980-01 a 2026-08, 560 meses (millones de EUR; saldo a fin de mes; A-D0-1 A-D0-4 A-D0-5 A-D0-7)
+  - M2 de la Eurozona, sin ajustar: se publica, 1980-01 a 2026-08, 560 meses (millones de EUR; saldo a fin de mes; A-D0-1 A-D0-4 A-D0-5 A-D0-7)
+  - M2 de Japón: se publica, 2003-04 a 2026-08, 281 meses (100 millones de JPY; promedio de saldos del mes; A-D0-1 A-D0-6 A-D0-8)
+  - Dinero amplio de China (M3 de la OCDE): no se publica: NO MEDIDO: sin validación externa
+  - Balance de la Reserva Federal: total de activos, consolidado: se publica, 2002-12 a 2026-09, 286 meses (millones de USD; nivel del último miércoles del mes; A-D0-1 A-D0-14 A-D0-15)
+  - Balance del Eurosistema: total de activos: se publica, 1999-01 a 2026-09, 333 meses (millones de EUR; cierre del último viernes del mes; A-D0-1 A-D0-7 A-D0-14 A-D0-16)
+  - Balance del Banco de Japón: total de activos: se publica, 1998-04 a 2026-08, 341 meses (100 millones de JPY; saldo a fin de mes; A-D0-1 A-D0-8 A-D0-16)
+  - Balance del Banco Popular de China: total de activos (BIS): no se publica: NO MEDIDO: sin validación externa
+  - Tipo de cambio: USD por EUR: se publica, 1999-01 a 2026-09, 333 meses (USD por EUR; tipo comprador del mediodía en Nueva York: promedio del mes y último día del mes; A-D0-1 A-D0-10)
+  - Tipo de cambio: JPY por USD: se publica, 1971-01 a 2026-09, 669 meses (JPY por USD; tipo comprador del mediodía en Nueva York: promedio del mes y último día del mes; A-D0-1 A-D0-10)
+  - Tipo de cambio: CNY por USD: se publica, 1981-01 a 2026-09, 549 meses (CNY por USD; tipo comprador del mediodía en Nueva York: promedio del mes y último día del mes; A-D0-1 A-D0-10)
+  - Efectivo y depósitos en bancos comerciales de EE.UU., fechas de balance (1892-1946): se publica, 1892-06 a 1946-12, 79 meses (millones de USD; saldo del día de balance (call date); anual, 30 de junio, hasta 1922; semestral, junio y diciembre, desde 1923; A-D0-17 A-D0-18 A-D0-19 A-D0-31 A-D0-32 A-D0-33)
+  - Efectivo y depósitos en bancos comerciales de EE.UU., mensual, ajustada por estacionalidad (1947-1958): se publica, 1947-01 a 1958-12, 144 meses (miles de millones de USD; promedio mensual de cifras diarias; A-D0-17 A-D0-19 A-D0-31 A-D0-32 A-D0-33)
+  - Efectivo y depósitos en bancos comerciales de EE.UU., mensual, sin ajustar (1947-1958): no se publica: NO MEDIDO: sin validación externa; la segunda fuente (NBER m14144b, 1955-1969) no está en FRED y data.nber.org veda a los programas (A-D0-31)
+  - Riqueza: valor de los inmuebles: no se publica: NO MEDIDO: no hay una serie global con licencia abierta; la estimación de Savills va como cifra citada (A-D0-24, A-D0-28)
+  - Riqueza: oro sobre la superficie (cantidad): no se publica: NO MEDIDO: la única serie de existencias es del World Gold Council, clase (c); su cifra va como cifra citada (A-D0-24, A-D0-28)
+  - Riqueza total: no se publica: NO MEDIDO: los informes de riqueza global son (c) o no se pudieron leer (A-D0-24)
+  - Riqueza: títulos de deuda en circulación: no se publica: NO MEDIDO: pendiente de implementar la suma de las economías que declaran al BIS (A-D0-22)
+  - Riqueza: capitalización bursátil: no se publica: NO MEDIDO: pendiente de implementar la lectura del agregado WLD del Banco Mundial (A-D0-23)
+  - Riqueza: capitalización de BTC: no se publica: NO MEDIDO: pendiente de implementar la lectura de CapMrktCurUSD de Coin Metrics (A-R0-4)
+- Validación:
+  - m2_eeuu: gate contra la Tabla 1 del H.6 en HTML cerró: 17 meses, tolerancia ±0.05 miles de millones de USD, diferencia máxima 0.0000
+  - m2_eeuu_sin_ajustar: gate contra la Tabla 1 del H.6 en HTML cerró: 17 meses, tolerancia ±0.05 miles de millones de USD, diferencia máxima 0.0000
+  - balance_fed: gate contra BIS WS_CBTA (EE.UU.) cerró: 284 meses, tolerancia ±5 millones de USD, diferencia máxima 0.0000; control contra FRED WALCL: 1242 semanas, todas iguales
+  - m2_eurozona: gate contra el Banco de España (cuadros 1.12 y 1.10) cerró: 3 meses, tolerancia ±0.5 millones de EUR, diferencia máxima 0.0000
+  - m2_eurozona_sin_ajustar: gate contra el Banco de España (cuadros 1.12 y 1.10) cerró: 3 meses, tolerancia ±0.5 millones de EUR, diferencia máxima 0.4867
+  - balance_eurosistema: gate contra BIS WS_CBTA (zona del euro), viernes de la última semana hábil cerró: 332 meses, tolerancia ±0.5 millones de EUR, diferencia máxima 0.0000
+  - m2_japon: gate contra e-Stat Statistics Dashboard cerró: 281 meses, tolerancia ±0.5 100 millones de JPY, diferencia máxima 0.0000
+  - m2cd_japon_1967_1999: gate contra FRED MYAGM2JPM189N (FMI, IFS), desde el inicio a 1998-03 cerró: 375 meses, tolerancia ±0.5 100 millones de JPY, diferencia máxima 0.0000; superposición con m2cd_japon_1998_2008: 12 meses, m2cd_japon_1998_2008 entre +0.410 % y +0.483 % (media +0.450 %); no se empalma
+  - m2cd_japon_1998_2008: gate contra FRED MYAGM2JPM189N (FMI, IFS), 1998-04 a 2003-03 cerró: 60 meses, tolerancia ±0.5 100 millones de JPY, diferencia máxima 0.0000; superposición con m2_japon: 61 meses, m2_japon entre -0.590 % y -0.422 % (media -0.501 %); no se empalma
+  - balance_boj: gate contra BIS WS_CBTA (Japón) cerró: 340 meses, tolerancia ±0.5 100 millones de JPY, diferencia máxima 0.0000
+  - dinero_amplio_china: sin comparar contra lecturas a mano de una segunda fuente (hay 2 anclas y hacen falta 3)
+  - balance_pboc: sin comparar contra lecturas a mano de una segunda fuente (hay 0 anclas y hacen falta 3)
+  - usd_por_eur: control contra BIS WS_XRU, promedio mensual cerró: 332 meses, tolerancia ±0.5 %, diferencia máxima 0.6841; en disputa (control): 1 meses
+  - jpy_por_usd: control contra BIS WS_XRU, promedio mensual cerró: 668 meses, tolerancia ±0.5 %, diferencia máxima 0.4879
+  - cny_por_usd: control contra BIS WS_XRU, promedio mensual cerró: 548 meses, tolerancia ±0.5 %, diferencia máxima 0.1687
+- Agregado:
+  - Dinero amplio de tres economías en USD: M2 de EE.UU. y de la Eurozona, y de Japón M2+CDs hasta 2003-03 y M2 desde 2003-04: 1999-01 a 2026-08, 332 meses; tipo de cambio constante del 1999-01 (A-D0-11)
+  - quiebre declarado: Japón pasa de m2cd_japon_1998_2008 a m2_japon, sin empalme: en este mes m2_japon es -0.422 % respecto de m2cd_japon_1998_2008, -23.9 miles de millones de USD del agregado
+- Revisiones de datos históricos:
+  - 281 revisiones: la fuente reescribió la historia; se resumen por serie
+  - agregado_usd_tc_constante: 281 meses, de 2003-04-01 a 2026-08-01
+- Nota: las series del BCE entran por copia bajada a mano (A-D0-29); los ZIP de la Junta y las fuentes de contraste quedan fuera del repositorio, con su hash en el manifiesto (A-D0-27)
 
 ## 2026-10-05 · ratios D0
 
