@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from fractions import Fraction
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -1855,4 +1856,202 @@ SERIES_DINERO_HISTORICO = (SERIE_DINERO_1892_1946, SERIE_DINERO_1947_1958, SERIE
 NO_MEDIDO_SIN_AJUSTAR_1947_1958 = (
     "NO MEDIDO: sin validación externa; la segunda fuente (NBER m14144b, 1955-1969) no está en FRED "
     "y data.nber.org veda a los programas (A-D0-31)"
+)
+
+
+# ---------------------------------------------------------------------------
+# Fase R, contexto histórico: el precio oficial del oro en EE.UU. antes de 1960
+# (A-R0-21 a A-R0-26). Fijado por ley, no observado en un mercado: es una serie
+# de contexto, fuera de las métricas, sin empalme con el Pink Sheet.
+#
+# Lo leído de cada norma, con página, está en FUENTES.md, sección 4.8.
+# ---------------------------------------------------------------------------
+
+ARCHIVO_ORO_OFICIAL = DIR_SERIES / "oro_precio_oficial.csv"
+CLAVE_ORO_OFICIAL = "oro_precio_oficial_usd"
+ETIQUETA_ORO_OFICIAL = "precio oficial fijado por ley, no precio de mercado"
+COLUMNAS_ORO_OFICIAL = [
+    "mes",
+    "oro_oficial_usd_oz",
+    "etiqueta",
+    "norma",
+    "vigente_desde",
+    "convertibilidad",
+    "estado",
+    "apto_metricas",
+    "cita",
+    "nota",
+]
+GRANOS_POR_ONZA_TROY = 480
+# A-R0-23: cuatro decimales, como los publica la Casa de Moneda.
+DECIMALES_ORO_OFICIAL = 4
+
+
+@dataclass(frozen=True)
+class TramoOroOficial:
+    """Un tramo del precio oficial: la norma que fija el peso del dólar en oro.
+
+    El precio por onza troy se deriva en el código, con fracciones exactas:
+    480 granos por onza ÷ (granos del dólar × ley de fino). No se teclea.
+    """
+
+    desde: str  # primer mes publicado con este precio, "AAAA-MM" (A-R0-22)
+    hasta: str  # último mes publicado con este precio
+    granos: Fraction  # granos de oro estándar por dólar
+    fino: Fraction  # ley de fino del oro estándar
+    norma: str
+    vigente_desde: str  # fecha y hora de vigencia de la norma, literal
+    cita: str
+    fuente_url: str
+
+    @property
+    def precio(self) -> Fraction:
+        return Fraction(GRANOS_POR_ONZA_TROY) / (self.granos * self.fino)
+
+
+_FRASER_TESORO_1900 = "https://fraser.stlouisfed.org/files/docs/publications/treasar/AR_TREASURY_1900.pdf"
+_FRASER_BOLETIN_1934_02 = "https://fraser.stlouisfed.org/files/docs/publications/FRB/1930s/frb_021934.pdf"
+
+# A-R0-24: la serie empieza con la ley de 1900 porque es la primera norma que
+# se pudo leer; la paridad venía de antes (sección 3511 de los Revised
+# Statutes), y ese tramo anterior queda NO MEDIDO hasta leer esas leyes.
+TRAMOS_ORO_OFICIAL = (
+    TramoOroOficial(
+        desde="1900-03",
+        hasta="1934-01",
+        granos=Fraction(129, 5),  # 25.8 granos
+        fino=Fraction(9, 10),
+        norma="Gold Standard Act, ley del 14 de marzo de 1900, sección 1 (dólar de 25,8 granos de oro de 9/10 de fino)",
+        vigente_desde="1900-03-14",
+        cita=(
+            "Annual Report of the Secretary of the Treasury, 1900, informe del Director de la Casa de Moneda, "
+            "'The gold-standard law', p. 345; texto literal de la sección 1"
+        ),
+        fuente_url=_FRASER_TESORO_1900,
+    ),
+    TramoOroOficial(
+        desde="1934-02",
+        hasta="1959-12",
+        granos=Fraction(320, 21),  # 15 5/21 granos
+        fino=Fraction(9, 10),
+        norma=(
+            "Proclamación presidencial del 31 de enero de 1934 (sección 43(b)(2) del Título III de la ley del "
+            "12 de mayo de 1933, reformada por la sección 12 de la Gold Reserve Act del 30 de enero de 1934): "
+            "dólar de 15 5/21 granos de oro de 9/10 de fino"
+        ),
+        vigente_desde="1934-01-31 15:10, hora del Este",
+        cita="Federal Reserve Bulletin, febrero de 1934, pp. 68-69; la fracción se comprobó en la imagen",
+        fuente_url=_FRASER_BOLETIN_1934_02,
+    ),
+)
+
+# A-R0-22: enero de 1934 lleva el precio viejo. Es la convención publicada por
+# la Junta: "calculated at the rate of $20.67 per fine ounce of gold through
+# January 1934 and $35 per fine ounce thereafter" (BMS 1914-1941, p. 522).
+CONVENCION_MES_DE_CAMBIO = (
+    "el mes en que cambia la norma lleva el precio vigente al cierre del mes anterior, como la Junta: "
+    "'$20.67 ... through January 1934 and $35 ... thereafter' (Banking and Monetary Statistics 1914-1941, p. 522)"
+)
+
+# A-R0-26: la paridad legal siguió en 20,67 mientras no hubo convertibilidad, y
+# el precio administrado del oro recién extraído de 1933-34 es otra cosa.
+CONVERTIBILIDAD_ORO_OFICIAL = (
+    ("1900-03", "1933-02", "sí"),
+    (
+        "1933-03",
+        "1934-01",
+        "no: paridad legal sin convertibilidad desde el 6 de marzo de 1933 (feriado bancario); exportación con "
+        "licencia desde el 10 de marzo; tenencia privada prohibida desde el 5 de abril",
+    ),
+    (
+        "1934-02",
+        "1959-12",
+        "solo bancos centrales extranjeros y usos licenciados: el Tesoro compra a 35 menos 1/4 % y vende a 35 más "
+        "1/4 % (Federal Reserve Bulletin, febrero de 1934, pp. 67-69)",
+    ),
+)
+NOTA_PRECIO_ADMINISTRADO = (
+    "del 8 de septiembre de 1933 al 31 de enero de 1934 rigió además un precio administrado, diario, para el oro "
+    "recién extraído (29,00 a 34,45 USD por onza; Annual Report of the Secretary of the Treasury 1934, anexo 26, "
+    "p. 205): no es el precio oficial y no está en esta serie"
+)
+MESES_PRECIO_ADMINISTRADO = ("1933-09", "1934-01")
+
+
+@dataclass(frozen=True)
+class AnclaOroOficial:
+    """Una cifra publicada por otra institución, leída a mano, contra la que cierra el precio derivado."""
+
+    mes: str  # un mes del tramo que confirma
+    valor: float  # USD por onza troy de oro fino, como lo imprime la fuente
+    fuente: str
+    fuente_url: str
+    fecha_lectura: date
+
+
+# A-R0-25: tolerancia ±0.005 USD (medio centavo), declarada el 2026-10-07 antes
+# de comparar; las cifras publicadas con dos decimales caben en ella y las de
+# cuatro, también. El gate también exige que el primer mes a 35 sea 1934-02.
+TOLERANCIA_ORO_OFICIAL = 0.005
+PRIMER_MES_A_35 = "1934-02"
+_LEIDO_ORO = date(2026, 10, 7)
+ANCLAS_ORO_OFICIAL = (
+    AnclaOroOficial(
+        "1933-06",
+        20.67,
+        "Tesoro de EE.UU., Annual Report of the Secretary of the Treasury 1934, p. 120: compras de las casas de moneda "
+        "'at $20.67+ per fine ounce' en el ejercicio 1934",
+        "https://fraser.stlouisfed.org/title/annual-report-secretary-treasury-state-finances-194/annual-report-secretary-treasury-state-finances-fiscal-year-ended-june-30-1934-5587",
+        _LEIDO_ORO,
+    ),
+    AnclaOroOficial(
+        "1934-06",
+        35.0,
+        "Tesoro de EE.UU., Annual Report of the Secretary of the Treasury 1934, p. 120: compras 'at $35 per fine ounce'",
+        "https://fraser.stlouisfed.org/title/annual-report-secretary-treasury-state-finances-194/annual-report-secretary-treasury-state-finances-fiscal-year-ended-june-30-1934-5587",
+        _LEIDO_ORO,
+    ),
+    AnclaOroOficial(
+        "1931-06",
+        20.6718,
+        "Casa de Moneda de EE.UU., Annual Report of the Director of the Mint, ejercicio 1935, p. 91: precio por onza fina "
+        "a la paridad antigua, '$20.6718'",
+        "https://fraser.stlouisfed.org/title/annual-report-director-mint-182/annual-report-director-mint-fiscal-year-ended-june-30-1935-5760",
+        _LEIDO_ORO,
+    ),
+    AnclaOroOficial(
+        "1935-06",
+        35.0,
+        "Casa de Moneda de EE.UU., Annual Report of the Director of the Mint, ejercicio 1935, p. 91: paridad nueva, '$35.0000'",
+        "https://fraser.stlouisfed.org/title/annual-report-director-mint-182/annual-report-director-mint-fiscal-year-ended-june-30-1935-5760",
+        _LEIDO_ORO,
+    ),
+    AnclaOroOficial(
+        "1934-01",
+        20.67,
+        "Junta de la Reserva Federal, Banking and Monetary Statistics 1914-1941, p. 522: '$20.67 per fine ounce of gold "
+        "through January 1934 and $35 per fine ounce thereafter'",
+        "https://fraser.stlouisfed.org/title/banking-monetary-statistics-1914-1941-38",
+        _LEIDO_ORO,
+    ),
+    AnclaOroOficial(
+        "1946-12",
+        35.0,
+        "FMI, paridad declarada por EE.UU. el 18 de diciembre de 1946: 0,888671 gramos de oro fino por dólar, '35.0000' "
+        "(Federal Reserve Bulletin, enero de 1947, p. 12)",
+        "https://fraser.stlouisfed.org/files/docs/publications/FRB/1940s/frb_011947.pdf",
+        _LEIDO_ORO,
+    ),
+)
+MINIMO_ANCLAS_ORO_OFICIAL = MINIMO_ANIOS_GATE
+
+# El quiebre con el Pink Sheet: a la izquierda un precio fijado por ley; a la
+# derecha, desde 1960-01, el promedio mensual del fixing de Londres (A-R0-7).
+QUIEBRE_ORO_OFICIAL = (
+    "1960-01: termina esta serie y empieza el oro del Pink Sheet (promedio mensual del fixing de Londres, "
+    "A-R0-7); son dos series distintas y no se empalman"
+)
+NO_MEDIDO_ORO_ANTES_DE_1900 = (
+    "antes de 1900-03: NO MEDIDO hasta verificar la base legal (sección 3511 de los Revised Statutes y las leyes "
+    "de 1834, 1837 y 1873, no leídas: loc.gov exige una verificación humana)"
 )
