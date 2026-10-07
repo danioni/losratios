@@ -541,6 +541,186 @@ y fuera de las métricas. Lo que corresponde es reportarlo al Banco Mundial
 
 ---
 
+### 4.8 El precio oficial del oro antes de 1960 — paso 0 (2026-10-07)
+
+**Lo que se pidió.** Verificar, leyendo fuentes primarias de dominio público,
+el precio oficial del oro en USD por onza troy y sus fechas de vigencia desde
+el régimen de 20,67 hasta 1960, donde empieza el Pink Sheet (4.5); evaluar si
+existe un precio de mercado citable para algún tramo; y detenerse con la
+propuesta. Nada está implementado. Cada pedido (48, con hora UTC, URL, código
+HTTP, bytes y SHA-256) quedó en un registro fuera del repositorio, como los del
+paso 0 de D0. Ningún número de esta sección viene de memoria: cada uno tiene
+página.
+
+**Qué se leyó.** `robots.txt` antes de cada host: FRASER, `Crawl-delay: 10` y
+sin vedas (se respetaron 12 s entre pedidos); `www.govinfo.gov`, veda la
+búsqueda y permite `/content/pkg/`; `www.nber.org`, veda `/search/`;
+`www.loc.gov`, permitía las rutas pero **respondió 403 con un desafío de
+Cloudflare** a todos los pedidos y pide una verificación humana en el
+navegador, que no se completó; `www.bankofengland.co.uk`, **403 al propio
+`robots.txt`**: no se le pidió nada más; `www.presidency.ucsb.edu` veda
+explícitamente a `ClaudeBot`: nada. Documentos leídos en FRASER: once números
+del *Federal Reserve Bulletin* (marzo a julio, noviembre y diciembre de 1933;
+enero a marzo de 1934; enero de 1947), el *Annual Report of the Secretary of
+the Treasury* de 1900 y de 1934, el *Annual Report of the Director of the
+Mint* de los ejercicios 1934 y 1935, y la sección 14 ("Gold") de los dos
+volúmenes de *Banking and Monetary Statistics* (D0.3.1). En govinfo: 86 Stat.
+116–118 y 87 Stat. 352. **Licencias:** las leyes, proclamaciones y órdenes
+ejecutivas son dominio público; los Boletines y los informes del Tesoro y de
+la Casa de Moneda son publicaciones federales sin aviso de copyright (se
+buscó en las páginas citadas), y que estén en dominio público es la misma
+inferencia que D0.3.1 hace para *Banking and Monetary Statistics*; FRASER
+pide atribución y no responde por los derechos de cada documento
+(`https://fraser.stlouisfed.org/terms-of-use`).
+
+**Los tramos del precio oficial** (480 granos por onza troy; "9/10 de fino"
+= 90 % de oro puro):
+
+| Vigencia | USD por onza troy de oro fino | Norma y cita literal | Dónde se leyó |
+| --- | --- | --- | --- |
+| Desde el 14 de marzo de 1900 (la paridad venía de antes: abajo) hasta el 31 de enero de 1934 a las 15:10, hora del Este | **20,671835** = 480 ÷ 23,22 = 8000/387 (20,6718346…). "20,67" es el redondeo al centavo; la Casa de Moneda publica "$20.6718" | Gold Standard Act, 14 de marzo de 1900, sección 1: *"That the dollar consisting of twenty-five and eight-tenths grains of gold nine-tenths fine, as established by section thirty-five hundred and eleven of the Revised Statutes of the United States, shall be the standard unit of value, and all forms of money issued or coined by the United States shall be maintained at a parity of value with this standard"* | *Annual Report of the Secretary of the Treasury* 1900, p. 345 (`https://fraser.stlouisfed.org/files/docs/publications/treasar/AR_TREASURY_1900.pdf`). La cita "31 Stat. 45" solo se vio citada por la proclamación de 1934: el volumen no se pudo abrir (loc.gov) |
+| Desde el 31 de enero de 1934 a las 15:10 (hora del Este), sin cambios hasta el 8 de mayo de 1972 | **35,00 exactos**: 15 5/21 = 320/21 granos × 9/10 = 96/7 granos de oro fino; 480 ÷ (96/7) = 35 | Proclamación presidencial del 31 de enero de 1934, bajo la sección 43(b)(2) del Título III de la ley del 12 de mayo de 1933, reformada por la sección 12 de la Gold Reserve Act del 30 de enero de 1934: *"do hereby proclaim, order, direct, declare, and fix the weight of the gold dollar to be 15 5/21 grains nine tenths fine, from and after the date and hour of this proclamation. ... Done in the City of Washington at 3:10 o'clock in the afternoon, eastern standard time, this 31st day of January, in the year of our Lord one thousand nine hundred and thirty-four"* | *Federal Reserve Bulletin*, febrero de 1934, pp. 68–69 (`https://fraser.stlouisfed.org/files/docs/publications/FRB/1930s/frb_021934.pdf`); la fracción se comprobó en la imagen. El Tesoro: *"At this weight, the statutory value of gold is $35 per fine ounce"* (informe de 1934, p. 204). El número "2072" y la cita "48 Stat. 1730" no aparecen en lo leído: no verificados |
+
+Comprobaciones, cada una contra la página que se nombra: (320/21) ÷ 25,8 =
+0,590624, los *"59.06 plus percent"* de la declaración presidencial (Boletín,
+feb. 1934, p. 67) y la devaluación de 40,94 % de BMS 1914–41, p. 522; 35 ÷
+20,671835 = 1,693125, el *"69.31 per cent"* de BMS 1914–41, p. 526; 31,1034768
+÷ 35 = 0,888671 gramos de oro fino por dólar, la paridad que EE.UU. declaró
+al FMI el 18 de diciembre de 1946 (*"0.888671 ... 35.0000"*, Boletín, enero de
+1947, p. 12); la Casa de Moneda imprime "$20.6718" y "$35.0000" (informe del
+ejercicio 1935, p. 91). **Entre 1934 y 1960 no hubo ningún cambio**: BMS
+1914–41 valúa a 35 *"thereafter"* hasta 1941; BMS 1941–70 dice que EE.UU.
+compró y vendió *"at the established rate of $35 per fine troy ounce in effect
+throughout the period"* (p. 897, con su nota 8: 38 el 8 de mayo de 1972 por
+la Public Law 92-268 y 42,22 el 18 de octubre de 1973 por la Public Law
+93-110, las dos leídas en govinfo: 86 Stat. 116, sección 2, *"$1 equals one
+thirty-eighth of a fine troy ounce of gold"*; 87 Stat. 352, sección 1,
+*"forty-two and two-ninths dollars per fine troy ounce of gold"*).
+
+**La base anterior a 1900: NO MEDIDO.** La ley de 1900 remite a la sección
+3511 de los *Revised Statutes* (1874), que codifica las leyes de 1834, 1837 y
+1873. Están en los volúmenes 4, 5, 17 y 18 de los *Statutes at Large*, en
+loc.gov, que no se dejó leer. Con lo leído, el tramo de 20,67 solo se sostiene
+desde el 14 de marzo de 1900; extenderlo (por ejemplo a 1892-06, para alinear
+con A-D0-17) exige leer esas leyes a mano u otra reimpresión oficial.
+
+**El tránsito de 1933**, con lo verificado (reimpresiones oficiales en el
+Boletín y en el informe del Tesoro de 1934):
+
+- 9 de marzo, Emergency Banking Act: faculta a regular el oro y a exigir su
+  entrega contra *"an equivalent amount of any other form of coin or
+  currency"* (Boletín, marzo de 1933, p. 115). **No fija ningún precio.**
+- 5 de abril, orden ejecutiva contra el atesoramiento (el número 6102 no está
+  impreso en la fuente leída): entrega obligatoria antes del 1 de mayo
+  (Boletín, abril de 1933, pp. 213–214). **No fija ningún precio.**
+- 12 de mayo, Agricultural Adjustment Act, Título III, sección 43(b)(2):
+  *"By proclamation to fix the weight of the gold dollar in grains nine tenths
+  fine ... but in no event shall the weight of the gold dollar be fixed so as
+  to reduce its present weight by more than 50 per centum"* (Boletín, mayo de
+  1933, pp. 317–318). **Autoriza; no cambia nada por sí misma.**
+- 5 de junio, Joint Resolution: anula las cláusulas oro (Boletín, junio de
+  1933, p. 338). **No toca la paridad.**
+- Del 8 de septiembre de 1933 al 31 de enero de 1934, **precio administrado
+  del oro recién extraído**, diario, de 29,00 a 34,45: venta a la industria
+  (8 de septiembre a 24 de octubre), compras de la RFC (25 de octubre a 15 de
+  enero: *"ranging from $31.36 to $34.06"*) y compras del Banco de la Reserva
+  Federal de Nueva York a 34,45 (16 a 31 de enero). La tabla diaria completa
+  está en el informe del Tesoro de 1934, anexo 26, p. 205 (comprobada en la
+  imagen) y en los Boletines de diciembre de 1933 (p. 779), enero (p. 51) y
+  febrero de 1934 (p. 133); entre el anexo y las tablas del Boletín hay dos
+  discrepancias menores (7 de noviembre y 23 de diciembre de 1933).
+- 30 de enero de 1934, Gold Reserve Act: secciones 8 y 9 (el Secretario compra
+  y vende oro *"at such rates and upon such terms and conditions as he may deem
+  most advantageous"*), 12 (techo del 60 %) y 15 (mientras no se proclame otro
+  peso, el dólar son 25,8 granos) (Boletín, febrero de 1934, pp. 65–67). La
+  cita "48 Stat. 337" no se pudo abrir.
+- 31 de enero y 1 de febrero de 1934, el Tesoro compra *"at the rate of $35 per
+  fine troy ounce, less the usual mint charges and less one quarter of 1
+  percent for handling charges"* y vende a bancos centrales extranjeros *"at
+  $35 per fine ounce plus one quarter percent handling charge"* (Boletín,
+  febrero de 1934, pp. 67–69; informe del Tesoro de 1934, pp. 201 y 204–205):
+  34,9125 y 35,0875, cálculo propio.
+
+**Respuesta a la pregunta concreta:** entre marzo de 1933 y el 31 de enero
+de 1934 la paridad legal siguió siendo la de 25,8 granos, aunque el Tesoro no
+vendiera oro a ese precio ni pagara en oro. Lo dice el Tesoro: *"The rate for
+gold other than newly mined gold was not changed by the orders of August 29 or
+October 25, or the act of the Reconstruction Finance Corporation; but
+remained at $20.67 an ounce"* (informe de 1934, p. 204, punto 15); las casas
+de moneda compraron en el ejercicio 1934 *"at $20.67+ per fine ounce"*
+20.114.858,02 USD y *"at $35 per fine ounce"* 800.047.115,02 USD (p. 120); y la
+Junta valúa *"at the rate of $20.67 per fine ounce of gold through January
+1934 and $35 per fine ounce thereafter"* (BMS 1914–41, p. 522). Lo que cambió
+fue la convertibilidad: sin pagos en oro desde el 6 de marzo de 1933, con
+licencia para exportar desde el 10 de marzo y tenencia privada prohibida
+desde el 5 de abril.
+
+**Precio de mercado: no hay serie mensual en USD abierta y publicable antes
+de 1960** entre lo leído. Los dos volúmenes de BMS no traen ninguna tabla de
+precio del oro (índice y búsqueda de texto). Candidatos:
+
+| Candidato | Fuente | Qué es | Veredicto |
+| --- | --- | --- | --- |
+| Precio del oro en Londres, promedio anual, 1870–1934 | *Annual Report of the Director of the Mint*, ejercicio 1935, pp. 90–91 (la misma tabla en el de 1934, p. 93); dominio público por la misma inferencia | En libras, chelines y peniques por onza *standard* hasta 1918 y por onza fina desde 1919; el "equivalente en USD" está convertido a la paridad legal, no al cambio de mercado (nota 2, literal: *"Conversions on basis of legal monetary parity; exchange not a factor"*). Leídos: 1931: £4 12s 6,23d; 1932: £5 18s 0,82d; 1933: £6 4s 10,4d; 1934: £6 17s 7,85d; equivalentes 22,5126; 28,7293; 30,3836; 33,4952 (paridad vieja) y 56,7114 (nueva) | Publicable, pero anual, en esterlinas, y su valor en USD de mercado sería un cálculo propio con el tipo de cambio del año (A-D0-7). Sirve, como mucho, de control anual de 1931 a 1939 |
+| Precio administrado diario, 1933-09-08 a 1934-01-31 | Informe del Tesoro de 1934, anexo 26, p. 205; Boletines de diciembre de 1933 a febrero de 1934 | Tres regímenes administrados en una tabla, no un mercado | Citable como serie aparte con su etiqueta; con la regla de meses completos solo quedarían noviembre y diciembre de 1933 y enero de 1934 |
+| NBER Macrohistory Database, capítulos IV y XIV | Listados leídos | Sin serie de precio del oro; sin licencia (A-D0-20) | Descartado |
+| Banco de Inglaterra, "A millennium of macroeconomic data" | No leído: el host responde 403 al propio `robots.txt` | Un resumen de terceros habla de Open Government Licence v3.0: no verificado | **NO MEDIDO**; lectura a mano si el dueño quiere evaluarlo |
+| LBMA, World Gold Council, FRED | 4.1 a 4.3 | — | Ya descartados |
+
+**Propuesta, para aprobar o rechazar.**
+
+1. Serie `oro_precio_oficial_usd`, USD por onza troy de oro fino, estado
+   **dato**, con la etiqueta visible "precio oficial fijado por ley, no precio
+   de mercado" en cada fila y en el sitio. Dos tramos: 20,6718 hasta 1934-01
+   y 35,00 desde 1934-02. Inicio en **1900-03** con lo verificado; más atrás
+   solo después de leer las leyes de 1837 y 1873. Fin a decidir: 1959-12 (sin
+   superponerse con el Pink Sheet) o 1973-10, con los tramos de 38 y 42,22,
+   donde la superposición 1960–1971 con el Pink Sheet sería en sí misma un
+   control (durante el London Gold Pool el mercado debería quedar a menos de
+   1 % de 35; A-R0-17).
+2. El mes en que cambia la norma lleva la convención publicada por la Junta
+   (*"$20.67 ... through January 1934 and $35 ... thereafter"*, BMS 1914–41,
+   p. 522): enero de 1934 = 20,6718; febrero de 1934 = 35,00. Sin promedios
+   ponderados por días: serían valores que ninguna fuente publica.
+3. Cuatro decimales, derivados en el código de la fracción legal (480 ÷
+   (granos × fino)), como los publica la Casa de Moneda; error de redondeo
+   0,00005. Una columna descriptiva de convertibilidad: "sí" hasta 1933-02;
+   "no" desde 1933-03; desde 1934-02, "solo bancos centrales extranjeros y
+   usos licenciados" (BMS 1941–70, p. 897).
+4. **Fuera de `apto_metricas`**, siempre; no es lado de ningún ratio; sin
+   empalme con el Pink Sheet y con el quiebre declarado en 1960-01: dos series
+   en el gráfico, no una. El par oro oficial / dinero de EE.UU. según la Junta
+   (las series `dinero_eeuu_1892_1946` y `dinero_eeuu_1947_1958` del PR #6) solo como par aparte, con los quiebres de las dos series a la
+   vista y también fuera de las métricas.
+5. Gate de nivel y de fecha, con tolerancia **±0,005 USD** y fecha de cambio
+   exacta (1934-01-31), declarada el 2026-10-07 antes de comparar, contra
+   publicaciones de instituciones distintas de la que da el texto legal:
+   Tesoro (informe de 1934, p. 120), Casa de Moneda (ejercicio 1935, p. 91),
+   Junta (BMS 1914–41, p. 522) y FMI vía el Boletín de enero de 1947, p. 12.
+   Resultado, calculado después de declararla: 20,671835 difiere 0,0018 de
+   "20.67" y 0,00003 de "20.6718"; 35 difiere 0 de "35.0000". Que esto baste
+   como gate es decisión del dueño.
+6. La serie saldría de un archivo pequeño escrito a mano con cita por fila
+   (tramos: desde, hasta, granos, fino, norma, fuente, página), como las
+   anclas del H.4.1 y las cifras del USGS; nada que bajar en la corrida. Los
+   PDF leídos irían a `data/privado/` con URL, fecha y SHA-256.
+7. Supuestos nuevos que haría falta escribir (prefijo a decidir; la serie es
+   de la fase R por el oro, y su carácter de contexto histórico sin empalme se
+   parece a A-D0-17): la serie es de contexto, fijada por ley; la convención
+   del mes de cambio; los decimales; el inicio en 1900 mientras no se lean las
+   leyes anteriores; el gate de nivel y fecha; y que de 1933-03 a 1934-01 rige
+   la paridad legal sin convertibilidad, con el precio administrado como otra
+   serie si alguna vez se publica.
+
+**Lo que queda abierto.** La base anterior a 1900 y las citas de volumen de
+los *Statutes at Large* (loc.gov exige una verificación humana; o buscar una
+reimpresión oficial de las "coinage laws" en un informe de la Casa de Moneda
+del siglo XIX); el Banco de Inglaterra; si alguna publicación federal trae una
+tabla mensual del precio de Londres (no se revisaron los Boletines de 1935 a
+1939 ni otros informes de la Casa de Moneda); el fin de la serie y la
+convención del mes de cambio, que son decisiones del dueño; y cómo rotular
+todo esto en el sitio.
+
 ## 5. Plata
 
 ### 5.1 FRED — leída (negativa)
