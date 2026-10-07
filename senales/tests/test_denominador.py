@@ -21,6 +21,8 @@ from senales.configuracion import (
     BDE_CODIGO_M2_SIN_AJUSTAR,
     BOJ_CODIGO_BALANCE,
     BOJ_CODIGO_M2,
+    CLAVE_M2CD_1967_1999,
+    CLAVE_M2CD_1998_2008,
     COLUMNAS_D0_FICHAS,
     DESCARGA_BCE_M2_AJUSTADA,
     ESTAT_INDICADOR_M2,
@@ -219,7 +221,7 @@ def _sembrar(crudo: Path, privado: Path, fecha: str, con_bce: bool = True) -> No
         (crudo / f"bce_m2_ajustada_{fecha}.csv").write_text(datos.csv_bce_m2(BCE_CLAVE_M2_AJUSTADA), encoding="utf-8")
         (crudo / f"bce_m2_sin_ajustar_{fecha}.csv").write_text(datos.csv_bce_m2(BCE_CLAVE_M2_SIN_AJUSTAR, 1000.0), encoding="utf-8")
         (crudo / f"bce_balance_eurosistema_{fecha}.csv").write_text(datos.csv_bce_balance(BCE_CLAVE_BALANCE), encoding="utf-8")
-    (crudo / f"boj_m2_{fecha}.csv").write_text(datos.csv_boj(BOJ_CODIGO_M2, datos.m2_japon()), encoding="utf-8")
+    (crudo / f"boj_m2_{fecha}.csv").write_text(datos.csv_boj_m2_completo(), encoding="utf-8")
     (crudo / f"boj_balance_{fecha}.csv").write_text(datos.csv_boj(BOJ_CODIGO_BALANCE, datos.balance_boj()), encoding="utf-8")
     (crudo / f"ocde_china_dinero_amplio_{fecha}.csv").write_text(datos.csv_ocde(datos.dinero_china()), encoding="utf-8")
     balance_cn = pd.Series([40_000.0 + i for i in range(len(datos.MESES))], index=datos.meses_ts())
@@ -236,6 +238,7 @@ def _sembrar(crudo: Path, privado: Path, fecha: str, con_bce: bool = True) -> No
     (privado / f"bde_m2_ajustada_{fecha}.csv").write_text(datos.csv_bde(BDE_CODIGO_M2_AJUSTADA, datos.m2_eurozona()), encoding="latin-1")
     (privado / f"bde_m2_sin_ajustar_{fecha}.csv").write_text(datos.csv_bde(BDE_CODIGO_M2_SIN_AJUSTAR, datos.m2_eurozona() + 1000.0), encoding="latin-1")
     (privado / f"estat_m2_japon_{fecha}.json").write_text(datos.json_estat(datos.m2_japon(), ESTAT_INDICADOR_M2), encoding="utf-8")
+    (privado / f"fred_fmi_m2_japon_{fecha}.csv").write_text(datos.csv_fred_fmi_m2_japon(), encoding="utf-8")
     (privado / f"bis_cbta_jp_{fecha}.csv").write_text(datos.csv_bis_activos("JP", datos.balance_boj() / 10.0), encoding="utf-8")
     for area, moneda, base, pendiente, invertir in (("XM", "EUR", 1.10, 0.0001, True), ("JP", "JPY", 150.0, 0.01, False), ("CN", "CNY", 7.0, 0.0005, False)):
         promedio = datos.cambio_mensual_promedio(datos.cambio_diario(base, pendiente))
@@ -278,6 +281,12 @@ def test_corrida_completa_publica_y_es_idempotente(entorno):
     assert list(fichas.columns) == COLUMNAS_D0_FICHAS
     publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"])
     assert {"m2_eeuu", "m2_eurozona", "m2_japon", "dinero_amplio_china", "balance_fed", "balance_eurosistema", "balance_boj", "usd_por_eur"} <= publicadas
+    # A-D0-34, A-D0-35: las series antiguas de Japón se publican, cada una con su gate contra el FMI.
+    assert {CLAVE_M2CD_1967_1999, CLAVE_M2CD_1998_2008} <= publicadas
+    viejo = fichas.loc[fichas["serie"] == CLAVE_M2CD_1967_1999].iloc[0]
+    assert "cerró en 15 meses" in viejo["validacion"] and "superposición con m2cd_japon_1998_2008: 12 meses" in viejo["validacion"]
+    nuevo = fichas.loc[fichas["serie"] == CLAVE_M2CD_1998_2008].iloc[0]
+    assert "cerró en 60 meses" in nuevo["validacion"] and "superposición con m2_japon: 0 meses" not in nuevo["validacion"]
     # Sin anclas, el balance del PBoC se calcula y no se publica.
     pboc = fichas.loc[fichas["serie"] == "balance_pboc"].iloc[0]
     assert pboc["publicada"] == "no" and pboc["estado"] == NO_MEDIDO_SIN_VALIDACION
@@ -287,6 +296,9 @@ def test_corrida_completa_publica_y_es_idempotente(entorno):
 
     dinero = pd.read_csv(series / "d0_dinero.csv", dtype={"mes": str})
     assert "balance_pboc" not in set(dinero["serie"])
+    m2cd = dinero.loc[dinero["serie"] == CLAVE_M2CD_1998_2008]
+    assert m2cd["mes"].iloc[0] == "1998-04" and m2cd["mes"].iloc[-1] == "2008-04"
+    assert m2cd.loc[m2cd["mes"] == "2003-04", "quiebre"].iloc[0].startswith("empieza el M2")
     balances = pd.read_csv(series / "d0_balances.csv", dtype={"mes": str})
     fed = balances.loc[balances["serie"] == "balance_fed"]
     assert fed["mes"].iloc[-1] == "2026-09" and fed["fecha_origen"].iloc[-1] == "2026-09-30"
@@ -295,6 +307,9 @@ def test_corrida_completa_publica_y_es_idempotente(entorno):
     fila = agregado.iloc[0]
     assert fila["agregado_usd"] == pytest.approx(fila["m2_eeuu_usd"] + fila["m2_eurozona_usd"] + fila["m2_japon_usd"])
     assert fila["agregado_usd_tc_constante"] == pytest.approx(fila["agregado_usd"])
+    # A-D0-36: sin tipo de cambio antes de 2025 en estas fuentes de prueba, Japón entra solo con el M2 actual.
+    assert set(agregado["serie_japon"]) == {"m2_japon"}
+    assert (agregado["quiebre"].fillna("") == "").all()
     cambio = pd.read_csv(series / "d0_cambio.csv", dtype={"mes": str})
     eur = cambio.loc[cambio["par"] == "usd_por_eur"]
     assert eur["mes"].iloc[-1] == "2026-09" and pd.isna(eur["fin_de_mes"].iloc[-1])  # mes en curso: sin fin de mes
@@ -347,3 +362,68 @@ def test_un_gate_que_no_cierra_deja_la_serie_sin_publicar(entorno):
     japon = fichas.loc[fichas["serie"] == "m2_japon"].iloc[0]
     assert japon["publicada"] == "no" and japon["estado"] == NO_MEDIDO_SIN_VALIDACION
     assert "2025-04" in japon["validacion"] or "1 fuera" in japon["validacion"]
+
+
+# --- Japón por tramos (A-D0-34 a A-D0-36) ---------------------------------------
+
+
+def _mensual(valores: dict[str, float]) -> denominador.SerieConstruida:
+    indice = pd.DatetimeIndex([pd.Timestamp(f"{mes}-01") for mes in valores], name="mes")
+    return denominador.SerieConstruida(pd.Series(list(valores.values()), index=indice, dtype=float))
+
+
+def test_recortar_toma_los_meses_entre_dos_limites_inclusive():
+    serie = _mensual({"2003-02": 1.0, "2003-03": 2.0, "2003-04": 3.0}).valores
+    assert list(denominador._recortar(serie, None, "2003-03")) == [1.0, 2.0]
+    assert list(denominador._recortar(serie, "2003-03", None)) == [2.0, 3.0]
+    assert list(denominador._recortar(serie, "2003-03", "2003-03")) == [2.0]
+
+
+def test_la_superposicion_se_mide_y_no_se_corrige():
+    series = {
+        CLAVE_M2CD_1998_2008: _mensual({"2003-03": 100.0, "2003-04": 100.0, "2003-05": 200.0}),
+        "m2_japon": _mensual({"2003-04": 99.5, "2003-05": 199.2, "2003-06": 300.0}),
+    }
+    nota = denominador.superposicion(series, CLAVE_M2CD_1998_2008)
+    assert nota.startswith("superposición con m2_japon: 2 meses, m2_japon entre -0.500 % y -0.400 %")
+    assert nota.endswith("no se empalma")
+    assert denominador.superposicion(series, "m2_japon") == ""
+
+
+def test_el_dinero_de_japon_del_agregado_concatena_los_tramos_sin_empalme():
+    series = {
+        CLAVE_M2CD_1998_2008: _mensual({"2003-02": 100.0, "2003-03": 101.0, "2003-04": 102.0, "2003-05": 103.0}),
+        "m2_japon": _mensual({"2003-03": 90.0, "2003-04": 99.0, "2003-05": 100.0}),
+    }
+    valores, etiquetas = denominador._dinero_del_agregado("japon", "m2_japon", series)
+    assert list(valores) == [100.0, 101.0, 99.0, 100.0]  # hasta 2003-03 el tramo viejo, después el M2 actual tal cual
+    assert list(etiquetas) == [CLAVE_M2CD_1998_2008, CLAVE_M2CD_1998_2008, "m2_japon", "m2_japon"]
+    valores_eeuu, etiquetas_eeuu = denominador._dinero_del_agregado("eeuu", "m2_eeuu_sin_ajustar", {"m2_eeuu_sin_ajustar": _mensual({"2003-03": 1.0})})
+    assert list(valores_eeuu) == [1.0] and list(etiquetas_eeuu) == ["m2_eeuu_sin_ajustar"]
+
+
+def test_el_agregado_declara_el_quiebre_de_japon_en_el_mes_del_cambio():
+    meses = {"2003-02": 0.0, "2003-03": 0.0, "2003-04": 0.0, "2003-05": 0.0}
+    series = {
+        "m2_eeuu_sin_ajustar": _mensual({m: 6000.0 for m in meses}),
+        "m2_eurozona_sin_ajustar": _mensual({m: 5_000_000.0 for m in meses}),
+        CLAVE_M2CD_1998_2008: _mensual({m: 6_800_000.0 for m in meses}),
+        "m2_japon": _mensual({m: 6_766_000.0 for m in meses}),  # 0.5 % menos que M2+CDs
+    }
+    indice = pd.DatetimeIndex([pd.Timestamp(f"{m}-01") for m in meses], name="mes")
+    fines = pd.DataFrame({"fin_de_mes": [1.1] * 4, "fecha_fin_de_mes": indice}, index=indice)
+    series["usd_por_eur"] = denominador.SerieConstruida(pd.Series([1.1] * 4, index=indice), fin_de_mes=fines)
+    series["jpy_por_usd"] = denominador.SerieConstruida(pd.Series([120.0] * 4, index=indice))
+    publicadas = set(series)
+    tabla, notas = denominador.agregado(series, publicadas)
+    assert list(tabla["mes"]) == ["2003-02", "2003-03", "2003-04", "2003-05"]
+    assert list(tabla["serie_japon"]) == [CLAVE_M2CD_1998_2008, CLAVE_M2CD_1998_2008, "m2_japon", "m2_japon"]
+    assert tabla["m2_japon_usd"].iloc[1] == pytest.approx(6_800_000.0 / 120.0 / 10.0)
+    assert tabla["m2_japon_usd"].iloc[2] == pytest.approx(6_766_000.0 / 120.0 / 10.0)
+    quiebre = tabla.loc[tabla["mes"] == "2003-04", "quiebre"].iloc[0]
+    assert quiebre.startswith("Japón pasa de m2cd_japon_1998_2008 a m2_japon, sin empalme: en este mes m2_japon es -0.500 %")
+    assert (tabla.loc[tabla["mes"] != "2003-04", "quiebre"] == "").all()
+    assert any("quiebre declarado" in nota for nota in notas)
+    # Sin el tramo antiguo publicado, el agregado no se calcula y lo dice.
+    tabla_sin, notas_sin = denominador.agregado(series, publicadas - {CLAVE_M2CD_1998_2008})
+    assert tabla_sin.empty and "faltan m2cd_japon_1998_2008" in notas_sin[0]
