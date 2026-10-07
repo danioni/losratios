@@ -16,6 +16,7 @@ Qué se recalcula y desde dónde:
 | denominador_agregado.csv | denominador_dinero.csv, denominador_tipos_de_cambio.csv y serie_D0.csv |
 | crudos versionados | denominador_descargas.csv y descargas_ratios.csv (SHA-256) |
 | dinero_eeuu_historico.csv | las dos transcripciones de data/raw/transcripcion_junta_1892_1958/ y las filas de serie_D0.csv que dicen qué se publica |
+| numerador_series.csv | los crudos versionados de N0 (Coin Metrics, Data Series 140, tablas del Z.1, Censo), las lecturas a mano de configuracion.py y las filas de serie_N0.csv que dicen qué se publica |
 
 Qué no se puede recalcular aquí, y por qué: precios_mensuales.csv y series.csv
 dependen de crudos que no viajan con el repositorio (Shiller y NASDAQCOM, A-R0-15)
@@ -37,7 +38,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from senales import denominador, dinero_historico, liquidez_neta, ratios
+from senales import denominador, dinero_historico, liquidez_neta, numerador, ratios
 from senales.configuracion import (
     ARCHIVO_D0_AGREGADO,
     ARCHIVO_D0_CAMBIO,
@@ -48,10 +49,14 @@ from senales.configuracion import (
     ARCHIVO_D0_RATIOS,
     ARCHIVO_DESCARGAS,
     ARCHIVO_DINERO_HISTORICO,
+    ARCHIVO_N0_DESCARGAS,
+    ARCHIVO_N0_FICHAS,
+    ARCHIVO_N0_SERIES,
     ARCHIVO_PARES,
     ARCHIVO_RATIOS,
     ARCHIVO_SERIE,
     COLUMNAS_D0_AGREGADO,
+    COLUMNAS_N0_SERIES,
     COLUMNAS_DINERO_HISTORICO,
     COLUMNAS_PARES,
     COLUMNAS_RATIOS,
@@ -59,6 +64,7 @@ from senales.configuracion import (
     DIR_CRUDO,
     DIR_TRANSCRIPCION_JUNTA,
     FORMATO_D0,
+    FORMATO_N0,
     FORMATO_RATIOS,
     PARES,
     SERIE_RRP,
@@ -158,7 +164,7 @@ def test_agregado_sale_de_dinero_y_tipos_de_cambio(tmp_path):
     assert _escribir(tmp_path, "a.csv", agregado, COLUMNAS_D0_AGREGADO, FORMATO_D0) == _bytes(ARCHIVO_D0_AGREGADO)
 
 
-@pytest.mark.parametrize("manifiesto", [ARCHIVO_D0_DESCARGAS, ARCHIVO_DESCARGAS])
+@pytest.mark.parametrize("manifiesto", [ARCHIVO_D0_DESCARGAS, ARCHIVO_DESCARGAS, ARCHIVO_N0_DESCARGAS])
 def test_los_crudos_versionados_coinciden_con_su_manifiesto(manifiesto):
     """Cada crudo que viaja con el repositorio tiene el hash que publicó su manifiesto."""
     filas = pd.read_csv(manifiesto, dtype=str, keep_default_na=False)
@@ -183,3 +189,26 @@ def test_el_dinero_historico_sale_de_las_dos_transcripciones(tmp_path):
     publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"]) & set(series)
     tabla = dinero_historico.publicar(series, publicadas)
     assert _escribir(tmp_path, "h.csv", tabla, COLUMNAS_DINERO_HISTORICO, FORMATO_D0) == _bytes(ARCHIVO_DINERO_HISTORICO)
+
+
+def test_las_series_de_n0_salen_de_sus_crudos(tmp_path):
+    """A-N0-14: numerador_series.csv, desde los crudos versionados, las lecturas de configuracion.py y las fichas publicadas.
+
+    Los contrastes que no viajan con el repositorio (el HTML del Z.1, FRED) solo
+    deciden qué se publica, y eso se lee de serie_N0.csv; ningún valor ni marca
+    de control de las filas depende de ellos.
+    """
+    manifiesto = pd.read_csv(ARCHIVO_N0_DESCARGAS, dtype=str, keep_default_na=False)
+    versionados = manifiesto.loc[manifiesto["crudo_en_repo"] == "sí"]
+    fecha = versionados["fecha_descarga"].max()
+    rutas = {}
+    for fila in versionados.loc[versionados["fecha_descarga"] == fecha].itertuples():
+        candidatos = sorted(DIR_CRUDO.glob(f"{fila.fuente}_{fila.fecha_descarga}.*"))
+        assert candidatos, f"falta el crudo de {fila.fuente} del {fila.fecha_descarga}"
+        rutas[fila.fuente] = candidatos[0]
+    construido = numerador.construir(rutas)
+    validaciones = numerador.validar(construido)
+    fichas = pd.read_csv(ARCHIVO_N0_FICHAS, dtype=str, keep_default_na=False)
+    publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"])
+    tabla = numerador.tabla_series(construido, validaciones, publicadas)
+    assert _escribir(tmp_path, "n.csv", tabla, COLUMNAS_N0_SERIES, FORMATO_N0) == _bytes(ARCHIVO_N0_SERIES)
