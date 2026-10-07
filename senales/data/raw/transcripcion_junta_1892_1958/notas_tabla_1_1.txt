@@ -1,0 +1,22 @@
+Notas de la Tabla 1.1, "Money stock and related data, monthly, 1947-70", Banking and Monetary Statistics 1941-1970
+(Junta de Gobernadores, 1976). Parte A (seasonally adjusted) en la pagina 17 del libro (pagina 24 del PDF de FRASER);
+parte B (not seasonally adjusted) en la pagina 20 del libro (pagina 27 del PDF). Las notas estan al pie de la ultima pagina
+de la parte B, pagina 22 del libro (pagina 29 del PDF). Transcripcion literal, en ingles, leida en el escaneo a 220 ppp.
+
+[In billions of dollars]
+1 At all commercial banks.
+NOTE.-Unless otherwise noted, series represent averages of daily figures. Composition of components is as follows:
+Currency: Amounts outside the Treasury, the Federal Reserve Banks, and the vaults of all commercial banks.
+Demand deposits: Amounts of (1) demand deposits at all commercial banks other than those due to domestic commercial banks and
+the U.S. Govt., less cash items in the process of collection and Federal Reserve float, and (2) foreign demand balances at
+Federal Reserve Banks.
+CD's: Negotiable time certificates of deposit (CD's) issued in denominations of $100,000 or more by large weekly reporting banks.
+"Other" time and savings deposits: Figures for all commercial banks for savings deposits, for time deposits open account, and
+for time CD's other than negotiable time CD's issued in denominations of $100,000 or more by large weekly reporting banks.
+Excluded are time deposits of the U.S. Govt. and domestic commercial interbank time deposits.
+Nonbank thrift institutions: Averages of beginning- and end-of-month figures for (1) deposits at mutual savings banks and
+(2) savings capital at savings and loan associations.
+
+Columnas del tramo 1947-58, parte A: Month; Money stock: Total, Currency component, Demand deposit component; Time deposits
+adjusted (1). Parte B: las mismas mas U.S. Govt. demand deposits (1). Desde 1959 la tabla cambia de forma (M1 a M5 y sus
+componentes) y no se transcribio.

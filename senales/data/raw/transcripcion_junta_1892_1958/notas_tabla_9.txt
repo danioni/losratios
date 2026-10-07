@@ -1,0 +1,22 @@
+Notas al pie de la Tabla No. 9, "Deposits and currency - adjusted deposits of all banks and currency outside banks, 1892-1941",
+Banking and Monetary Statistics 1914-1941 (Junta de Gobernadores, 1943), pagina 35 del libro (pagina 44 del PDF de FRASER).
+Transcripcion literal, en ingles, hecha dos veces de forma independiente (A y B) y comparada: identicas.
+
+1 Includes demand deposits, other than interbank and United States Government, less cash items in process of collection.
+2 Beginning with December 1938, includes United States Treasurer's time deposits, open account.
+3 Excludes interbank time deposits and postal savings redeposited in banks.
+4 Includes both amounts redeposited in banks and amounts not so redeposited; excludes amounts at banks in possessions.
+5 The commercial bank figures exclude and the mutual savings bank figures include three mutual savings banks which became members of the Federal Reserve System in 1941.
+
+Encabezado de la tabla: [In millions of dollars]. Columnas: Call date; Total deposits adjusted and currency outside banks;
+Total demand deposits adjusted and currency outside banks; Total deposits adjusted; Demand deposits adjusted (1);
+United States Government deposits (2); Time deposits: Total, Commercial banks (3), Mutual savings banks, Postal Savings System (4);
+Currency outside banks. En la nota 2 la palabra "time" esta en cursiva en el original.
+
+Continuacion para 1941-46: Banking and Monetary Statistics 1941-1970 (Junta de Gobernadores, 1976), Seccion 1, pagina 5 del libro
+(pagina 12 del PDF de FRASER), tabla sin numero presentada con la nota 3 de la introduccion, literal:
+"Inasmuch as the monthly series for the money stock does not begin until 1947, data to update the money stock series shown in
+Table 9 of Banking and Monetary Statistics (1914-41) are shown below for the period 1941-46:". Columnas: Date; Money stock:
+Total, Currency outside banks, Demand deposits adjusted; Related deposits: Time: Total, Commercial banks, Mutual savings banks,
+Postal Savings System; U.S. Government. En millones de dolares (la tabla no repite la unidad; es la de la Tabla 9 y sus dos
+filas de 1941 coinciden con ella).

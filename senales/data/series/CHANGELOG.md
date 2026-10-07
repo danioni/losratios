@@ -11,6 +11,37 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-07 · A-D0-27 · Los crudos de `data/raw/` se guardan con los bytes
+  exactos que entregó la fuente; todo el directorio pasa a `-text` en
+  `.gitattributes`.** Decisión del dueño. Hasta hoy git normalizaba los
+  saltos de línea al commitear y los volvía a convertir al extraer en
+  Windows, y el test de los crudos contra el manifiesto (A-D0-30) fallaba.
+  Cambian los bytes versionados de cuatro crudos del 2026-10-05, que la
+  fuente entregó con CRLF y el repositorio guardaba con LF:
+  `bce_m2_ajustada`, `bce_m2_sin_ajustar`, `bce_balance_eurosistema` (copias
+  a mano del BCE) y `ocde_china_dinero_amplio`. **Ningún hash del manifiesto
+  cambia:** los publicados ya eran los de los bytes originales, y los tres
+  crudos del BoJ y el del BIS ya estaban guardados tal cual. Los tres CSV de
+  FRED de S2 no tienen hash publicado (A-S2-10) y quedan como estaban en el
+  repositorio. No cambia ningún valor publicado.
+
+- **2026-10-07 · A-D0-17, A-D0-19, A-D0-31 a A-D0-33 · El dinero de EE.UU.
+  antes de 1959 pasa de NO MEDIDO a publicado, en dos series transcritas.**
+  `dinero_eeuu_1892_1946` (79 fechas de balance, millones de USD, Tabla 9 de
+  *Banking and Monetary Statistics 1914–1941* y su continuación) y
+  `dinero_eeuu_1947_1958` (144 meses, miles de millones de USD, Tabla 1.1 A
+  del volumen 1941–1970) nacen en `dinero_eeuu_historico.csv`, con sus
+  componentes y la cita de cada cifra. Dos lecturas independientes cotejadas
+  celda por celda (2.082 celdas, una discrepancia resuelta releyendo la
+  imagen), sumas con tolerancia cero en millones y ±0.1 en miles de
+  millones, y dos gates con tolerancia fijada antes: el Censo (nueve filas
+  de *Historical Statistics*, igualdad, 61 cifras iguales) y el NBER vía FRED
+  (144 meses, ±0.1, máxima 0.1). La serie sin ajustar de 1947–58 queda
+  transcrita y NO MEDIDO: sin segunda fuente accesible a un programa.
+  Dos erratas de la fuente (1949-03 y 1950-12) se publican tal cual y en
+  disputa (A-D0-33). Primera publicación: no cambia ningún valor anterior;
+  en `serie_D0.csv` cambian las dos fichas NO MEDIDO y entra una tercera.
+
 - **2026-10-06 · A-D0-25 · El mínimo de anclas pasa de 2 a 3, y el dinero amplio
   de China pasa de publicado a NO MEDIDO.** El 2 se había fijado después de ver
   que China tenía dos lecturas de la NBS: no era una tolerancia declarada a
@@ -258,6 +289,28 @@ cita.
   predeterminada. La fórmula de S2.1 y la tolerancia del gate (±5) no cambian.
   Junto con el cambio se agregaron tests que fallan si el identificador `WDTGAL`
   deja de estar declarado en millones.
+
+## 2026-10-07 · dinero histórico
+
+- Fuentes:
+  - junta_bms_1914_1941: https://fraser.stlouisfed.org/files/docs/publications/bms/1914-1941/BMS14-41_complete.pdf, sha256 ca7b8e3161d21ecf3bd804accd901eb3234397146f5cd091d6388e1027d2387e
+  - junta_bms_1941_1970: https://fraser.stlouisfed.org/files/docs/publications/bms/1941-1970/BMS41-70_complete.pdf, sha256 c04bd75916599fcb8d1c961024012a65f39d7447b2e499ac07d0a85866c3db4d
+  - censo_hsus_1960_cap_x: https://www2.census.gov/library/publications/1960/compendia/hist_stats_colonial-1957/hist_stats_colonial-1957-chX.pdf, sha256 39861a3930f44581eae24ee16bc34524048f6c7b51f0054e4dfcdf68963b9828
+  - fred_nber_m14144c: https://fred.stlouisfed.org/graph/fredgraph.csv?id=M1444CUSM027SNBR, sha256 ba9316a21942961f56ba1376a04e51dc1cfbf09cf0e0a47073cc9719d6fab521
+- Transcripción:
+  - 2082 celdas leídas dos veces; 1 discrepancias, resueltas releyendo la imagen
+  - resuelta: tabla_1_1_B 1955-11 plazo_ajustados: A=49.? B=49.8 -> 49.8 (Relectura de la celda en el escaneo ampliado a 900 ppp (Banking and Monetary Statistics 1941-1970, p. 20): el último dígito tiene una mancha de tinta; el glifo muestra dos lazos cerrados, como el 8 de las celdas vecinas, y no la cola abierta del 3. Lectura con reserva: queda registrada aquí y en el changelog; la serie sin ajustar no se publica (A-D0-31).)
+  - gate de sumas: Tabla 9 y continuación, todas las identidades cuadran; superposición de 1941: igual
+  - control de sumas, en disputa: tabla_1_1_A 1949-03: total = efectivo + vista: impreso 111.2, suma de componentes 113.3 (diferencia -2.1)
+  - control de sumas, en disputa: tabla_1_1_B 1950-12: total = efectivo + vista: impreso 119.2, suma de componentes 118.8 (diferencia 0.4)
+- Series:
+  - Efectivo y depósitos en bancos comerciales de EE.UU., fechas de balance (1892-1946): se publica, 1892-06 a 1946-12, 79 observaciones (millones de USD; saldo del día de balance (call date); anual, 30 de junio, hasta 1922; semestral, junio y diciembre, desde 1923; A-D0-17 A-D0-18 A-D0-19 A-D0-31 A-D0-32 A-D0-33)
+  - Efectivo y depósitos en bancos comerciales de EE.UU., mensual, ajustada por estacionalidad (1947-1958): se publica, 1947-01 a 1958-12, 144 observaciones (miles de millones de USD; promedio mensual de cifras diarias; A-D0-17 A-D0-19 A-D0-31 A-D0-32 A-D0-33)
+  - Efectivo y depósitos en bancos comerciales de EE.UU., mensual, sin ajustar (1947-1958): no se publica: NO MEDIDO: sin validación externa; la segunda fuente (NBER m14144b, 1955-1969) no está en FRED y data.nber.org veda a los programas (A-D0-31)
+- Validación:
+  - dinero_eeuu_1892_1946: gate contra Oficina del Censo de EE.UU., Historical Statistics of the United States, Colonial Times to 1957 (1960), capítulo X, series X 266-274 (PDF), 9 filas de junio leídas a mano cerró: 9 fechas de balance, 61 cifras, tolerancia igualdad en millones de USD
+  - dinero_eeuu_1947_1958: gate contra NBER m14144c vía FRED (M1444CUSM027SNBR) cerró: 144 meses, tolerancia ±0.1 miles de millones de USD, diferencia máxima 0.1000; diferencia mediana 0.00
+- Revisiones de datos históricos: ninguna
 
 ## 2026-10-05 · ratios D0
 

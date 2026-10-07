@@ -15,6 +15,7 @@ Qué se recalcula y desde dónde:
 | denominador_ratios.csv y denominador_pares.csv | precios_mensuales.csv, series.csv, denominador_dinero.csv y serie_D0.csv |
 | denominador_agregado.csv | denominador_dinero.csv, denominador_tipos_de_cambio.csv y serie_D0.csv |
 | crudos versionados | denominador_descargas.csv y descargas_ratios.csv (SHA-256) |
+| dinero_eeuu_historico.csv | las dos transcripciones de data/raw/transcripcion_junta_1892_1958/ y las filas de serie_D0.csv que dicen qué se publica |
 
 Qué no se puede recalcular aquí, y por qué: precios_mensuales.csv y series.csv
 dependen de crudos que no viajan con el repositorio (Shiller y NASDAQCOM, A-R0-15)
@@ -36,7 +37,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from senales import denominador, liquidez_neta, ratios
+from senales import denominador, dinero_historico, liquidez_neta, ratios
 from senales.configuracion import (
     ARCHIVO_D0_AGREGADO,
     ARCHIVO_D0_CAMBIO,
@@ -46,14 +47,17 @@ from senales.configuracion import (
     ARCHIVO_D0_PARES,
     ARCHIVO_D0_RATIOS,
     ARCHIVO_DESCARGAS,
+    ARCHIVO_DINERO_HISTORICO,
     ARCHIVO_PARES,
     ARCHIVO_RATIOS,
     ARCHIVO_SERIE,
     COLUMNAS_D0_AGREGADO,
+    COLUMNAS_DINERO_HISTORICO,
     COLUMNAS_PARES,
     COLUMNAS_RATIOS,
     COLUMNAS_SERIE,
     DIR_CRUDO,
+    DIR_TRANSCRIPCION_JUNTA,
     FORMATO_D0,
     FORMATO_RATIOS,
     PARES,
@@ -168,3 +172,14 @@ def test_los_crudos_versionados_coinciden_con_su_manifiesto(manifiesto):
         )
         assert candidatos, f"falta el crudo de {fila.fuente} del {fila.fecha_descarga}"
         assert hashlib.sha256(candidatos[0].read_bytes()).hexdigest() == fila.sha256, candidatos[0].name
+
+
+def test_el_dinero_historico_sale_de_las_dos_transcripciones(tmp_path):
+    """A-D0-19, A-D0-31: dinero_eeuu_historico.csv, desde los crudos versionados y las fichas publicadas."""
+    transcripcion = dinero_historico.leer_transcripcion(DIR_TRANSCRIPCION_JUNTA)
+    fallos = dinero_historico.verificar_sumas(transcripcion)
+    series = dinero_historico.construir_series(transcripcion, fallos)
+    fichas = pd.read_csv(ARCHIVO_D0_FICHAS, dtype=str, keep_default_na=False)
+    publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"]) & set(series)
+    tabla = dinero_historico.publicar(series, publicadas)
+    assert _escribir(tmp_path, "h.csv", tabla, COLUMNAS_DINERO_HISTORICO, FORMATO_D0) == _bytes(ARCHIVO_DINERO_HISTORICO)

@@ -44,6 +44,9 @@ from senales.configuracion import (
     BDE_CODIGO_M2_SIN_AJUSTAR,
     BOJ_CODIGO_BALANCE,
     BOJ_CODIGO_M2,
+    CLAVE_DINERO_1947_1958,
+    CLAVE_DINERO_1947_1958_SIN_AJUSTAR,
+    CLAVES_DINERO_HISTORICO,
     COLUMNAS_D0_AGREGADO,
     COLUMNAS_D0_BALANCES,
     COLUMNAS_D0_CAMBIO,
@@ -935,7 +938,16 @@ def tabla_fichas(
     series: dict[str, SerieConstruida],
     motivos: dict[str, str],
     validaciones: dict[str, Validacion],
+    fichas_previas: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
+    """Una fila por serie. Las del tramo histórico las escribe dinero_historico.py y aquí se conservan."""
+    previas = {}
+    if fichas_previas is not None and not fichas_previas.empty:
+        previas = {
+            fila["serie"]: fila
+            for fila in fichas_previas.fillna("").astype(str).to_dict("records")
+            if fila["serie"] in CLAVES_DINERO_HISTORICO
+        }
     filas = []
     for serie in SERIES_D0:
         construida = series.get(serie.clave)
@@ -970,6 +982,12 @@ def tabla_fichas(
             }
         )
     for pendiente in SERIES_PENDIENTES:
+        if pendiente.clave in previas:
+            # dinero_historico.py ya publicó (o dejó NO MEDIDO con su motivo) esta serie.
+            filas.append(previas.pop(pendiente.clave))
+            if pendiente.clave == CLAVE_DINERO_1947_1958 and CLAVE_DINERO_1947_1958_SIN_AJUSTAR in previas:
+                filas.append(previas.pop(CLAVE_DINERO_1947_1958_SIN_AJUSTAR))
+            continue
         filas.append(
             {columna: "" for columna in COLUMNAS_D0_FICHAS}
             | {
@@ -997,6 +1015,13 @@ def _ancha(tabla: pd.DataFrame | None, clave: str, valor: str) -> pd.DataFrame |
     ancha.columns = [str(columna) for columna in ancha.columns]
     ancha.insert(0, "fecha", pd.to_datetime(ancha.index + "-01"))
     return ancha.reset_index(drop=True)
+
+
+def _leer_fichas(ruta: Path) -> pd.DataFrame | None:
+    """La ficha anterior, con todo como texto: un vacío es un vacío y 144 meses no son 144.0."""
+    if not ruta.exists():
+        return None
+    return pd.read_csv(ruta, dtype=str, keep_default_na=False)
 
 
 def _leer(ruta: Path) -> pd.DataFrame | None:
@@ -1106,7 +1131,7 @@ def main(argv: list[str] | None = None) -> int:
     balances = tabla_balances(series, publicadas)
     cambio = tabla_cambio(series, publicadas, validaciones)
     agregada, notas_agregado = agregado(series, publicadas)
-    fichas = tabla_fichas(series, motivos, validaciones)
+    fichas = tabla_fichas(series, motivos, validaciones, _leer_fichas(ARCHIVO_D0_FICHAS))
 
     previa_dinero = _leer(ARCHIVO_D0_DINERO)
     revisiones = revisiones_de(previa_dinero, dinero, "serie", "valor")
