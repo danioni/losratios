@@ -331,7 +331,7 @@ mes,par,promedio_mensual,fin_de_mes,fecha_fin_de_mes,contraste
 2026-06,usd_por_eur,1.1516,1.1417,2026-06-30,dentro del umbral
 2026-07,usd_por_eur,1.1423,1.1519,2026-07-31,dentro del umbral
 2026-08,usd_por_eur,1.1594,1.1617,2026-08-31,dentro del umbral
-2026-09,usd_por_eur,1.1505,,,sin comparar
+2026-09,usd_por_eur,1.1505,1.1345,2026-09-30,sin comparar
 1971-01,jpy_por_usd,358.02,357.72,1971-01-29,dentro del umbral
 1971-02,jpy_por_usd,357.545,357.56,1971-02-26,dentro del umbral
 1971-03,jpy_por_usd,357.5187,357.42,1971-03-31,dentro del umbral
@@ -1000,7 +1000,7 @@ mes,par,promedio_mensual,fin_de_mes,fecha_fin_de_mes,contraste
 2026-06,jpy_por_usd,160.77,162.61,2026-06-30,dentro del umbral
 2026-07,jpy_por_usd,162.3295,159.16,2026-07-31,dentro del umbral
 2026-08,jpy_por_usd,158.8476,159.74,2026-08-31,dentro del umbral
-2026-09,jpy_por_usd,156.4171,,,sin comparar
+2026-09,jpy_por_usd,156.4171,157.25,2026-09-30,sin comparar
 1981-01,cny_por_usd,1.5518,1.5886,1981-01-30,dentro del umbral
 1981-02,cny_por_usd,1.6131,1.6179,1981-02-27,dentro del umbral
 1981-03,cny_por_usd,1.6314,1.6165,1981-03-31,dentro del umbral
@@ -1549,4 +1549,4 @@ mes,par,promedio_mensual,fin_de_mes,fecha_fin_de_mes,contraste
 2026-06,cny_por_usd,6.7758,6.7851,2026-06-30,dentro del umbral
 2026-07,cny_por_usd,6.7757,6.7509,2026-07-31,dentro del umbral
 2026-08,cny_por_usd,6.7361,6.7197,2026-08-31,dentro del umbral
-2026-09,cny_por_usd,6.7084,,,sin comparar
+2026-09,cny_por_usd,6.7084,6.7045,2026-09-30,sin comparar
