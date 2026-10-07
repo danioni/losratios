@@ -4470,3 +4470,138 @@ cada fila lleva la nota (A-N0-3).
 emitidos, igual al calendario. Z.1: cuatro gates cerrados (36, 36, 9 y 54
 comparaciones; máxima 0.049 contra 0.05). Tabla 7: cerró. Tabla 7a: no cerró
 (punto 2). Population Estimates contra la Tabla 7a: máxima 0.07 %.
+
+### N0.16 Paso 0 corto: las fuentes de la familia "respuesta observada de la oferta al precio" (2026-10-07)
+
+Lo pide el punto 5 de N0.10.5: antes de descargar o cruzar precios, un paso 0
+de las fuentes que N0 no había verificado (la FHFA, el deflactor, la
+valuación) y una parada para mostrarlo. **Aquí no se calculó nada y no hay
+prerregistro todavía:** el prerregistro va en `SUPUESTOS.md`, en un commit
+propio, después de que el dueño elija entre las opciones de abajo. Se agregó
+la construcción de viviendas, que tampoco estaba verificada. Leído el
+2026-10-07 entre las 18:34 y las 18:38 UTC con `python-requests`; registro en
+`senales/data/privado/n0_paso0/precios/registro.md`.
+
+| Host | `robots.txt` | Estado |
+| --- | --- | --- |
+| www.fhfa.gov | Reglas de Drupal (`/admin/`, `/search/`, `/user/...`); `/document` y `/media` vedados solo para bots nombrados (semrushbot, ahrefsbot, bingbot, googlebot). Nada de lo pedido | Página del HPI, la de conjuntos de datos, la política del sitio, un CSV y un xlsx |
+| www.bls.gov, download.bls.gov | **HTTP 403 al propio `robots.txt`**, con una página "Access Denied" que dice, literal: *"Automated retrieval programs (commonly called "robots" or "bots") can cause delays and interfere with other customers' timely access to information. Therefore, bot activity that doesn't conform to BLS usage policy is prohibited."* | No se le pidió nada más |
+| api.bls.gov, data.bls.gov | `User-agent: *`, `Disallow: /` | No se le pidió nada |
+| www.census.gov | Ya leído (N0.1) | Páginas de New Residential Construction y dos xlsx |
+| fred.stlouisfed.org | Ya leído (N0.1) | Un pedido (`CPIAUCNS`) |
+
+#### N0.16.1 FHFA, House Price Index (all-transactions, EE.UU. y divisiones censales) — leída, dominio público
+
+- Conjuntos de datos: `https://www.fhfa.gov/data/hpi/datasets`. El archivo
+  leído: `https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_at_us_and_census.csv`
+  (43.679 bytes, SHA-256
+  `580d761c3488f3e9a6f25074bdace5de96f476f579c06eeb7144835e8f52deba`), sin
+  encabezado, cuatro columnas: área, año, trimestre, índice.
+- Frecuencia: trimestral. Convención: índice de precios de viviendas por
+  ventas repetidas, "estimated using sales prices and appraisal data"
+  (all-transactions), sin ajuste estacional, nominal. La base del índice no
+  está en el archivo (no se leyó la documentación).
+- **Inicio real: EE.UU. (`USA`) 1975 Q1 = 60.04.** Último: 2026 Q2 = 719.87.
+  206 trimestres, sin huecos a la vista.
+- Otras ediciones en la misma página: el índice *purchase-only* mensual desde
+  enero de 1991 (el xlsx `hpi_po_monthly_nsa.xlsx` que se bajó es un resumen
+  de variaciones, no el índice; el índice mensual es `hpi_po_monthly_hist.xlsx`,
+  no leído); el *expanded-data* (1975 Q1 en adelante) usa datos de un
+  proveedor con licencia ("Real Property County Recorder Data from a Licensed
+  Vendor"): no se propone; y el maestro `hpi_master.csv` que une todo, no
+  bajado.
+- Clave / registro: no.
+- **Licencia: dominio público.** Política del sitio
+  (`https://www.fhfa.gov/about/fhfa-policies/website-privacy-policy`, sección
+  10, "Copyright and Trademark Notice"), literal: *"Generally, information and
+  materials produced by Federal agencies, including FHFA, are in the public
+  domain and may be copied and distributed without permission."* Excluye los
+  sellos y las marcas; el "FHFA HPI®" es marca registrada: se cita, no se
+  usa como nombre propio.
+- **Contraste pendiente:** no se leyó una segunda fuente (FRED reempaqueta la
+  serie; no se pidió).
+
+#### N0.16.2 Census Bureau, New Residential Construction: viviendas terminadas e iniciadas — leída, dominio público
+
+- Series históricas: `https://www.census.gov/construction/nrc/data/series.html`.
+  Terminadas: `https://www.census.gov/construction/nrc/xls/comps_cust.xlsx`
+  (171.446 bytes, SHA-256
+  `62ce743e1714eacecbf8592d43a3128b101eb4aa366c419a3f59d54f9fb83986`);
+  iniciadas: `https://www.census.gov/construction/nrc/xls/starts_cust.xlsx`
+  (193.398 bytes, SHA-256
+  `02c1926ba520e5ab4f7eadf93a10293fe8c9b95f4343ee9285856321fc2b6da4`).
+- "New Privately-Owned Housing Units Completed" y "... Started", en miles de
+  unidades; hojas anual, mensual sin ajustar y mensual a tasa anual ajustada;
+  total de EE.UU. por tipo de estructura y por región. "Source: U.S. Census
+  Bureau and U.S. Department of Housing and Urban Development".
+- **Inicio real:** terminadas, **1968 = 1319.8** mil (2025 = 1488.5);
+  iniciadas, **1959 = 1517** mil (2025 = 1355.8). Última revisión de la
+  página: 17 de septiembre de 2026.
+- Licencia: dominio público por ley (17 U.S.C. § 105, N0.8.1).
+- Qué mide para esta familia: la construcción, un flujo que entra al parque.
+  Es contexto del parque del HVS (N0.8), no un gate.
+
+#### N0.16.3 El deflactor — BLS vedado a los programas; FRED como canal
+
+- **El BLS no admite programas.** `api.bls.gov` y `data.bls.gov` vedan todo
+  en su `robots.txt`; `www.bls.gov` y `download.bls.gov` responden "Access
+  Denied" al propio `robots.txt` (tabla de arriba). Por la regla de
+  `CLAUDE.md`, el pipeline no les pide nada. Las opciones:
+  1. **FRED `CPIAUCNS`** (CPI-U, todos los ítems, promedio de ciudades, sin
+     ajuste estacional, 1982-84 = 100), leída:
+     `https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCNS` (25.074
+     bytes, SHA-256
+     `f79e3a78837142293449cee4a1a9b1da7be677fb3e989ffb2ef48e8e7cf4cdd7`),
+     **1913-01 = 9.800 a 2026-08 = 334.980, 1364 meses.** El dato es del BLS
+     (obra federal, dominio público); el canal es FRED, clase (b) con reserva
+     (A-R0-3). El promedio anual sería cálculo propio.
+  2. Copia bajada a mano del BLS, como las series del BCE (A-D0-29).
+  3. La columna "Unit value (98$/t)" de la *Data Series 140*, que ya trae un
+     precio real de 1900 a 2022: el deflactor que usa el USGS no está en la
+     hoja ("See embedded notes document", no leído). Sin leerlo, no se sabe
+     qué deflacta.
+  4. Los deflactores del BEA: su API exige clave; no se leyó.
+- Ninguna de las cuatro se decidió.
+
+#### N0.16.4 La valuación de las acciones de EE.UU. — Z.1, tabla B.103 — leída, dominio público
+
+- Está en el paquete que N0 ya baja (`z1_csv_files.zip`): la tabla B.103,
+  "Balance sheet of nonfinancial corporate business" (`S11_1_b.csv` en el
+  paquete; sería la sexta tabla versionada).
+- Dos candidatas, trimestrales desde 1945:Q4:
+  - **La razón que publica la propia Junta,** línea 48, `FL103164106.Q`,
+    "Nonfinancial corporate business; corporate equities as a percentage of
+    net worth": 1945:Q4 = 52.67; 2000:Q4 = 127.37; 2025:Q4 = 223.82;
+    2026:Q2 = 242.31.
+  - **El cociente propio** entre el valor de mercado de las acciones
+    (`LM103164105.Q`, línea 45) y el patrimonio neto (`FL102090005.Q`, línea
+    47): 194.11 % en 2025:Q4.
+  - **No coinciden** (223.82 contra 194.11): la línea 48 usa otra definición
+    de patrimonio o de acciones, que hay que leer en la guía de las cuentas
+    financieras antes de prerregistrar. Las dos son dominio público.
+- Otra candidata de la misma tabla: la deuda como porcentaje del valor de
+  mercado de las acciones (línea 49, `FL104104016.Q`: 18.27 % en 2025:Q4).
+
+#### N0.16.5 El precio del oro y de la plata — ya verificado
+
+- Pink Sheet (sección 4.5), mensual desde 1960-01, CC BY 4.0; el promedio
+  anual es cálculo propio (en R el gate anual contra el USGS ya lo compara).
+- *Data Series 140* (N0.4.2, N0.5.2): valor unitario anual en USD por tonelada
+  desde 1900, nominal (y la columna en dólares de 1998, N0.16.3).
+
+#### N0.16.6 Lo que el prerregistro tendría que fijar, y las opciones para el dueño
+
+Esto es una lista de decisiones, no el prerregistro. El prerregistro se
+escribe en `SUPUESTOS.md` con su propio commit después de estas elecciones, y
+antes de bajar o cruzar un solo precio.
+
+| Decisión | Opciones leídas | Nota |
+| --- | --- | --- |
+| Precio de viviendas | FHFA all-transactions trimestral desde 1975 Q1 (N0.16.1); purchase-only mensual desde 1991-01 (no leído el índice) | el expanded-data queda fuera por los datos con licencia |
+| Cantidad de viviendas | terminadas (desde 1968) o iniciadas (desde 1959), Censo (N0.16.2) | las terminadas son lo que entra al parque |
+| Deflactor | las cuatro opciones de N0.16.3 | el BLS no admite programas |
+| Valuación de acciones | línea 48 del Z.1 o el cociente propio (N0.16.4) | leer la definición de la línea 48 antes |
+| Precio del oro y la plata | Pink Sheet (1960 en adelante) o DS140 (1900–2022) | dos ventanas posibles |
+| Ventanas | oro y plata: 1900–2022 y 1971–2022 con la DS140, o 1960–2025 con el Pink Sheet; viviendas: 1976–2025; acciones: 1946–2025 | se fijan antes de calcular |
+| Método | regresión en logaritmos de la variación de la cantidad sobre la variación del precio real con rezagos de 0 a 5 años, errores robustos a autocorrelación, intervalos del 95 % por coeficiente y para la suma | lo que dijo el dueño en N0.10.5 |
+| Criterio de lectura | "responde" si el intervalo del 95 % de la suma de los coeficientes excluye el cero y es positivo; "no responde" si lo incluye; nunca un número único | rótulo fijo: "asociación observada, no elasticidad causal: precio y cantidad se determinan juntos" |
