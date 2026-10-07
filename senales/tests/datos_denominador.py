@@ -191,15 +191,58 @@ def balance_boj() -> pd.Series:
     return pd.Series([6_400_000.0 + 2000.0 * i for i in range(len(MESES))], index=meses_ts())
 
 
-def csv_boj(codigo: str, serie: pd.Series, nombre: str = "Serie de prueba", estado: str = "200") -> str:
+def meses_entre(desde: str, hasta: str) -> pd.DatetimeIndex:
+    return pd.DatetimeIndex([p.to_timestamp() for p in pd.period_range(desde, hasta, freq="M")])
+
+
+def m2cd_japon_1967_1999() -> pd.Series:
+    """El tramo antiguo sin bancos extranjeros, acortado a 1997-01 a 1999-03."""
+    indice = meses_entre("1997-01", "1999-03")
+    return pd.Series([5_800_000.0 + 10_000.0 * i for i in range(len(indice))], index=indice)
+
+
+def m2cd_japon_1998_2008() -> pd.Series:
+    """El tramo con bancos extranjeros, completo: 1998-04 a 2008-04."""
+    indice = meses_entre("1998-04", "2008-04")
+    return pd.Series([5_920_000.0 + 12_000.0 * i for i in range(len(indice))], index=indice)
+
+
+def csv_boj_varias(series: dict[str, pd.Series], estado: str = "200") -> str:
+    """Una respuesta de getDataCode con varias series, como la pide DESCARGA_BOJ_M2."""
     lineas = [
         f"STATUS,{estado}",
         "MESSAGEID,M181000I",
         "SERIES_CODE,NAME_OF_TIME_SERIES,UNIT,FREQUENCY,CATEGORY,LAST_UPDATE,SURVEY_DATES,VALUES",
     ]
-    for mes, valor in serie.items():
-        lineas.append(f"{codigo},{nombre},100 million yen,MONTHLY,Prueba,20260909,{mes.strftime('%Y%m')},{valor:.0f}")
+    for codigo, serie in series.items():
+        for mes, valor in serie.items():
+            lineas.append(
+                f"{codigo},Serie de prueba,100 million yen,MONTHLY,Prueba,20260909,{mes.strftime('%Y%m')},{valor:.0f}"
+            )
     return "\n".join(lineas) + "\n"
+
+
+def csv_boj(codigo: str, serie: pd.Series, nombre: str = "Serie de prueba", estado: str = "200") -> str:
+    return csv_boj_varias({codigo: serie}, estado)
+
+
+def csv_boj_m2_completo() -> str:
+    """El crudo del M2 con las dos series antiguas, como lo entrega la API."""
+    return csv_boj_varias(
+        {"MAM1NAM2M2MO": m2_japon(), "MAMS1ANM2C": m2cd_japon_1967_1999(), "MAMS3ANM2C": m2cd_japon_1998_2008()}
+    )
+
+
+def csv_fred_fmi_m2_japon(id_serie: str = "MYAGM2JPM189N") -> str:
+    """La copia del FMI en FRED, en yenes: sigue al tramo viejo hasta 1998-03 y al otro desde 1998-04."""
+    filas = [f"observation_date,{id_serie}"]
+    for mes, valor in m2cd_japon_1967_1999().items():
+        if mes <= pd.Timestamp("1998-03-01"):
+            filas.append(f"{mes:%Y-%m-%d},{valor * 1e8:.0f}")
+    for mes, valor in m2cd_japon_1998_2008().items():
+        if mes <= pd.Timestamp("2003-03-01"):
+            filas.append(f"{mes:%Y-%m-%d},{valor * 1e8:.0f}")
+    return "\n".join(filas) + "\n"
 
 
 def json_estat(serie: pd.Series, indicador: str) -> str:
