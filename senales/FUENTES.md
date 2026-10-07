@@ -3451,3 +3451,957 @@ BIS; el yen llega a 0.49 % y el yuan a 0.17 %. El agregado va de 2003-04 a
   inmuebles, cantidad de oro y total no tienen serie (A-D0-22 a A-D0-24). Las
   cifras de Savills y del World Gold Council van en
   `data/series/citas_terceros.csv` como "estimación de terceros" (A-D0-28).
+
+---
+
+## N0. Fuentes de El Numerador: oferta de activos, su tasa de crecimiento y su elasticidad
+
+> **PASO 0, SIN CÓDIGO (2026-10-07).** Todo lo que figura aquí se leyó de la
+> fuente el 2026-10-07, entre las 16:31 y las 16:43 UTC, desde una máquina con
+> salida directa, con `python-requests 2.33.1` y su User-Agent por defecto, salvo
+> donde la ficha diga otra cosa. Cada descarga quedó anotada con su URL, hora,
+> estado HTTP, bytes y SHA-256 en `senales/data/privado/n0_paso0/<tema>/registro.md`
+> (carpeta que git ignora, A-R0-15). Nada viene de memoria. Lo que no se pudo
+> leer está dicho como tal y no tiene cifras.
+>
+> **Ninguna decisión está tomada.** Las propuestas van en N0.10, la validación
+> propuesta en N0.11 y el índice de supuestos A-N0-\* propuestos en N0.12.
+
+Este documento es el entregable del paso 0 de la familia N0 (El Numerador,
+`elnumerador.com`): evaluar, por activo, de dónde puede salir una serie
+**observada** de la oferta (cuánto hay y cuánto se agrega por año), con la misma
+disciplina que las fases R y D0. Los activos son los cinco que el sitio ordena en
+su "jerarquía": efectivo y bonos, acciones, inmuebles, oro y Bitcoin. La plata
+entra porque ya tiene precio en la fase R y el USGS la publica junto al oro. El
+dinero (M2) ya está en D0 y no se duplica.
+
+**La corrección conceptual que estas series tienen que reflejar.** Dos cosas
+distintas:
+
+- **Tasa de crecimiento de la oferta:** cuánto crece el stock por año. Es un
+  cociente entre lo que se agregó en el año y lo que había. Es un dato cuando el
+  flujo y el stock están medidos.
+- **Elasticidad de la oferta:** cuánto responde la oferta a un cambio del
+  precio. Es una pendiente estimada, con rezago, con intervalo. Nunca es un
+  número único y nunca es un dato.
+
+Cada serie de N0 dice cuál de las dos mide. El sitio hoy las mezcla (N0.0, fila
+11). Y BTC no está en 0 %: su emisión anual es positiva y decreciente; lo que es
+cero es su elasticidad, por construcción del protocolo (N0.3).
+
+**Sobre las citas.** Como en D0: las cláusulas de fuentes en dominio público o
+abiertas van literales; las de fuentes con derechos reservados van
+parafraseadas, con la URL. Ningún nivel de índice bursátil se reproduce aquí
+(regla de `CLAUDE.md`), tampoco los que trae el código del sitio.
+
+### N0.0 Qué afirma hoy el sitio
+
+Leído en el repositorio `danioni/elnumerador`, rama `master`, commit
+`3ac29061d225dd6d67ef13164cc19f9b2bfabe58` (2026-10-06T15:15:51Z), por la API de
+GitHub. Los textos salen de `src/components/Dashboard.tsx` (último cambio
+`2bf08c1`, 2026-03-03) y las cifras de `src/lib/data.ts` (último cambio
+`ad06489`, 2026-02-18). La portada desplegada (`https://elnumerador.com/`,
+leída a las 16:31 UTC, 30.358 bytes, SHA-256
+`bdb471cc7bf46157e157e9e988427bfc7b556b3d0d98616ee9ee6ac47a70e08e`) muestra
+exactamente los textos de `master`: no hay otra versión publicada.
+
+**Cómo produce sus cifras `data.ts`.** Tiene 18 "anclas" anuales escritas a
+mano (1913, 1929, 1945, 1960, 1971, 1980, 1990, 2000, 2009, 2012, 2015, 2017,
+2020 a 2025), interpola geométricamente entre ellas para cada año, y de ahí
+deriva índices, stock-to-flow, "dilución" interanual y una "elasticidad". El
+comentario de cabecera cita como fuentes "World Gold Council, WFE, UN-Habitat,
+BIS, SIFMA, blockchain data", sin URL, sin fecha y sin tabla de origen. **Nada
+de eso cumple la regla "ningún número sin fuente".**
+
+| N.º | Afirmación (literal) | Dónde | De qué sale |
+| --- | --- | --- | --- |
+| 1 | "Bonos se emiten al ritmo de la impresora. Acciones, 3-5% anual. Inmuebles, 2-3%. Oro, 1.5%." | `Dashboard.tsx`, texto de portada | Texto fijo |
+| 2 | "Cash / Bonos · Nivel 1 — Es el denominador · 7-15% anual · expansión de oferta" | `Dashboard.tsx`, `ASSET_TIERS` | Texto fijo |
+| 3 | "Acciones · Nivel 2 — Elasticidad alta · ~3-5% anual"; "la emisión neta global es positiva" | ídem | Texto fijo |
+| 4 | "Inmuebles · Nivel 3 — Elasticidad moderada · ~2-3% anual" | ídem | Texto fijo |
+| 5 | "Oro · Nivel 4 — Elasticidad baja · ~1.5% anual"; "Stock-to-flow alto (~60 años), pero no infinito" | ídem | Texto fijo |
+| 6 | "Bitcoin · Nivel 5 — Elasticidad cero · 0% · expansión de oferta"; etiqueta "Supply fijo"; "La emisión se reduce a la mitad cada ~4 años hasta converger a cero" | ídem | Texto fijo |
+| 7 | "21 millones de unidades"; "se reduce a la mitad cada 210,000 bloques (~4 años)" | `Dashboard.tsx` | Texto fijo |
+| 8 | "Cuando el precio sube, no se produce más Bitcoin. En cualquier otro activo, el alza incentiva producción" | `Dashboard.tsx`, "El caso límite" | Texto fijo |
+| 9 | Producción minera de oro, en toneladas: 1913 = 690, 1929 = 600, 1945 = 800, 1960 = 1050, 1971 = 1250, 1980 = 1220, 1990 = 2180, 2000 = 2590, 2009 = 2600, 2012 = 2860, 2015 = 3100, 2017 = 3300, 2020 = 3200, 2021 = 3560, 2022 = 3612, 2023 = 3644, 2024 = 3700, 2025 = 3500 | `data.ts`, `gold_production` | Anclas a mano; comparadas con el USGS en N0.4.6 |
+| 10 | Oro sobre la superficie, en toneladas: 1913 = 35000 … 2024 = 212000, 2025 = 215000; stock-to-flow 2025 = 215000 / 3500 = 61.4; proyección a 2050 con la producción cayendo 1 % por año ("peak gold") | `data.ts`, `gold_stock_tonnes`, `generateS2FProjection` | Anclas a mano y un supuesto sin fuente |
+| 11 | "Cada activo tiene una tasa a la que se crean nuevas unidades — su elasticidad de oferta" | `Dashboard.tsx`, "La jerarquía de la elasticidad" | Define la elasticidad como la tasa de crecimiento: son dos cosas distintas |
+| 12 | `elasticity_gold`, `elasticity_equities`, `elasticity_realestate`, `elasticity_bonds`: cociente entre la variación porcentual del índice de oferta y la del índice de precio en ventanas de 10 años | `data.ts`, tercer pase | Cálculo sobre anclas interpoladas, sin rezago y sin intervalo |
+| 13 | Oferta de BTC: 2009 = 1623400, 2012 = 10625050, 2015 = 15027800, 2017 = 16774575, 2020 = 18587000, 2021 = 18897000, 2022 = 19240000, 2023 = 19570000, 2024 = 19790000, 2025 = 19830000; de ahí `btc_pct_mined` 2025 = 94.4 %; emisión anual = 2628000 / 2^(halvings), con 52560 bloques por año | `data.ts` | Anclas a mano con interpolación lineal; comparadas con Coin Metrics en N0.3 |
+| 14 | "Global shares outstanding (billions)": 1913 = 5 … 2025 = 325; "Companies listed globally": 2000 … 43500 | `data.ts`, `equities_shares_billion`, `equities_companies` | Anclas "estimated from market cap / avg price ratios, WFE data post-1990" |
+| 15 | "Global housing units (millions)": 1913 = 250 … 2025 = 1900 | `data.ts`, `realestate_units_million` | Anclas "UN-Habitat, census data" |
+| 16 | "Global debt outstanding (trillions USD)": 1913 = 0.03 … 2024 = 145, 2025 = 150 | `data.ts`, `bonds_outstanding` | Anclas "BIS, SIFMA, historical US Treasury data" |
+| 17 | "El S&P 500 subió ~750x desde 1913. El denominador subió ~3,400x"; "Multiplicó 10x desde 2000 vs. un denominador que multiplicó 7x"; "$100,000 ahorrados en 2000 compran hoy lo que $45,000" | `Dashboard.tsx` | Precio y M2: fuera del alcance de N0 (fases R y D0) |
+
+**Lo que el encargo parafraseó y no está en `master`.** El pedido del paso 0
+cita "bonos y acciones entre 3 % y 8 %", "Bitcoin se acerca a cero" y
+stock-to-flow "Oro ~62, Acciones ~20, Bonos ~12". En `master` del 2026-10-06 no
+aparece ninguna de esas tres frases: los rangos publicados son los de las filas
+1 a 6; el stock-to-flow del oro que calcula el código es 61.4 (fila 10) y el
+texto dice "~60 años"; no hay stock-to-flow de acciones ni de bonos en el código;
+y "converger a cero" (fila 6) es lo más cercano a "se acerca a cero". El
+"94,4 %" sí sale del código (fila 13). Es posible que esas frases hayan estado
+en una versión anterior del sitio; el historial de `Dashboard.tsx` tiene diez
+commits entre el 2026-02-08 y el 2026-03-03 y no se revisaron uno por uno.
+
+### N0.1 Qué se leyó, desde dónde y cómo
+
+**`robots.txt` antes de cada host**, con una excepción que se declara en la
+tabla (nora.nerc.ac.uk). Un host sin `robots.txt` (HTTP 404) se trata como sin
+reglas, igual que en D0.15.
+
+| Host | `robots.txt` | Estado el 2026-10-07 |
+| --- | --- | --- |
+| api.github.com (vía `gh api`) | No aplica: API autenticada, no el sitio | Leídos los archivos de `danioni/elnumerador` (`master`) y de `bitcoin/bitcoin` (`master`). |
+| elnumerador.com | Sin archivo (HTTP 404) | Portada leída. |
+| pubs.usgs.gov | `User-agent: *`, `Disallow: /archive/` | Dos capítulos de los *Mineral Commodity Summaries 2026*, fuera de `/archive/`. |
+| www.usgs.gov | Veda `/search/`, `/admin/` y rutas de Drupal; nada de lo pedido | Política de derechos, página de la *Data Series 140* y dos páginas de archivos. |
+| d9-wret.s3.us-west-2.amazonaws.com | `robots.txt` responde HTTP 403 (`AccessDenied`): no hay archivo legible | Es donde www.usgs.gov aloja los xlsx de la *Data Series 140*. Dos descargas. Se trata como sin reglas; se declara. |
+| www.federalreserve.gov | Sin archivo (HTTP 404) | Índice del Z.1, descargo legal, fechas de publicación, mapa de tablas, paquete CSV (8.3 MB) y dos tablas en HTML. |
+| www.census.gov | `User-agent: *`, `Disallow: /search-results.html`; nada de lo pedido | Tablas históricas del HVS, dos xlsx, páginas de políticas, citas y términos de la API. |
+| www2.census.gov | `User-agent: *` sin vedas; `Crawl-delay: 30` solo para Googlebot, Bing, Yahoo y Applebot | Un xlsx de estimaciones de viviendas. |
+| api.census.gov | **Responde "Request Rejected" (HTML, HTTP 200) al propio `robots.txt`** con el User-Agent de `python-requests` | No se le pidió nada más. La API del Censo no se usa en este paso. |
+| fred.stlouisfed.org | `User-agent: *`, `Crawl-delay: 1`; veda gráficos y búsquedas | Un pedido (`ETOTALUSQ176N`), solo como contraste. |
+| data.bis.org, stats.bis.org | data.bis.org: `Allow: /` y veda las URL con `filter=`, `rows=`, `cols=`, `page_size=` y `selectedDate=`. stats.bis.org no tiene archivo propio: `/robots.txt` redirige (301) a la portada de data.bis.org | Términos, estructura del flujo `WS_NA_SEC_DSS` y una consulta de datos (`c[REF_AREA]=US`, 21 MB), que no usa ninguno de los parámetros vedados. |
+| community-api.coinmetrics.io | Sin archivo (HTTP 404) | Definiciones de cuatro métricas y la historia diaria de `SplyCur`, `BlkCnt` e `IssTotNtv`. |
+| gitbook-docs.coinmetrics.io, docs.coinmetrics.io | `Allow: /` | Página de la licencia community y documentación de `SplyCur`. **La página trae instrucciones dirigidas a agentes automáticos ("Agent Instructions"); se ignoraron.** |
+| api.blockchain.info, www.blockchain.com | api.blockchain.info redirige (302) su `robots.txt` a la documentación del explorador; www.blockchain.com veda `/search`, `block-index`, `tx-index`; nada de lo pedido | `q/totalbc` y `q/getblockcount`, solo como contraste (clase (c), sección 6.3). |
+| www.bgs.ac.uk | `User-agent: *`, `Disallow:` vacío | Seis páginas: estadísticas mundiales, términos, descarga, API, archivo y la ficha de la publicación. |
+| nora.nerc.ac.uk | **Leído después de la descarga.** `User-agent: *`, `Disallow: /cgi/` | El PDF *World Mineral Production 2020–24* (2.7 MB) está en este host, al que remite la ficha de www.bgs.ac.uk; se bajó siguiendo ese enlace sin leer antes el `robots.txt` del host nuevo. Leído después: la ruta del PDF no está bajo `/cgi/`. Desde entonces no se le pidió nada más. Un intento de abrir el PDF en el navegador de la app mostró un diálogo de guardado y se canceló. |
+| silverinstitute.org | `User-agent: *`, `Allow: /` | Página "Silver Supply & Demand" y aviso legal. |
+| www.gold.org | Veda rutas de Drupal; nada de lo pedido | Página de producción minera (HTTP 200) y su xlsx (**HTTP 403**). |
+| www.law.cornell.edu | `User-agent: *`, `Crawl-delay: 10` | 17 U.S.C. § 105, un pedido. uscode.house.gov estaba "under maintenance". |
+| www.sifma.org | Leído: solo "content signals"; no se le pidió nada más | No se usa (clase (c), D0.9). |
+
+### N0.2 Tasa de crecimiento y elasticidad: cómo se mide cada una
+
+- **Tasa de crecimiento de la oferta** (dato, si el stock y el flujo están
+  medidos). Para un stock observado: `stock_t / stock_{t-1} - 1`. Para un
+  flujo observado sin stock abierto (oro, plata): se publica el flujo, y la
+  tasa queda NO MEDIDO o se calcula sobre una cifra de terceros declarada
+  (A-D0-28), fuera de las métricas.
+- **Elasticidad de la oferta** (estimación, siempre). Pendiente de la
+  variación del flujo respecto de la variación del precio, con rezagos,
+  estimada sobre una serie larga y publicada como intervalo. El método, los
+  rezagos y las submuestras se fijan antes de calcular (N0.10.2). Para BTC es
+  cero **por construcción**: el subsidio por bloque es función de la altura y
+  de nada más (N0.3.1); eso es un dato del protocolo, no una estimación.
+- Lo que el sitio llama "elasticidad" (fila 12 de N0.0) es un cociente de
+  variaciones a diez años sin rezago sobre anclas interpoladas. No es ni una
+  tasa de crecimiento observada ni una elasticidad estimada.
+
+### N0.3 BTC
+
+#### N0.3.1 Calendario de emisión del protocolo: Bitcoin Core — leído, MIT
+
+- Leído de `bitcoin/bitcoin`, rama `master`, commit
+  `9dfde64cc3262329051fd05fffe40eecc786a99f` (2026-10-07T12:54:56Z):
+  - `src/kernel/chainparams.cpp`, línea 114 (red principal):
+    `consensus.nSubsidyHalvingInterval = 210000;`
+  - `src/validation.cpp`, líneas 1833–1844, literal:
+
+    ```
+    CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
+    {
+        int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
+        // Force block reward to zero when right shift is undefined.
+        if (halvings >= 64)
+            return 0;
+
+        CAmount nSubsidy = 50 * COIN;
+        // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
+        nSubsidy >>= halvings;
+        return nSubsidy;
+    }
+    ```
+
+  - `src/consensus/amount.h`, líneas 15 y 26: `COIN{100'000'000}` y
+    `MAX_MONEY{21'000'000 * COIN}`.
+- **Qué es:** una función determinista de la altura del bloque. El subsidio es
+  50 BTC en los bloques 0 a 209999, 25 en los 210000 a 419999, 12.5, 6.25 y
+  3.125 (desde el bloque 840000). La suma de todos los subsidios tiende a 21
+  millones y nunca los alcanza. El calendario no depende del precio ni de
+  ninguna otra variable: **la elasticidad es cero por construcción.**
+- **Lo que el calendario no da:** fechas. El tiempo entre bloques es aleatorio
+  alrededor de diez minutos; cuántos bloques caen en un año calendario es un
+  dato observado (N0.3.2), no del protocolo. La emisión anual "del protocolo"
+  es subsidio × bloques del año, y los bloques del año se leen de la cadena.
+- Licencia: MIT (`COPYING`). Se citan diez líneas de código con su commit.
+
+#### N0.3.2 Oferta observada: Coin Metrics community, `SplyCur`, `IssTotNtv`, `BlkCnt` — leída, (b)
+
+- URL: `https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyCur,BlkCnt,IssTotNtv&frequency=1d&page_size=10000`
+  (773.293 bytes, SHA-256
+  `ae3c1339354c7a7f8613aa9a701d4b3395d354fa332c55a081c870b3ff327a24`).
+  Definiciones en `/v4/reference-data/asset-metrics?metrics=SplyCur,BlkCnt,IssTotNtv,SplyExpFut10yr`.
+- **Definiciones oficiales, literales:**
+  - `SplyCur`: *"The sum of all native units ever created and visible on the
+    ledger (i.e., issued) at the end of that interval."* La documentación
+    agrega: *"For UTXO chains, current supply is the sum of all unspent output
+    values."*
+  - `IssTotNtv`: *"The sum of all new native units issued that interval."*
+  - `BlkCnt`: *"The sum count of blocks created that interval that were included
+    in the main (base) chain."*
+- Frecuencia: diaria, cierre a las 00:00 UTC del día siguiente (misma
+  convención que `PriceUSD`, sección 6.2).
+- Unidad: BTC (unidades nativas).
+- **Inicio real:** 2009-01-03 con `SplyCur = 0` y `BlkCnt = 0`; el primer día
+  con oferta es **2009-01-09: 19 bloques, 950 BTC emitidos, `SplyCur = 950`.**
+  El bloque génesis (2009-01-03) no cuenta ni como bloque ni como oferta: sus
+  50 BTC no están en el conjunto de salidas no gastadas. Es una diferencia de
+  definición respecto del calendario, no un error.
+- Volumen: **6.486 filas del 2009-01-03 al 2026-10-06, sin paginación y sin
+  días faltantes.**
+- Último dato: 2026-10-06, `SplyCur = 20094435.50075681`, 155 bloques, 484.375
+  BTC emitidos.
+- Clave / registro: no. Límite: 10 pedidos por 6 segundos por IP.
+- **Licencia: (b), CC BY-NC 4.0**, la misma de A-R0-4 (página
+  `gitbook-docs.coinmetrics.io/packages/coin-metrics-community-data.md`, releída
+  hoy: *"Available to the community under the Creative Commons license"*, con
+  enlace a `creativecommons.org/licenses/by-nc/4.0/`).
+- **Lo que dicen los datos (cálculo propio sobre la descarga):**
+
+  | Año | Bloques | Emisión (`IssTotNtv`, BTC) | Oferta al 31-12 (`SplyCur`, BTC) | Tasa de crecimiento |
+  | --- | --- | --- | --- | --- |
+  | 2019 | 54232 | 677900.000 | 18133617.32 | 3.884 % |
+  | 2020 | 53222 | 453287.500 | 18586896.44 | 2.500 % |
+  | 2021 | 52686 | 329287.500 | 18916168.79 | 1.772 % |
+  | 2022 | 53188 | 332425.000 | 19248585.15 | 1.757 % |
+  | 2023 | 53999 | 337493.750 | 19586074.25 | 1.753 % |
+  | 2024 | 53473 | 217756.250 | 19803829.62 | 1.112 % |
+  | 2025 | 53082 | 165881.250 | 19969701.16 | 0.838 % |
+  | 2026 | 39915 | 124734.375 | — (hasta el 2026-10-06) | — |
+
+  La emisión de 2025 (165881.25 BTC) es exactamente 53082 bloques × 3.125:
+  en 2025 ningún bloque reclamó menos que el subsidio. Con 52560 bloques (el
+  supuesto de `data.ts`) la emisión habría sido 164250. **La tasa de
+  crecimiento observada de la oferta fue 0.838 % en 2025 y 1.112 % en 2024:
+  positiva, decreciente, y no 0 %.**
+
+- **Contraste con el calendario del protocolo (cálculo propio).** Si `N` es la
+  suma de `BlkCnt` hasta un día, la suma de los subsidios de los bloques 1 a
+  `N` (sin el génesis) es la oferta máxima que el calendario permite ese día.
+  La diferencia `SplyCur - calendario`:
+
+  | Fecha | `BlkCnt` acumulado (N) | Calendario, bloques 1..N (BTC) | `SplyCur` (BTC) | Diferencia (BTC) | Diferencia |
+  | --- | --- | --- | --- | --- | --- |
+  | 2012-11-28 | 210063 | 10501550.000 | 10501539.94351183 | -10.056 | -0.00010 % |
+  | 2016-07-09 | 420052 | 15750612.500 | 15750598.60474103 | -13.895 | -0.00009 % |
+  | 2020-05-11 | 630028 | 18375131.250 | 18375098.57078164 | -32.679 | -0.00018 % |
+  | 2024-04-20 | 840133 | 19687868.750 | 19687799.24271483 | -69.507 | -0.00035 % |
+  | 2024-12-31 | 877263 | 19803900.000 | 19803829.62409340 | -70.376 | -0.00036 % |
+  | 2025-12-31 | 930345 | 19969781.250 | 19969701.15996540 | -80.090 | -0.00040 % |
+  | 2026-10-06 | 970260 | 20094515.625 | 20094435.50075681 | -80.124 | -0.00040 % |
+
+  La diferencia es siempre negativa (nunca hay más oferta que la que el
+  calendario permite) y crece lentamente: son los subsidios que algún minero
+  no reclamó enteros y las salidas que ya no están en el conjunto no gastado.
+  Que `BlkCnt` acumulado sea la altura del último bloque (es decir, que no
+  cuente al génesis) es una **inferencia**: con la otra convención la
+  diferencia de 2012-11-28 sería positiva, y eso es imposible.
+- **Lo que esta fuente no es:** no es "la cadena". Es la lectura que hace Coin
+  Metrics de su nodo. Para contrastar hay una segunda lectura (N0.3.3) y el
+  calendario (N0.3.1).
+
+#### N0.3.3 blockchain.com, `q/totalbc` y `q/getblockcount` — leída, (c), contraste
+
+- `https://api.blockchain.info/q/totalbc` respondió `2009485300000000`
+  satoshis = **20094853.00 BTC** y `q/getblockcount` respondió **970363**, a las
+  16:34 UTC del 2026-10-07.
+- El calendario del protocolo hasta el bloque 970363 inclusive suma
+  20094887.5 BTC con el génesis y 20094837.5 sin él (cálculo propio). El valor
+  de blockchain.com cae entre los dos: no coincide con la suma de salidas no
+  gastadas de Coin Metrics ni con el calendario exacto; es, por lo que se ve,
+  una cuenta propia de ese sitio. No se leyó su método.
+- No es comparable día a día con Coin Metrics sin alinear la altura: el dato de
+  Coin Metrics del 2026-10-06 cierra en 970260 bloques acumulados y el de
+  blockchain.com está 103 bloques más adelante. La comparación a igual altura
+  queda para el paso 1 (N0.11).
+- Licencia: (c), la lectura de la sección 6.3. Solo sirve para contrastar.
+
+### N0.4 Oro
+
+#### N0.4.1 USGS, *Mineral Commodity Summaries 2026*, capítulo "Gold" — leída, dominio público
+
+- `https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-gold.pdf` (138.864 bytes,
+  SHA-256 `c2fef62f665d3334302b8b9bd32e2da6f40b3f8136d1ae00ffa102e196943627`;
+  los mismos bytes que en 4.6).
+- Frecuencia: anual; cada edición trae dos años de producción mundial (el
+  último, estimado) y cinco de estadísticas de EE.UU.
+- Convención y unidad: toneladas métricas de contenido de oro, producción de
+  mina del año calendario. Nota 1: *"One metric ton (1,000 kilograms) =
+  32,150.7 troy ounces."*
+- **Valores leídos** (tabla "World Mine Production and Reserves" y texto
+  "Events, Trends, and Issues", literal: *"In 2025, worldwide gold mine
+  production was an estimated 3,300 tons compared with 3,280 tons in 2024."*):
+
+  | | 2024 | 2025 (estimado) |
+  | --- | --- | --- |
+  | Mundo (redondeado) | 3280 | 3300 |
+  | EE.UU. | 163 | 160 |
+
+  Y en "Salient Statistics—United States", producción de mina: 2021 = 187,
+  2022 = 173, 2023 = 170, 2024 = 163, 2025e = 160.
+- Quiebres: el último año es siempre estimado y la edición siguiente lo
+  revisa. La lectura de la tabla por país no es confiable con `pdftotext`
+  (mezcla columnas); el total mundial y la fila de EE.UU. se confirmaron con
+  el texto corrido.
+- Clave / registro: no.
+- **Licencia: dominio público.** `https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits`,
+  releída hoy, literal: *"USGS-authored or produced data and information are
+  considered to be in the U.S. Public Domain."*
+
+#### N0.4.2 USGS, *Data Series 140*, "Gold statistics", 1900–2022 — leída, dominio público
+
+- Página: `https://www.usgs.gov/centers/national-minerals-information-center/historical-statistics-mineral-and-material-commodities`
+  → `https://www.usgs.gov/media/files/gold-historical-statistics-data-series-140`
+  → archivo `https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-gold-2022.xlsx`
+  (40.809 bytes, SHA-256
+  `025f3eb98adb606cc214b82caa70646b80cf9debdf6544dbafce361283c1c480`),
+  "Last modification: November 20, 2023".
+- Frecuencia: anual. Columnas: producción primaria y secundaria de EE.UU.,
+  importaciones, exportaciones, consumo, valor unitario en USD por tonelada
+  (corriente y en dólares de 1998) y **producción mundial**.
+- Unidad: toneladas métricas de contenido de oro.
+- **Inicio real: 1900 = 386 t.** Último: 2022 = 3160 t. 123 años sin huecos en
+  la columna mundial.
+- Valores leídos en los años ancla del sitio: 1913 = 694, 1929 = 609,
+  1945 = 762, 1960 = 1190, 1971 = 1450, 1980 = 1220, 1990 = 2180, 2000 = 2590,
+  2009 = 2490, 2012 = 2740, 2015 = 3100, 2017 = 3260, 2020 = 3050, 2021 = 3120,
+  2022 = 3160.
+- La suma de la columna mundial 1900–2022 da 175343 t (cálculo propio). **No es
+  el stock sobre la superficie:** falta todo lo anterior a 1900 y la serie no
+  resta nada. Se anota solo para dejar claro que de aquí no sale un stock.
+- Es un flujo, no un acervo. También trae un precio anual desde 1900 (valor
+  unitario), útil para una estimación de elasticidad (N0.10.2).
+- Licencia: la misma de N0.4.1.
+
+#### N0.4.3 British Geological Survey, *World Mineral Production 2020–24* — leída, contraste, términos restrictivos
+
+- Ficha: `https://www.bgs.ac.uk/mineralsuk/statistics/world-mineral-statistics/world-mineral-statistics-archive/`
+  → `https://nora.nerc.ac.uk/id/eprint/541620/` → PDF
+  `https://nora.nerc.ac.uk/id/eprint/541620/1/WMP_2020%20to%202024.pdf`
+  (2.770.234 bytes, SHA-256
+  `260a9891d28082990e49a75b97c386da1499af1ba59aad8743407c0c57aa55c6`),
+  "First Published 2026", ISBN 978-0-85272-803-1.
+- Frecuencia: anual; cada edición trae cinco años por país.
+- Unidad: kilogramos de contenido de metal. Convención: producción de mina
+  del año calendario; el BGS **incluye estimaciones de minería artesanal** y
+  dice que por eso redondea más el total mundial (texto previo a la tabla).
+- **Valores leídos** (página 37 del PDF, impresa 27, tabla "Mine production of
+  gold", fila "World total", extraída con `pdftotext -raw`; la extracción con
+  `-layout` mezcla columnas y no se usó para las cifras):
+
+  | | 2020 | 2021 | 2022 | 2023 | 2024 |
+  | --- | --- | --- | --- | --- | --- |
+  | Mundo (kg) | 3200000 | 3200000 | 3300000 | 3300000 | 3300000 |
+  | EE.UU. (kg) | 193000 | 187000 | 173000 | 170000 | 159000 (estimado) |
+
+- **Contraste con el USGS.** 2024: BGS 3300 t contra USGS 3280 t (0.6 %, dentro
+  del redondeo del BGS). Pero 2021: BGS 3200 contra USGS 3120 (2.6 %), y 2022:
+  BGS 3300 contra USGS 3160 (4.4 %). Los dos compiladores no miden lo mismo:
+  el BGS suma estimaciones artesanales que el USGS no declara. Para EE.UU. el
+  BGS usa las cifras del USGS (coinciden en 2021 a 2023) con una estimación
+  propia para 2024 (159 contra 163).
+- Clave / registro: no.
+- **Licencia: términos propios, restrictivos.** Página
+  `https://www.bgs.ac.uk/mineralsuk/statistics/world-mineral-statistics/bgs-mineral-statistics-terms-and-conditions-ipr/`:
+  el copyright es del NERC; **se permite adaptar y usar las tablas para fines
+  académicos y de investigación no comerciales**; cualquier uso comercial, o
+  entregarlas a un tercero, exige permiso (contacto `ipr@bgs.ac.uk`); y hay que
+  mostrar el reconocimiento *"World Mineral Statistics contributed by
+  permission of the British Geological Survey"*. El PDF agrega que las
+  compilaciones no pueden reproducirse sin permiso del Director. Publicar la
+  serie en un sitio público puede leerse como "entregarla a terceros": se trata
+  como **(c) para publicar y válida para contrastar** (A-R0-12), y se pregunta
+  (N0.13).
+- La herramienta de datos del BGS (API OGC) cubre 1970 a 2021 y está en beta;
+  no se usó. El archivo tiene PDF desde 1913.
+
+#### N0.4.4 El stock sobre la superficie: World Gold Council — (c), ya citado; y lo que no existe
+
+- La cifra del World Gold Council (222600 t a fin del segundo trimestre de
+  2026) ya está en `data/series/citas_terceros.csv` como "estimación de
+  terceros" (A-D0-28, leída el 2026-10-05, D0.9). Su serie anual pide cuenta y
+  responde HTTP 403.
+- Hoy se leyó además `https://www.gold.org/goldhub/data/gold-production-by-country`
+  (producción minera anual por país desde 2010, "Updated annually, in
+  conjunction with the publication of Metals Focus' Gold Focus report"): la
+  página responde HTTP 200 y su xlsx
+  (`/download/file/7593/Gold-Mining-Production-Volumes-Data-2025.xlsx`)
+  responde **HTTP 403**. Clase (c), la lectura de 4.3.
+- El USGS no publica existencias (D0.9): su página de preguntas frecuentes da
+  "about 187,000 metric tons historically produced", sin fecha.
+- **Conclusión:** no hay ninguna serie abierta del oro sobre la superficie. El
+  stock y el stock-to-flow quedan **NO MEDIDO como serie**; se pueden mostrar
+  como cifra citada de terceros, fuera de todo cálculo (A-D0-28). Con la cifra
+  del WGC, 3300 / 222600 = 1.48 % y 222600 / 3300 = 67.5 (cálculo sobre una
+  cifra de terceros, no un dato); con los 187000 t del USGS, 56.7. El "~60
+  años" del sitio cae entre las dos, y las dos son estimaciones ajenas.
+
+#### N0.4.5 Minerals Yearbook — no leído en este paso
+
+- Los capítulos "Gold" y "Silver" del *Minerals Yearbook* (USGS, dominio
+  público) traen la producción por país con uno o dos años más de rezago que
+  los *Mineral Commodity Summaries*, y son la fuente de la *Data Series 140*.
+  No se leyeron hoy: la *Data Series 140* ya cubre 1900–2022 y los *Summaries*
+  2024–2025. Quedan para el paso 1 si hace falta el detalle por país o la
+  revisión de 2023.
+
+#### N0.4.6 Las anclas del sitio contra el USGS
+
+| Año | `data.ts` (t) | USGS (t) | Fuente USGS |
+| --- | --- | --- | --- |
+| 1913 | 690 | 694 | DS140 |
+| 1929 | 600 | 609 | DS140 |
+| 1945 | 800 | 762 | DS140 |
+| 1960 | 1050 | 1190 | DS140 |
+| 1971 | 1250 | 1450 | DS140 |
+| 1980 | 1220 | 1220 | DS140 |
+| 1990 | 2180 | 2180 | DS140 |
+| 2000 | 2590 | 2590 | DS140 |
+| 2009 | 2600 | 2490 | DS140 |
+| 2012 | 2860 | 2740 | DS140 |
+| 2015 | 3100 | 3100 | DS140 |
+| 2017 | 3300 | 3260 | DS140 |
+| 2020 | 3200 | 3050 | DS140 |
+| 2021 | 3560 | 3120 | DS140 |
+| 2022 | 3612 | 3160 | DS140 |
+| 2023 | 3644 | no leído (BGS: 3300) | — |
+| 2024 | 3700 | 3280 | MCS 2026 |
+| 2025 | 3500 | 3300 (estimado) | MCS 2026 |
+
+Cuatro anclas coinciden con el USGS (1980, 1990, 2000, 2015); las de 2021 a
+2025 están entre 6 % y 14 % por encima de lo que publica el USGS y no
+coinciden tampoco con el BGS. No se sabe de dónde salen.
+
+### N0.5 Plata
+
+#### N0.5.1 USGS, *Mineral Commodity Summaries 2026*, capítulo "Silver" — leída, dominio público
+
+- `https://pubs.usgs.gov/periodicals/mcs2026/mcs2026-silver.pdf` (138.760
+  bytes, SHA-256
+  `f0dfe407304855a51f7647fc711f6c32081188a86269d011cd45e297aa673855`; los
+  mismos bytes que en 4.6).
+- Misma frecuencia, convención, unidad y licencia que N0.4.1.
+- **Valores leídos** (texto, literal: *"World silver mine production increased
+  slightly in 2025 to an estimated 26,000 tons compared with 25,300 tons in
+  2024."*; tabla "Salient Statistics—United States", producción de mina):
+
+  | | 2021 | 2022 | 2023 | 2024 | 2025 (estimado) |
+  | --- | --- | --- | --- | --- | --- |
+  | Mundo (redondeado) | | | | 25300 | 26000 |
+  | EE.UU. | 1020 | 1010 | 1020 | 1050 | 1100 |
+
+- **No es del todo independiente del Silver Institute:** la nota 8 del
+  capítulo cita como fuente *"Metals Focus, 2025, World silver survey 2025:
+  Silver Institute, prepared by Metals Focus"* (para la partida que lleva esa
+  nota). Se declara al proponer el contraste (N0.11).
+
+#### N0.5.2 USGS, *Data Series 140*, "Silver statistics", 1900–2021 — leída, dominio público
+
+- `https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-silver-2021.xlsx`
+  (38.604 bytes, SHA-256
+  `e57b952a5fd469291341bf275fbaa1c20dfd0caa9b40f383a2a19076efa9e997`),
+  "Last modification: September 1, 2023".
+- Columnas: producción de mina, primaria y secundaria de EE.UU., envíos,
+  importaciones, exportaciones, existencias, consumo aparente, valor unitario
+  (corriente y en dólares de 1998) y **producción mundial**.
+- **Inicio real: 1900 = 5400 t.** Último: 2021 = 25000 t. 122 años.
+- Valores leídos: 1913 = 7010, 1945 = 5040, 1980 = 10700, 2000 = 18100,
+  2015 = 27600, 2020 = 24100, 2021 = 25000.
+- Un año más corta que la del oro (2021 contra 2022).
+
+#### N0.5.3 The Silver Institute, "Silver Supply & Demand" (Metals Focus) — leída, s/d, contraste
+
+- `https://silverinstitute.org/silver-supply-demand/`, sección "Mine
+  Production", literal: *"In 2024, global silver mine production rose by 0.9
+  percent to 819.7 Moz"*. "Material and statistics in this section were adapted
+  in part from the Silver Institute's World Silver Survey 2025."
+- Unidad: millones de onzas troy. 819.7 Moz × 31.1034768 g = **25496 t**
+  (cálculo propio), contra 25300 t del USGS: **0.77 %**.
+- Licencia: s/d. El aviso legal (`https://silverinstitute.org/legal-disclaimer/`,
+  releído hoy) solo trae un descargo y la propiedad de las marcas; no dice nada
+  sobre reutilizar los datos. Es la misma lectura de 8.1. Aquí se transcribe
+  una cifra, con su cita.
+- El *World Silver Survey 2026* no se leyó (8.1 ya lo anotaba).
+
+#### N0.5.4 British Geological Survey — leída, contraste
+
+- Misma publicación de N0.4.3, página 74 del PDF (impresa 64), tabla "Mine
+  production of silver", fila "World total", en kilogramos de contenido de
+  metal (`pdftotext -raw`): 2020 = 26717000, 2021 = 26895000,
+  2022 = 26945000, 2023 = 26754000, **2024 = 27815000**.
+- Contra el USGS: 2024, 27815 contra 25300 t (**9.9 %**); 2021, 26895 contra
+  25000 (7.6 %). La brecha es sistemática y mucho mayor que en el oro. No se
+  leyó la explicación; las notas de la tabla hablan de producción de
+  fundición o refinería en algunos países. **El BGS no sirve como gate de la
+  plata**; se anota como contexto.
+
+#### N0.5.5 El stock de plata
+
+No se encontró ninguna fuente abierta de existencias de plata. El Silver
+Institute menciona "above ground stocks" en su encuesta anual (clase s/d, PDF
+no leído). **NO MEDIDO.**
+
+### N0.6 Acciones: emisión neta en EE.UU. (Z.1)
+
+#### N0.6.1 Junta de la Reserva Federal, *Financial Accounts of the United States* (Z.1), tablas F51.1 y D3 — leída, dominio público
+
+- Publicación: `https://www.federalreserve.gov/releases/z1/`, "Release Date:
+  September 11, 2026", datos a 2026:Q2. Trimestral; el calendario
+  (`/releases/z1/release-dates.htm`) muestra una publicación por trimestre,
+  unas diez semanas después del cierre.
+- Descarga: paquete `https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip`
+  (8.336.582 bytes, SHA-256
+  `b63af9755437df0fb88b7cf346f8f9eaeb22bf1aa2b5df1709334135c43de4b6`): un CSV
+  por tabla (307 archivos) más un diccionario con la descripción de cada
+  serie. El mapa de nombres `current/z1_table_mapping.csv` (9.737 bytes) dice
+  que **F51.1 es la antigua F.224/L.224 "Corporate equities"** (la F.223 de hoy
+  es "Direct investment intercompany debt": el número que daba el encargo ya no
+  es el de acciones) y que F3 es la antigua F.208/L.208 "Debt securities".
+  También existe el paquete completo `/releases/z1/data/FRB_Z1_csv.zip` y el
+  programa de descarga (DDP); no se usaron.
+- **Series** (diccionario del paquete, literal):
+
+  | Serie | Descripción | Tabla | Unidad y convención |
+  | --- | --- | --- | --- |
+  | `FA893064105.Q` | All sectors; corporate equities; asset | F51.1.t, línea 1 ("Net issues" en el HTML) | Millions of dollars; transactions at a seasonally adjusted annual rate |
+  | `FA103164105.Q` | Nonfinancial corporate business; corporate equities; liability | F51.1.t, línea 2 | ídem |
+  | `FA793164105.Q` | Domestic financial sectors; corporate equities; liability | F51.1.t, línea 3 | ídem |
+  | `LM893064105.Q` | All sectors; corporate equities; asset | F51.1.s, línea 1 | Millions of dollars; amounts outstanding end of period, market value, not seasonally adjusted |
+  | `LM103164105.Q` | Nonfinancial corporate business; corporate equities; liability | F51.1.s, línea 2 | ídem |
+
+  Los flujos sin ajuste estacional están en `F51_1_t_tu.csv` (prefijo `FU`).
+- **Inicio real:** los flujos empiezan en **1946:Q4** (anuales hasta 1951,
+  trimestrales desde 1952:Q1); los saldos en **1945:Q4**. 305 observaciones
+  hasta 2026:Q2.
+- **Muestra, contrastada con la tabla en HTML del mismo emisor**
+  (`/releases/z1/current/html/F51_1_t.htm`): `FA893064105` 2026:Q2 = 2952979
+  en el CSV y 2953.0 (miles de millones) en el HTML; anuales 2024 = 905.0 y
+  2025 = 1163.8 en el HTML, 905 y 1164 sumando los cuatro trimestres del CSV
+  y dividiendo por cuatro (cálculo propio). Igual. Es un contraste de
+  transporte, no una segunda medición: el Z.1 tiene un solo compilador.
+- **Lo que dicen los datos (cálculo propio: emisión neta del año sobre el
+  valor de mercado de fin del año anterior):**
+
+  | Año | Soc. no financieras, emisión neta (miles de millones) | Sobre el valor de mercado previo | Todos los sectores, emisión neta | Sobre el valor previo |
+  | --- | --- | --- | --- | --- |
+  | 2015 | −506 | −2.00 % | −95 | −0.26 % |
+  | 2016 | −442 | −1.81 % | −108 | −0.30 % |
+  | 2017 | −328 | −1.27 % | 217 | 0.55 % |
+  | 2018 | −628 | −2.09 % | −216 | −0.46 % |
+  | 2019 | −340 | −1.22 % | −194 | −0.45 % |
+  | 2020 | −74 | −0.21 % | 781 | 1.46 % |
+  | 2021 | −54 | −0.12 % | 920 | 1.44 % |
+  | 2022 | −553 | −1.02 % | 236 | 0.30 % |
+  | 2023 | −603 | −1.43 % | 34 | 0.05 % |
+  | 2024 | −397 | −0.77 % | 905 | 1.18 % |
+  | 2025 | −348 | −0.55 % | 1164 | 1.26 % |
+
+  **En EE.UU. las sociedades no financieras retiraron acciones netas en los
+  once años**: las recompras superaron a las emisiones. El total de todos los
+  sectores (que suma financieras y acciones extranjeras compradas por
+  residentes) fue positivo en siete de once años y nunca pasó de 1.5 % del
+  valor de mercado. No es lo que dice la fila 3 de N0.0.
+- **Lo que esta serie no mide.** Es un flujo en dólares a valor de transacción,
+  no una cantidad de acciones: la "oferta" en unidades no existe en el Z.1. La
+  tasa `emisión neta / valor de mercado` mezcla cantidades y precios. La serie
+  se publica como lo que es ("emisión neta de acciones, EE.UU., en USD") y
+  lo dice en su ficha.
+- Cobertura: **solo EE.UU.** Una serie global de acciones en circulación no
+  tiene fuente abierta: la WFE es (c) (D0.9). Se llama "EE.UU." y nada más.
+- **Licencia: dominio público.** `https://www.federalreserve.gov/disclaimer.htm`,
+  releída hoy, literal: *"Unless otherwise indicated, information on Board's
+  website is in the public domain and may be copied and distributed without
+  permission. Please cite to the Board as the source of the information."*
+- Revisiones: cada publicación revisa la historia. Cada corrida guarda su
+  descarga con SHA-256 y reporta los cambios (A-D0-26).
+
+### N0.7 Bonos y deuda
+
+#### N0.7.1 Z.1, tablas F3 (títulos de deuda) y D3 (deuda por sector) — leída, dominio público
+
+- Mismo paquete, misma licencia y mismo contraste de transporte que N0.6.1
+  (`/releases/z1/current/html/F3_s.htm`: `FL894122005` 2025:Q4 = 65485.7 en
+  el HTML y 65485674 en el CSV).
+- **Series** (diccionario, literal):
+
+  | Serie | Descripción | Tabla | Unidad y convención |
+  | --- | --- | --- | --- |
+  | `FL894122005.Q` | All sectors; total debt securities; liability | F3.s, línea 1 | Millions of dollars; amounts outstanding end of period, not seasonally adjusted |
+  | `FA894122005.Q` | All sectors; total debt securities; liability | F3.t, línea 1 | Millions of dollars; transactions at a seasonally adjusted annual rate |
+  | `LA384104005.Q` | Domestic nonfinancial sectors; debt securities and loans; liability | D3.s, línea 1 | Millions of dollars; amounts outstanding end of period, seasonally adjusted |
+
+- **Inicio real:** saldos desde **1945:Q4** (`FL894122005` = 248814;
+  `LA384104005` = 352402); flujos desde 1946:Q4.
+- **Lo que dicen los datos (cálculo propio, variación de fin de año a fin de
+  año):**
+
+  | Año | Títulos de deuda, todos los sectores (millones) | Variación | Deuda de sectores no financieros internos (millones) | Variación |
+  | --- | --- | --- | --- | --- |
+  | 2019 | 44282743 | 5.00 % | 55358189 | 4.74 % |
+  | 2020 | 50509459 | 14.06 % | 62136630 | 12.24 % |
+  | 2021 | 53986280 | 6.88 % | 66688878 | 7.33 % |
+  | 2022 | 56049381 | 3.82 % | 70647649 | 5.94 % |
+  | 2023 | 59214983 | 5.65 % | 74283380 | 5.15 % |
+  | 2024 | 62105061 | 4.88 % | 77718783 | 4.62 % |
+  | 2025 | 65485674 | 5.44 % | 81810789 | 5.27 % |
+
+  Entre 3.8 % y 14.1 % en siete años; 5.4 % en 2025. La fila 2 de N0.0 dice
+  "7-15 %" para "Cash / Bonos" sin decir de qué país ni de qué agregado.
+- "Total debt securities" incluye los títulos emitidos por el resto del mundo
+  en manos de residentes; el Z.1 no publica en F3 una fila solo de emisores
+  residentes. Cobertura: EE.UU.
+
+#### N0.7.2 BIS, *Debt securities statistics* (`WS_NA_SEC_DSS`) — leída, (a), contraste y suma de economías
+
+- Consulta: `https://stats.bis.org/api/v2/data/dataflow/BIS/WS_NA_SEC_DSS/1.0/all?c[REF_AREA]=US&format=csv`
+  (20.987.658 bytes, SHA-256
+  `6c979607d5266388d6b1d015953a4a5766eae75b0bc3bbdec3937fffff38b9de`; 84207
+  filas, 291 series de EE.UU.). Sin clave.
+- Series de EE.UU. que importan (clave SDMX y título del BIS, literal):
+  - `Q.N.US.XW.S1.S1.N.L.LE.F3.T._Z.USD._T.N.V.N._T`: *"United States - Debt
+    sec, issued by residents, all markets, all original maturities, all
+    currencies, nominal value, stocks"*: **2025-Q4 = 61130.116** miles de
+    millones de USD. Es la cifra que D0.9 ya había leído.
+  - La misma a valor de mercado (`...M.V.N._T`): 2025-Q4 = 58807.766.
+- Contra el Z.1 (`FL894122005` 2025:Q4 = 65485.674 miles de millones): el BIS
+  queda **6.65 % por debajo** a valor nominal. No es un error: el BIS cuenta
+  solo emisores residentes y el Z.1 suma los del resto del mundo. **No sirve
+  como gate de igualdad**; sirve como comparación declarada.
+- Trimestral desde 1952-Q1 (vista en la primera fila de la descarga), con
+  rezago de dos trimestres (D0.9).
+- La suma de las 49 economías declarantes es la de A-D0-22, ya propuesta y NO
+  MEDIDA en D0; no se repite aquí.
+- **Licencia: (a).** `https://data.bis.org/help/legal`, "Terms of permitted use
+  of BIS statistics", releída hoy: uso sin restricciones si se cita al BIS como
+  fuente, no se sugiere su respaldo y, en un producto comercial, no se cobra un
+  cargo adicional por incluirlas (paráfrasis; el texto es del BIS).
+
+### N0.8 Inmuebles: el parque de viviendas de EE.UU. (Censo)
+
+#### N0.8.1 Census Bureau, *Housing Vacancies and Homeownership* (CPS/HVS), Tabla 7 — leída, dominio público
+
+- `https://www.census.gov/housing/hvs/data/histtabs.html` → Tabla 7,
+  `https://www.census.gov/housing/hvs/data/histtab7.xlsx` (32.041 bytes,
+  SHA-256 `335592c7de815c450495abeeea8a0d64d333e4760109a5b04b5eca4ee5ca8ebc`),
+  "Table 7. Estimates of the Total Housing Inventory for the United States:
+  1965 to Present", "Source: U.S. Census Bureau, Current Population
+  Survey/Housing Vacancy Survey, March 24, 2026".
+- Frecuencia: anual. Convención: promedio de las estimaciones mensuales del
+  año; **2025 promedia 11 meses** (nota literal: *"Due to a lapse in federal
+  funding, the Current Population Survey/Housing Vacancy Survey (CPS/HVS) did
+  not collect data for the month of October 2025. The Annual 2025 estimates
+  are based on the remaining 11 months of data."*).
+- Unidad: miles de viviendas ("All housing units").
+- **Inicio real: 1965 = 64213.** Último: 2024 = 146835; 2025 = 148086.
+- **Quiebres declarados por la fuente:** columnas revisadas 1979r1 (cambios de
+  1980), 1981r2, 1989r3 (incluye casas móviles vacantes), 1993r4 (Censo de
+  1990), 2002r5 (Censo de 2000); 1986 y 1987 con notas sobre vacantes
+  estacionales. Cada revisión aparece como una columna doble: la serie no
+  está empalmada por el Censo.
+- **Tabla 7a** (`hist_tab_7a_v2025.xlsx`, 35.983 bytes, SHA-256
+  `3777bf395606d5564c2fce3447f5e757f0628ce59354df057db0e0bcbc3338b2`): el
+  mismo inventario 2000–2025 **revisado con los controles de vivienda de las
+  vintages 2010, 2020 y 2025** (Population Estimates). Difiere de la Tabla 7:
+  2024 = 146770 contra 146835; 2025 = 148163 contra 148086. Son dos series del
+  mismo emisor con distinta base; no se mezclan.
+- Clave / registro: no.
+- **Licencia: dominio público por ley.** En las páginas del Censo leídas
+  (políticas, citas, términos de la API) no se encontró una cláusula propia
+  sobre reutilizar los archivos. Lo que rige es 17 U.S.C. § 105(a), leído en
+  `https://www.law.cornell.edu/uscode/text/17/105`, literal: *"Copyright
+  protection under this title is not available for any work of the United
+  States Government"*. La página de citas del Censo
+  (`/about/policies/citation.html`) da el formato de cita, que se usará. Los
+  términos de la API (`/data/developers/about/terms-of-service.html`) exigen un
+  aviso ("This product uses the Census Bureau Data API but is not endorsed or
+  certified by the Census Bureau") **solo para quien use la API**; aquí no se
+  usa.
+
+#### N0.8.2 Census Bureau, Population Estimates, viviendas 2020–2025 (`NST-EST2025-HU`) — leída, dominio público
+
+- `https://www2.census.gov/programs-surveys/popest/tables/2020-2025/housing/totals/NST-EST2025-HU.xlsx`
+  (16.894 bytes, SHA-256
+  `a1ff31e0dc318bb00e4ac546dbba45601adb17ab56f31893e01fc29b072f94a8`),
+  "Annual Estimates of Housing Units for the United States, Regions, States,
+  and the District of Columbia: April 1, 2020 to July 1, 2025", "Release Date:
+  May 2026".
+- Frecuencia: anual. Convención: **existencias al 1 de julio**, estimadas
+  desde la base del Censo de 2020 con permisos de construcción, pérdidas y
+  registros administrativos. Unidad: viviendas (unidades).
+- Valores leídos: base 2020-04-01 = 140498736; 2020 = 140817690;
+  2021 = 142193055; 2022 = 143831409; 2023 = 145398445; 2024 = 146829273;
+  **2025 = 148260882**.
+- Inicio real de esta vintage: 2020. Las vintages anteriores (2010–2019,
+  2000–2009) están en otras tablas, no leídas; cada vintage reexpresa su
+  década.
+- Es la fuente de los "controles" de la Tabla 7a: no son independientes.
+
+#### N0.8.3 FRED `ETOTALUSQ176N` — leída, contraste de transporte
+
+- `https://fred.stlouisfed.org/graph/fredgraph.csv?id=ETOTALUSQ176N`
+  (1.921 bytes): "Housing Inventory Estimate: Total Housing Units in the United
+  States", trimestral, miles, 2000-Q2 = 116047 a **2026-Q2 = 149454**; 105
+  observaciones. Es el HVS trimestral reempaquetado; emisor original: el
+  Censo.
+- 2025-Q3 = 148300 contra 148260.882 del 1 de julio (Population Estimates):
+  0.03 %.
+
+#### N0.8.4 Lo que dicen los datos (cálculo propio)
+
+| Año | Tabla 7 | Tabla 7a | Population Estimates (1 de julio) |
+| --- | --- | --- | --- |
+| 2020 | 0.83 % | 0.90 % | — |
+| 2021 | 0.81 % | 0.99 % | 0.98 % |
+| 2022 | 1.06 % | 1.12 % | 1.15 % |
+| 2023 | 1.33 % | 1.09 % | 1.09 % |
+| 2024 | 1.02 % | 1.00 % | 0.98 % |
+| 2025 | 0.85 % | 0.95 % | 0.98 % |
+
+Tasa compuesta 1965–2025 (Tabla 7): 1.40 % anual; 2000–2025 (Tabla 7a):
+0.98 %. **Entre 0.8 % y 1.3 % por año en 2020–2025, no "2-3 %".** Cobertura:
+solo EE.UU. "Global housing units" (fila 15 de N0.0) no tiene fuente abierta
+leída: UN-Habitat no se leyó. Si se publica, la serie se llama "parque de
+viviendas de EE.UU." y nada más.
+
+### N0.9 Dinero
+
+El crecimiento del M2 de EE.UU. (y de la Eurozona y Japón) ya se publica en
+D0 con su variación interanual. No se duplica. La fila 2 de N0.0 ("Cash /
+Bonos, 7-15 % anual") mezcla el dinero con los bonos; lo que N0 puede decir de
+los bonos está en N0.7, y lo del dinero en D0.
+
+### N0.10 Decisiones propuestas
+
+**Ninguna está tomada.**
+
+#### N0.10.1 Por activo: qué se puede medir, con qué cobertura y desde cuándo
+
+| Activo | Serie propuesta | Qué mide | Cobertura | Desde | Fuente | Licencia | Estado propuesto |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| BTC | Emisión anual del calendario | Flujo que el protocolo permite, por bloques observados del año | Red principal | 2009 | Bitcoin Core (subsidio) × Coin Metrics `BlkCnt` | MIT / CC BY-NC | dato |
+| BTC | Oferta observada y su tasa de crecimiento | Stock a fin de año (`SplyCur`) y `stock_t / stock_{t-1} - 1` | Red principal | 2009 | Coin Metrics `SplyCur` | CC BY-NC | dato; **reemplaza "0 %"** |
+| BTC | Elasticidad | Cero por construcción | — | — | Bitcoin Core | MIT | dato del protocolo, no estimación |
+| Oro | Producción minera mundial anual | Flujo | Mundo | 1900 | USGS DS140 (1900–2022) + MCS (2023 en adelante, con el último año estimado) | dominio público | dato |
+| Oro | Stock sobre la superficie y stock-to-flow | Acervo | — | — | WGC (c), USGS (sin fecha) | — | **NO MEDIDO como serie**; cifra de terceros (A-D0-28) |
+| Oro | Tasa de crecimiento del stock | Flujo / acervo | — | — | — | — | NO MEDIDO (sin acervo abierto) |
+| Plata | Producción minera mundial anual | Flujo | Mundo | 1900 | USGS DS140 (1900–2021) + MCS | dominio público | dato |
+| Plata | Stock | Acervo | — | — | — | — | NO MEDIDO |
+| Acciones | Emisión neta de acciones, EE.UU., en USD | Flujo en dólares (no en acciones) | EE.UU. | 1946 (anual), 1952 (trimestral) | Z.1 `FA103164105` y `FA893064105` | dominio público | dato, con su limitación declarada |
+| Acciones | Valor de mercado, EE.UU. | Acervo a valor de mercado | EE.UU. | 1945:Q4 | Z.1 `LM893064105`, `LM103164105` | dominio público | dato (contexto del flujo) |
+| Acciones | Acciones en circulación o emisión global | — | Mundo | — | WFE (c) | — | NO MEDIDO |
+| Bonos | Títulos de deuda en circulación, EE.UU., y su variación | Acervo y tasa | EE.UU. | 1945:Q4 | Z.1 `FL894122005` | dominio público | dato |
+| Bonos | Deuda de sectores no financieros internos, EE.UU. | Acervo | EE.UU. | 1945:Q4 | Z.1 `LA384104005` | dominio público | dato |
+| Bonos | Suma de 49 economías | Acervo | 49 economías | 2020-Q4 (panel fijo) | BIS | (a) | lo que ya dice A-D0-22 |
+| Inmuebles | Parque de viviendas de EE.UU., HVS Tabla 7 | Acervo, promedio anual | EE.UU. | 1965 | Censo | dominio público | dato, con sus revisiones declaradas |
+| Inmuebles | Parque de viviendas, Population Estimates | Acervo al 1 de julio | EE.UU. | 2020 (esta vintage) | Censo | dominio público | dato (contexto); vintages anteriores por leer |
+| Inmuebles | Viviendas globales | — | Mundo | — | UN-Habitat (no leído) | — | NO MEDIDO |
+| Dinero | M2 | — | — | — | D0 | — | ya publicado en D0; no se duplica |
+
+**Lo que se propone que diga cada nombre:** "EE.UU." donde la cobertura es
+EE.UU.; "mundo" solo para la producción minera del USGS, que así lo declara;
+"49 economías" para el BIS. Ningún nombre dice "global".
+
+#### N0.10.2 Elasticidad: estimar o NO MEDIDO
+
+Dos opciones, para que elija el dueño. **Recomendación: la B ahora, y la A
+como un paso aparte (N1), si se quiere.**
+
+- **Opción A: estimar, solo para oro y plata**, que son los únicos activos con
+  flujo y precio anuales abiertos y largos (USGS DS140, 1900–2022: producción
+  mundial y valor unitario en dólares de 1998; o el Pink Sheet desde 1960 para
+  el precio, sección 4.5). Método fijado aquí, antes de calcular, y sin
+  retoques después:
+  - Regresión por mínimos cuadrados de `Δln(producción_t)` sobre
+    `Δln(precio real_{t-k})`, con `k` de 0 a 5, todos los rezagos en la misma
+    ecuación, con constante y errores robustos a autocorrelación.
+  - Se publican los seis coeficientes y su suma, cada uno con su intervalo del
+    95 %, en dos submuestras fijadas ahora: 1900–2022 y 1971–2022.
+  - La serie se rotula "elasticidad estimada (cálculo propio)", con
+    `apto_metricas = no`, y si el intervalo incluye el cero se dice así.
+  - Para inmuebles haría falta un índice de precios abierto (el de la FHFA es
+    candidato; no se leyó) y queda para después. Para acciones y bonos la
+    "oferta" del Z.1 está en dólares: no hay forma de separar cantidad de
+    precio, y la elasticidad queda **NO MEDIDO**. Para BTC es cero por
+    construcción (dato).
+- **Opción B: NO MEDIDO para todos** salvo BTC (cero por construcción). El
+  sitio publica tasas de crecimiento observadas y deja de hablar de
+  elasticidades hasta que exista una estimación aprobada.
+
+#### N0.10.3 Frecuencia y convención
+
+- **Frecuencia: anual** para toda la familia. El USGS y el HVS son anuales;
+  BTC se suma por año calendario; el Z.1 se toma a fin de año (y queda
+  disponible trimestral para quien lo quiera, sin ratio contra nada).
+- **Convención de cada serie, en su ficha:** BTC, stock al 31 de diciembre
+  (00:00 UTC del 1 de enero); USGS, producción del año calendario; HVS,
+  promedio de meses del año (11 meses en 2025); Population Estimates, 1 de
+  julio; Z.1, saldo de fin de período (flujos: suma de los cuatro trimestres
+  a tasa anual, dividida por cuatro).
+- **La tasa de crecimiento** es siempre `stock_t / stock_{t-1} - 1` con la
+  convención de la serie; donde solo hay flujo (oro, plata) no se publica
+  tasa.
+- Ninguna de estas series entra a un ratio contra precio ni contra M2 en este
+  paso.
+
+#### N0.10.4 Afirmación actual del sitio → lo que dicen las fuentes → estado propuesto
+
+| Afirmación (N0.0) | Lo que dicen las fuentes leídas | Estado propuesto |
+| --- | --- | --- |
+| 1, 5: "Oro, 1.5 %" anual | USGS: producción 3280 t (2024) y 3300 t (2025, estimado). No hay stock abierto. Con la cifra de terceros del WGC, 3300 / 222600 = 1.48 %; no es un dato | Publicar la producción (dato). La tasa de crecimiento del stock, NO MEDIDO; mostrar el 1.48 % solo como cálculo sobre una cifra de terceros, fuera de las métricas |
+| 5, 10: stock-to-flow "~60 años" / 61.4; proyección a 2050 | 222600 / 3300 = 67.5 con el WGC; 187000 / 3300 = 56.7 con el USGS (sin fecha). La producción cayendo 1 % anual no tiene fuente | NO MEDIDO como serie; sin proyección |
+| 9: producción de oro de `data.ts` | Difiere del USGS en 14 de 18 anclas; 2021–2025 entre 6 % y 14 % por encima | Reemplazar por el USGS |
+| 1, 3: "Acciones, 3-5 % anual"; "la emisión neta global es positiva" | Z.1, EE.UU.: emisión neta de las sociedades no financieras negativa en 2015–2025 (−0.12 % a −2.09 % del valor de mercado previo); todos los sectores, entre −0.46 % y +1.46 %. Global: sin fuente abierta | Publicar la serie de EE.UU. en USD, con su limitación; global, NO MEDIDO |
+| 14: "Global shares outstanding", "Companies listed" | Sin fuente abierta (WFE, (c)) | NO MEDIDO |
+| 1, 4: "Inmuebles, 2-3 %" | Censo, EE.UU.: 0.8 % a 1.3 % por año en 2020–2025; 1.40 % compuesto 1965–2025 | Publicar el parque de EE.UU. (dato); global, NO MEDIDO |
+| 15: "Global housing units" 250 → 1900 millones | Sin fuente leída (UN-Habitat no leído). EE.UU. 2025: 148.1 millones (HVS) o 148.3 millones (1 de julio) | NO MEDIDO |
+| 2: "Cash / Bonos, 7-15 % anual"; 1: "al ritmo de la impresora" | Z.1, EE.UU.: títulos de deuda +3.8 % a +14.1 % por año en 2019–2025 (+5.4 % en 2025); deuda no financiera +4.6 % a +12.2 %. Dinero: D0 | Publicar las dos series del Z.1 (dato); el dinero se queda en D0 |
+| 16: "Global debt outstanding" 145 billones (2024) | BIS, suma propia de 49 economías: 145068 miles de millones a 2024-Q4 (D0.9); EE.UU. (Z.1): 62105 | Lo de A-D0-22; nunca "global" |
+| 6: "Bitcoin, 0 %", "Supply fijo", "converger a cero" | Coin Metrics: +1.112 % en 2024, +0.838 % en 2025; 165881.25 BTC emitidos en 2025; el calendario sigue positivo hasta más allá de 2100 | Publicar la emisión anual y la tasa observada (dato); "0 %" se reemplaza; la elasticidad es cero por construcción (dato del protocolo) |
+| 7: "21 millones", "cada 210,000 bloques" | `MAX_MONEY = 21'000'000 * COIN`; `nSubsidyHalvingInterval = 210000` | dato |
+| 13: "94,4 %" minado | Oferta al 2025-12-31: 19969701.16 BTC = 95.09 % de 21 millones; al 2026-10-06: 20094435.50 = 95.69 % | dato observado, con fecha |
+| 8: "Cuando el precio sube, no se produce más Bitcoin" | El subsidio es función de la altura (N0.3.1) | dato; se enuncia como elasticidad cero por construcción |
+| 11: elasticidad = tasa de crecimiento | Son dos magnitudes distintas (N0.2) | Corregir el texto; A-N0-1 |
+| 12: `elasticity_*` a 10 años | No es una estimación (sin rezago, sobre anclas interpoladas) | NO MEDIDO hasta que se apruebe un método (N0.10.2) |
+| 17: múltiplos del S&P 500, del denominador y del oro | Precio y M2 | Fuera de N0; fases R y D0 |
+
+#### N0.10.5 Lo que decidió el dueño (2026-10-07)
+
+Aprobó N0 con estas decisiones; rigen sobre las propuestas de N0.10.1 a
+N0.10.4 donde difieren.
+
+1. **Expansión neta de la oferta (dato) para todos los activos medibles.**
+   BTC: emisión del año según el protocolo, sobre la oferta en circulación
+   observada. Acciones de EE.UU.: emisión neta en monto y como porcentaje del
+   valor de mercado, por sector y total (Z.1, F51.1), sin interpretar. Bonos
+   de EE.UU.: variación anual del stock de títulos de deuda (Z.1). Viviendas
+   de EE.UU.: variación anual del parque (Censo). **Frecuencia anual.**
+   Acciones, bonos y viviendas se llaman "de EE.UU." en todas partes.
+2. **BTC.** El calendario del protocolo es el dato; la oferta observada de
+   Coin Metrics es el gate, con la tolerancia fijada antes de comparar. Se
+   publica también el porcentaje minado a la fecha.
+3. **Oro y plata.** Producción minera anual en toneladas, con el USGS como
+   fuente principal (MCS y *Data Series 140*). El BGS es control de
+   consistencia contra el USGS (marca, no bloquea), con tolerancia fijada
+   antes de comparar; la diferencia por minería artesanal se declara en la
+   ficha. **Cota superior de la tasa de crecimiento del stock** = producción
+   del año / producción acumulada desde 1900 (USGS DS140), con estado
+   "estimación" y el supuesto declarado (pérdidas despreciables; en plata,
+   declarar que el consumo industrial la hace menos informativa). Nunca se
+   presenta como la tasa real. El stock sobre tierra va solo como cifra
+   citada de terceros, fuera de todo cálculo.
+4. **Elasticidad, en dos niveles.** BTC: cero por construcción (la emisión
+   depende de la altura del bloque, no del precio); dato. Deuda de EE.UU.:
+   NO MEDIDO (no tiene un precio comparable). Oro, plata, viviendas de EE.UU.
+   y acciones de EE.UU.: nueva familia "respuesta observada de la oferta al
+   precio", estado "estimación" (punto 5).
+5. **Respuesta observada de la oferta al precio.** Antes de descargar o
+   cruzar precios, se prerregistra en `SUPUESTOS.md` la especificación
+   completa (variables, deflactor, rezagos de 0 a 5 años, ventana, método,
+   cómo se reportan los intervalos y qué resultado se leería como "responde"
+   o "no responde"), en un commit propio **antes** de calcular. Pares: oro y
+   plata (producción contra precio real), viviendas de EE.UU. (construcción
+   contra el índice de precios de la FHFA; el Case-Shiller tiene licencia de
+   S&P y queda fuera) y acciones de EE.UU. (emisión neta contra valuación).
+   Rótulo fijo: "asociación observada, no elasticidad causal: precio y
+   cantidad se determinan juntos". Intervalos, no un número único. Si alguna
+   fuente necesaria (FHFA, deflactor, valuación) no está verificada en N0,
+   primero un paso 0 corto para ella, con parada para mostrarla.
+6. **Tabla en el PR:** "afirmación actual del sitio (lista N0.0) → dato o
+   estimación → estado", sin interpretar.
+
+Y el encargo del paso 1: `numerador.py`, gates y tolerancias fijados antes
+de comparar, tests sin red, `test_salidas_publicadas`, supuestos A-N0-\*,
+changelog y README; commits pequeños y PR sin merge.
+
+### N0.11 Validación propuesta
+
+Con la regla de `CLAUDE.md`: una segunda fuente por serie y una tolerancia
+escrita antes de ver el resultado. **Advertencia, como en D0.11:** el paso 0
+exige contrastar una muestra, así que varios resultados ya están a la vista.
+Donde la tolerancia sale de la precisión publicada ("por construcción") se
+dice; donde se fija con el resultado conocido, también.
+
+| Serie | Fuente | Segunda fuente | Clase | Tolerancia propuesta | Cómo se fijó |
+| --- | --- | --- | --- | --- | --- |
+| BTC, oferta observada | Coin Metrics `SplyCur` | Calendario del protocolo a la misma altura (`BlkCnt` acumulado) | Gate | `SplyCur` nunca mayor que el calendario, y calendario − `SplyCur` ≤ 0.001 % del calendario | **Con el resultado a la vista:** la diferencia es −80 BTC (−0.0004 %) al 2026-10-06. Lo que no depende del resultado es el signo |
+| BTC, oferta observada | Coin Metrics `SplyCur` | blockchain.com `q/totalbc`, a igual altura | Control | Por fijar en el paso 1, antes de comparar a igual altura | La comparación de hoy fue a alturas distintas (103 bloques) y no sirve para fijarla |
+| BTC, emisión anual | Suma de `IssTotNtv` | Subsidio × `BlkCnt` del año | Gate | Igualdad en 2025; en años con bloques que reclamaron menos, `IssTotNtv` ≤ subsidio × bloques | Por construcción |
+| Oro, producción mundial | USGS (DS140 y MCS) | BGS, total mundial | Control | ±5 % | **Con el resultado a la vista:** 0.6 % (2024), 2.6 % (2021), 4.4 % (2022). ±50 t (medio redondeo del BGS) habría sido "por construcción" y falla en 2021 y 2022: los dos compiladores no miden lo mismo (artesanal). Por eso es control, no gate |
+| Oro, producción mundial | USGS MCS (último año) | USGS DS140 o MCS siguiente (revisión) | Control de revisión | Se reporta la diferencia; sin tolerancia que decida | — |
+| Plata, producción mundial | USGS | Silver Institute (Metals Focus), convertido de Moz | Control | ±2 % | **Con el resultado a la vista:** 0.77 % (2024). Y no son independientes del todo (nota 8 del USGS) |
+| Plata, producción mundial | USGS | BGS | Contexto | Sin tolerancia; se publica la diferencia (9.9 % en 2024) | — |
+| Acciones y bonos (Z.1) | CSV del paquete | Tabla en HTML del mismo emisor, mismos trimestres | Gate de transporte | Igualdad a 0.1 miles de millones (el HTML redondea a un decimal) | Por construcción |
+| Acciones y bonos (Z.1) | CSV del paquete | FRED (`BOGZ1…`), mismo emisor | Control | Igualdad | Por construcción; **FRED no se leyó en este paso** |
+| Bonos (Z.1) | `FL894122005` | BIS, emisores residentes, nominal | Comparación declarada | Sin tolerancia; se publica la diferencia (−6.65 % en 2025-Q4) y su causa | Conceptos distintos |
+| Viviendas, HVS Tabla 7a | xlsx del Censo | FRED `ETOTALUSQ176N`, promedio de los cuatro trimestres del año | Gate de transporte | ±0.5 mil (redondeo a miles) | Por construcción; **no se comparó todavía** |
+| Viviendas, HVS Tabla 7 | xlsx del Censo | Tabla 7a | Comparación declarada | Sin tolerancia; se publican las dos series y su diferencia | Dos bases distintas por decisión del Censo |
+| Viviendas | HVS (promedio anual) | Population Estimates (1 de julio) | Control | ±0.5 % | **Con el resultado a la vista:** −0.07 % y −0.12 % en 2025. Conceptos distintos (promedio contra 1 de julio) |
+
+- **Mínimo de comparaciones: tres**, como en A-R0-16 y A-D0-25. Un gate que no
+  cierra deja la serie como "NO MEDIDO: sin validación externa"; un control
+  marca el año como valor en disputa y no decide.
+- **Sin segunda fuente independiente:** acciones (Z.1 es el único compilador;
+  el HTML y FRED son el mismo dato), y el parque de viviendas (la Tabla 7a y
+  Population Estimates comparten los controles). Las fichas lo dicen.
+- **Revisiones:** cada corrida guarda su descarga con SHA-256 y reporta los
+  cambios en años ya publicados (A-D0-26). El Z.1 y el MCS revisan siempre el
+  último año.
+
+### N0.12 Supuestos A-N0-\* propuestos
+
+Ninguno está escrito en `SUPUESTOS.md` todavía. Si se aprueban, van allí con
+estos números.
+
+| N.º | Qué fija | Estado propuesto |
+| --- | --- | --- |
+| A-N0-1 | Tasa de crecimiento de la oferta y elasticidad son magnitudes distintas; cada serie declara cuál mide y el sitio no usa una por la otra | supuesto |
+| A-N0-2 | BTC: la emisión anual sale del calendario del protocolo por los bloques observados del año y se contrasta con `SplyCur`; la tasa de crecimiento publicada es la observada (0.838 % en 2025), no "0 %"; la elasticidad es cero por construcción | dato |
+| A-N0-3 | Oro y plata: la producción minera mundial es la del USGS (DS140 y MCS); el último año es estimado y se marca; el stock y el stock-to-flow quedan NO MEDIDO como serie y solo se citan como cifra de terceros (A-D0-28) | dato la producción; no medido el stock |
+| A-N0-4 | Acciones: emisión neta en USD de EE.UU. (Z.1), rotulada así, con su limitación (dólares, no acciones); global NO MEDIDO | dato con limitación; no medido global |
+| A-N0-5 | Bonos: títulos de deuda y deuda no financiera de EE.UU. (Z.1); la suma del BIS es la de A-D0-22 | dato |
+| A-N0-6 | Inmuebles: parque de viviendas de EE.UU. (HVS Tabla 7, con sus revisiones como columnas, y Tabla 7a aparte); Population Estimates como contexto; global NO MEDIDO | dato; no medido global |
+| A-N0-7 | Frecuencia anual y convención por serie (N0.10.3); ninguna serie de N0 entra a un ratio en este paso | supuesto |
+| A-N0-8 | Elasticidad: la opción que elija el dueño en N0.10.2; si es A, el método, los rezagos (0 a 5) y las submuestras (1900–2022 y 1971–2022) quedan fijados antes de calcular | supuesto (A) o no medido (B) |
+| A-N0-9 | Las tolerancias de N0.11; las que se fijaron con el resultado a la vista lo declaran | supuesto |
+| A-N0-10 | BGS y blockchain.com son fuentes de contraste, no de publicación (términos restrictivos); el `robots.txt` de nora.nerc.ac.uk se leyó después de la descarga y se declara | supuesto de licencia |
+| A-N0-11 | Crudos: se versionan en `data/raw/` los del USGS (dos PDF y dos xlsx), los del Censo (tres xlsx), los CSV de las tablas usadas del Z.1 (no el ZIP de 8.3 MB, que supera el tope de A-D0-27 y se registra por hash) y la descarga de Coin Metrics (CC BY-NC); el CSV del BIS (21 MB), el PDF del BGS y las respuestas de blockchain.com van a `data/privado/` con URL, fecha y SHA-256 | supuesto |
+| A-N0-12 | Ningún nombre de serie dice "global"; dice "EE.UU.", "mundo" (solo el USGS) o "49 economías" | supuesto |
+
+### N0.13 Permisos, avisos y preguntas
+
+Ninguno se envió.
+
+1. **BGS (`ipr@bgs.ac.uk`):** si citar los totales mundiales de oro y plata
+   en un sitio público de investigación sin ingresos cuenta como "provide them
+   to a third party", y si basta el reconocimiento que piden. Destraba usar al
+   BGS como gate publicado y no solo como contraste privado.
+2. **World Gold Council:** permiso para la serie anual de existencias sobre la
+   superficie (hoy detrás de una cuenta y con términos de uso personal).
+   Destraba el stock y el stock-to-flow del oro.
+3. **Silver Institute:** si sus cifras de producción minera pueden citarse
+   como serie (su aviso legal no lo dice).
+4. **Nada que pedir** a la Junta, al USGS ni al Censo (dominio público), ni a
+   Coin Metrics (CC BY-NC, con la condición de A-R0-4).
+
+### N0.14 Lo que sigue abierto
+
+- **Los *Minerals Yearbook* de oro y plata** (detalle por país, revisión de
+  2023) no se leyeron; el MCS 2025 tampoco (para ver cuánto revisa el MCS 2026).
+- **FRED como espejo del Z.1** (`BOGZ1…`) y del HVS trimestral: leído solo el
+  HVS; el control de N0.11 para el Z.1 queda por hacer.
+- **UN-Habitat** (viviendas globales) y **la WFE** (acciones listadas) no se
+  leyeron; la segunda ya es (c) por D0.9.
+- **Un índice de precios de vivienda abierto** (FHFA) para una eventual
+  elasticidad de los inmuebles: no leído.
+- **El método de blockchain.com** para `q/totalbc`: no leído; su cifra no
+  coincide con la suma de salidas no gastadas ni con el calendario exacto.
+- **La reconciliación exacta** entre `SplyCur` y el calendario (qué bloques
+  reclamaron menos, qué salidas no cuentan) queda para el paso 1; hoy solo se
+  sabe que la diferencia es negativa y de −80 BTC.
+- **Las vintages anteriores de Population Estimates** (2000–2009, 2010–2019)
+  para alargar esa serie hacia atrás.
+- **El historial del sitio:** las frases que el encargo citó y no están en
+  `master` (N0.0) podrían estar en un commit anterior; no se buscó.
