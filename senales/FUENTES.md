@@ -2749,6 +2749,28 @@ Ninguno se envió.
    con un texto fijo. Va antes de publicar la serie de Japón. Y una pregunta:
    si un sitio de investigación sin ingresos cae fuera de "fines comerciales",
    y si publicar series derivadas cuenta como alterar el contenido.
+
+   Dirección y asunto, citados de "Notice Regarding the Use of the API
+   Service" (`https://www.stat-search.boj.or.jp/info/api_notice_en.pdf`,
+   leído el 2026-10-05, SHA-256
+   `7773abb22c8a863038a0926001253e4b2cc4cb3a56db234772b64bad8c8b5fd6`),
+   sección I, "Notification on the Release of Services using the API":
+
+   > E-mail: post.rsd17@boj.or.jp
+   > Subject: [Release of the service using the API]
+
+   El destinatario es el Departamento de Investigación y Estadística
+   ("Research and Statistics Department"). El crédito de la sección II,
+   "Credit", palabra por palabra:
+
+   > "This service uses the API provided by the "Bank of Japan Time-Series
+   > Data Search." The Bank of Japan does not guarantee the content of the
+   > service."
+
+   La misma sección dice que no hay un lugar obligatorio para mostrarlo,
+   siempre que los usuarios del servicio puedan encontrarlo con facilidad.
+   El sitio lo muestra junto a las dos series de Japón y en el pie, con ese
+   texto exacto (`src/lib/creditos.ts` de eldenominador).
 2. **NBER: permiso para publicar las series 14144 de la Macrohistory
    Database.** La página de la base da `data@nber.org` para reportar errores;
    la de los libros tiene un formulario de permisos. Destraba la alternativa
