@@ -1574,7 +1574,8 @@ Es una diferencia con las secciones 2 a 8 de este archivo.
 | www.federalreserve.gov | Leído: páginas del H.6, el H.10 y el H.4.1, descargo legal, y los tres ZIP de XML. |
 | fred.stlouisfed.org | Leído, un pedido por vez con pausas de 20 s o más: 21 respuestas HTTP 200 y 2 HTTP 404 (identificadores que no existen). Solo como contraste. |
 | fraser.stlouisfed.org | Leído: los dos volúmenes de *Banking and Monetary Statistics* en PDF y los términos de uso. |
-| www.nber.org, data.nber.org | Leído: Macrohistory Database (capítulo 14) y el volumen de 1970 de Friedman y Schwartz. El libro de 1963 no está en línea. |
+| www.nber.org, data.nber.org | Leído: Macrohistory Database (capítulo 14) y el volumen de 1970 de Friedman y Schwartz. El libro de 1963 no está en línea. **El `robots.txt` de data.nber.org, leído el 2026-10-07, veda a todo programa (`User-agent: *`, `Disallow: /`): desde entonces no se le pide nada; su serie `m14144c` se lee en FRED (D0.3.6).** |
+| www2.census.gov | Leído el 2026-10-07: *Historical Statistics of the United States*, capítulo X, ediciones de 1960 y 1975, en PDF. Su `robots.txt` no veda a `User-agent: *`. Solo como segunda publicación de la Tabla 9 (D0.3.6). |
 | data-api.ecb.europa.eu, data.ecb.europa.eu, www.ecb.europa.eu | Leído. La API devolvió HTTP 504 o 502 en 4 de unos 30 pedidos; el reintento funcionó. **El `robots.txt` de data-api.ecb.europa.eu, leído después, veda a `python-requests`, el cliente con que se hicieron esos pedidos (D0.15).** |
 | www.bde.es, api.statistiken.bundesbank.de | Leído, como contraste. |
 | webstat.banque-france.fr, stat.nbb.be | **No leídos.** El primero no muestra valores sin JavaScript y su API pide iniciar sesión; el segundo reinició la conexión. |
@@ -1899,6 +1900,144 @@ por estacionalidad.
   Schwartz.** En 1959-01 vale 288.3 contra 286.6 del H.6 (0.6 % de
   diferencia), y en 1959-12, 297.4 contra 297.8. Pero M4 es anual hasta 1949
   y solo está en el PDF del volumen de 1970, que es (c).
+
+#### D0.3.6 La transcripción y sus gates (2026-10-07)
+
+Lo que D0.10.6 propuso y A-D0-17 aprobó se ejecutó en el PR del tramo
+histórico. Las dos series del sitio se llaman `dinero_eeuu_1892_1946` y
+`dinero_eeuu_1947_1958`, y ninguna se llama M2. Todo lo de esta sección se
+hizo leyendo los escaneos; los dígitos no salen de memoria de nadie.
+
+**Qué se transcribió.** Cuatro tablas, con su página en el libro y en el PDF
+de FRASER:
+
+| Tabla | Publicación | Página del libro | Página del PDF | Filas × columnas |
+| --- | --- | --- | --- | --- |
+| No. 9, "Deposits and currency—adjusted deposits of all banks and currency outside banks, 1892–1941" | *Banking and Monetary Statistics, 1914–1941* (1943) | 34–35 | 43–44 | 69 fechas de balance × 10 (690 celdas, 19 en blanco: el ahorro postal no existía antes de 1911) |
+| Continuación de la Tabla 9 para 1941–46, tabla sin número de la introducción de la Sección 1 (nota 3) | *Banking and Monetary Statistics, 1941–1970* (1976) | 5 | 12 | 12 fechas × 8 (96 celdas); las dos filas de 1941 repiten la Tabla 9 |
+| 1.1 A, "Money stock and related data, monthly, 1947–70", ajustada, tramo 1947–58 | *Banking and Monetary Statistics, 1941–1970* (1976) | 17 | 24 | 144 meses × 4 (576 celdas) |
+| 1.1 B, la misma sin ajustar, tramo 1947–58 | *Banking and Monetary Statistics, 1941–1970* (1976) | 20 | 27 | 144 meses × 5 (720 celdas) |
+
+Las notas al pie de las dos tablas están transcritas, literales, en
+`data/raw/transcripcion_junta_1892_1958/notas_tabla_9.txt` y
+`notas_tabla_1_1.txt`. La que define el tramo mensual, literal: *"Unless
+otherwise noted, series represent averages of daily figures"*; efectivo
+*"outside the Treasury, the Federal Reserve Banks, and the vaults of all
+commercial banks"*; depósitos a la vista *"at all commercial banks other than
+those due to domestic commercial banks and the U.S. Govt., less cash items in
+the process of collection and Federal Reserve float, and (2) foreign demand
+balances at Federal Reserve Banks"*; y "time deposits adjusted" lleva la nota
+*"At all commercial banks"*.
+
+**El protocolo (A-D0-19), tal como se ejecutó.**
+
+- Dos juegos de recortes del mismo escaneo: A, a 300 ppp en color, en bloques
+  de dos años (Tabla 1.1) o de unas veinte filas (Tabla 9); B, a 260 ppp en
+  escala de grises, con otros cortes (tres años y bloques distintos). Cada
+  recorte lleva pegado el encabezado de columnas.
+- Seis lecturas independientes (tres tablas por juego), cada una sin acceso
+  a la otra, con la consigna de transcribir lo impreso sin calcular ni
+  corregir, y de marcar con `?` un dígito ilegible.
+- Cotejo celda por celda: **2.082 celdas, 1 discrepancia.** En 1955-11 de la
+  Tabla 1.1 B (depósitos a plazo ajustados) la lectura A dejó el último
+  dígito como ilegible (`49.?`, mancha de tinta) y la B leyó 49.8. Se releyó
+  la celda a 900 ppp: el glifo tiene dos lazos cerrados, como el 8 de las
+  celdas vecinas, y no la cola abierta del 3. Quedó 49.8, con reserva, en
+  `resoluciones.csv`. No afecta a ninguna serie publicada: la 1.1 B no se
+  publica (abajo).
+- Un defecto del recorte, no de la lectura: el corte de la Tabla 9 dejó
+  afuera la fila 1933-12-30 en los dos juegos; se hizo un recorte nuevo y las
+  dos lecturas la agregaron, iguales.
+- La capa de texto OCR del PDF se usó solo para ubicar las páginas. En la
+  página 20 (Tabla 1.1 B) el OCR es ilegible; en las otras, tiene los errores
+  que ya decía D0.3.1.
+
+**Control de sumas, con la tolerancia fijada antes (A-D0-32).**
+
+- Tabla 9, cuatro identidades por fila (total de depósitos = vista + gobierno
+  + plazo; plazo = comerciales + cajas + postal; total con efectivo = total de
+  depósitos + efectivo; vista con efectivo = vista + efectivo), tolerancia
+  cero: **cuadran las 69 filas.** Un blanco de ahorro postal cuenta como cero.
+- Continuación, dos identidades (money stock = efectivo + vista; plazo =
+  comerciales + cajas + postal), tolerancia cero: cuadran las 12 filas, y las
+  dos de 1941 son iguales a las de la Tabla 9 en las ocho columnas.
+- Tabla 1.1, money stock = efectivo + vista, tolerancia 0.1 (dos componentes
+  redondeados a un decimal): cuadran **143 de 144** meses en A y 143 de 144
+  en B. Los dos que no cuadran son erratas de la fuente, confirmadas por las
+  dos lecturas y por el zoom: **1949-03, Tabla 1.1 A**, efectivo impreso 27.7
+  entre meses de 25.7 (27.7 + 85.6 = 113.3 contra 111.2 impreso); **1950-12,
+  Tabla 1.1 B**, total impreso 119.2 contra 25.4 + 93.4 = 118.8. Se publican
+  tal como están impresos y marcados como valor en disputa (A-D0-33).
+
+**Segunda publicación de las fechas de balance: el Censo.** *Historical
+Statistics of the United States, Colonial Times to 1957* (Oficina del Censo,
+1960), capítulo X, serie X 266-274, "Deposits adjusted and currency outside
+banks: 1892 to 1957", p. 646, en millones de USD *"as of June 30 or nearest
+available date"*. Su nota de fuente, literal: *"1892-1941 (except series X
+274, 1916-1947), Board of Governors of the Federal Reserve System, Banking and
+Monetary Statistics, pp. 34-35; 1942-1947, Federal Reserve Bulletin, January
+1949, p. 41; 1948-1957, September issues of Bulletin."* Es decir: la misma
+cifra, reimpresa por otra agencia. Dos columnas no sirven de contraste: X 266
+excluye los depósitos del gobierno (es la columna 1 de la Tabla 9 menos la 5)
+y X 274 incluye depósitos en los bancos de la Reserva (nota 6 del Censo).
+Se leyeron a mano nueve filas de junio (1892, 1900, 1914, 1920, 1929, 1933,
+1941, 1942 y 1946), ampliadas a 600 ppp; en esa tipografía el 3 y el 8 se
+confunden, así que cada fila se comprobó con las identidades del propio
+Censo antes de anotarla, sin mirar la Tabla 9. Tolerancia declarada antes de
+comparar: igualdad. **Resultado: 61 cifras, 61 iguales.** PDF:
+`https://www2.census.gov/library/publications/1960/compendia/hist_stats_colonial-1957/hist_stats_colonial-1957-chX.pdf`
+(4.456.284 bytes). También se bajó la edición de 1975 (capítulo X,
+10.436.734 bytes); su PDF no tiene capa de texto y no se usó. `robots.txt` de
+`www2.census.gov`: `User-agent: *` sin vedas; la pausa de 30 s rige solo para
+cuatro rastreadores nombrados.
+
+**Segunda fuente del tramo mensual: el NBER, vía FRED.** `data.nber.org`
+responde en su `robots.txt` `User-agent: *` / `Disallow: /`: **veda a todo
+programa**, y desde el 2026-10-07 no se le pide nada (los archivos de D0.3.3
+se leyeron antes de la regla A-D0-29). FRED republica `m14144c` como
+`M1444CUSM027SNBR` (1947-01 a 1969-09; `robots.txt` de FRED: pausa de 1 s y
+las rutas usadas permitidas); `m14144b`, la versión sin ajustar, no está en
+FRED (HTTP 404 al pedir `M1444BUSM027SNBR`). La tolerancia es la que D0.11
+propuso y la documentación del NBER sostiene: ±0.1 miles de millones (el
+redondeo de sus componentes). Antes de comparar quedó escrito que la serie
+del NBER es anterior a la revisión de 1976 de la Tabla 1.1, y que una
+diferencia mayor podía ser una revisión de la Junta y no un error de
+transcripción; también que los cuatro primeros meses se vieron en el extracto
+de la descarga. **Resultado: 144 meses, diferencia máxima 0.1, mediana 0.00:
+cerró.** De eso se infiere que la revisión de 1976 no tocó 1947–58 más allá
+del redondeo; la diferencia de 0.9 que D0.3.4 vio en 1959-01 queda del lado
+de 1959 en adelante y no se investigó aquí.
+
+**Lo que se publica** (`data/series/dinero_eeuu_historico.csv`, formato largo:
+`mes, fecha, serie, componente, valor, unidad, estado, control, cita, nota`):
+
+- `dinero_eeuu_1892_1946`: 79 fechas de balance (69 de la Tabla 9 y 10 de la
+  continuación, 1942-06-30 a 1946-12-31), en millones de USD, con los tres
+  componentes (efectivo fuera de bancos, depósitos a la vista ajustados,
+  depósitos a plazo en bancos comerciales) y su total. Estado "dato de fecha
+  de balance, estimado en parte" (A-D0-18). Cada fila cita publicación, tabla
+  y página; las de 1941 llevan la nota 5 de la Tabla 9 en el componente al
+  que aplica. Quiebres declarados en la ficha: 1923-06 (frecuencia), 1941-06
+  (nota 5) y 1942-06 (cambio de publicación).
+- `dinero_eeuu_1947_1958`: 144 meses, en miles de millones de USD, ajustada
+  por estacionalidad, con efectivo, depósitos a la vista, money stock
+  (impreso), depósitos a plazo ajustados y el total (money stock + plazo).
+  Estado "dato". El mes 1949-03 va con sus cinco valores marcados en disputa.
+- `dinero_eeuu_1947_1958_sin_ajustar`: transcrita y controlada, pero **NO
+  MEDIDO: sin validación externa** (A-D0-31): su segunda fuente natural,
+  `m14144b`, no está en FRED, y `data.nber.org` veda a los programas. Entra a
+  la ficha con el motivo; sus valores quedan en los crudos versionados.
+- La ficha (`serie_D0.csv`) la escribe `dinero_historico.py` y
+  `denominador.py` la conserva en sus corridas. La columna `meses` cuenta
+  observaciones: 79 fechas de balance no son meses.
+
+**Lo que queda abierto de este tramo.** La segunda fuente de la serie sin
+ajustar (una persona puede leer `m14144b` en un navegador, o buscar otra
+publicación de la Junta: el *Supplement to Banking and Monetary Statistics*
+de 1962 o el *Federal Reserve Bulletin* de agosto de 1962, pp. 941–51, que la
+propia Junta cita); la superposición 1959-01 a 1969-09 de la Tabla 1.1, que
+D0.10.6 proponía publicar y no se transcribió; y por qué la Junta imprimió
+27.7 en 1949-03 y 119.2 en 1950-12.
 
 ### D0.4 Eurozona: M2 del BCE (conjunto BSI) — leída, (a)
 
@@ -2999,10 +3138,11 @@ Ninguno se envió.
    guarde.
 6. **El XML del H.4.1 contra `WALCL`:** explicado el 2026-10-06 (D0.15,
    A-D0-15). Cerrado.
-7. **Las tablas de la Junta anteriores a 1959 solo se leyeron por muestra.**
-   Cuatro fechas de la Tabla 9 y de su continuación, y dos meses de la
-   Tabla 1.1. La transcripción
-   completa es trabajo del paso 1.
+7. **Las tablas de la Junta anteriores a 1959: transcritas y publicadas el
+   2026-10-07** (D0.3.6, A-D0-31). Sigue abierta la segunda fuente de la
+   serie sin ajustar de 1947–58 (`m14144b` no está en FRED y data.nber.org
+   veda a los programas) y la superposición 1959-01 a 1969-09 de la
+   Tabla 1.1, que no se transcribió.
 8. **No leído, EE.UU.:** el apéndice A de Friedman y Schwartz (1963); la
    historia de las redefiniciones del M2 antes de 2020; los promedios
    semanales del H.4.1.
@@ -3032,6 +3172,16 @@ Ninguno se envió.
     consulta al BCE está redactada en D0.13.
 17. **El aviso al Banco de Japón** por el uso de su API, antes de desplegar el
     sitio con esas series (A-D0-8).
+18. **El test de los crudos contra el manifiesto fallaba en Windows** (visto el
+    2026-10-07, también en `main`): `core.autocrlf=true` extraía los CSV de
+    `data/raw/` con CRLF, y los hashes publicados de `bce_m2_ajustada`,
+    `bce_m2_sin_ajustar`, `bce_balance_eurosistema` y
+    `ocde_china_dinero_amplio` del 2026-10-05 correspondían al contenido con
+    CRLF que entregó la fuente, mientras que el repositorio los guardaba con
+    LF. **Cerrado el mismo día por decisión del dueño:** el archivo canónico
+    son los bytes exactos de la fuente; todo `data/raw/` es `-text` y esos
+    cuatro crudos volvieron a sus bytes originales. Ningún hash cambió
+    (A-D0-27, changelog).
 
 ### D0.15 Lo que encontró el paso 1 (2026-10-06)
 

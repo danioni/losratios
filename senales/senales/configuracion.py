@@ -1541,3 +1541,318 @@ SERIES_PENDIENTES = (
         ("A-R0-4",),
     ),
 )
+
+
+# ---------------------------------------------------------------------------
+# Fase D0, tramo histórico: el dinero de EE.UU. antes de 1959, transcrito de
+# las publicaciones de la Junta (A-D0-17, A-D0-18, A-D0-19, A-D0-31 a A-D0-33).
+#
+# Lo que se leyó de cada fuente está en FUENTES.md, D0.3 y D0.3.6. Nada de esto
+# se descarga como serie: son cifras leídas dos veces de un escaneo y
+# comparadas; el pipeline exige que las dos lecturas coincidan antes de usarlas.
+# ---------------------------------------------------------------------------
+
+DIR_TRANSCRIPCION_JUNTA = DIR_CRUDO / "transcripcion_junta_1892_1958"
+ARCHIVO_DINERO_HISTORICO = DIR_SERIES / "dinero_eeuu_historico.csv"
+ARCHIVO_DINERO_HISTORICO_DESCARGAS = DIR_SERIES / "dinero_historico_descargas.csv"
+
+COLUMNAS_DINERO_HISTORICO = [
+    "mes",
+    "fecha",
+    "serie",
+    "componente",
+    "valor",
+    "unidad",
+    "estado",
+    "control",
+    "cita",
+    "nota",
+]
+
+CLAVE_DINERO_1892_1946 = "dinero_eeuu_1892_1946"
+CLAVE_DINERO_1947_1958 = "dinero_eeuu_1947_1958"
+CLAVE_DINERO_1947_1958_SIN_AJUSTAR = "dinero_eeuu_1947_1958_sin_ajustar"
+CLAVES_DINERO_HISTORICO = (
+    CLAVE_DINERO_1892_1946,
+    CLAVE_DINERO_1947_1958,
+    CLAVE_DINERO_1947_1958_SIN_AJUSTAR,
+)
+
+# A-D0-18: lo declara la propia Junta en la Tabla 9.
+ESTADO_FECHA_DE_BALANCE = "dato de fecha de balance, estimado en parte"
+
+CITA_BMS_1914_1941 = (
+    "Junta de Gobernadores del Sistema de la Reserva Federal, Banking and Monetary "
+    "Statistics, 1914-1941 (1943), Tabla 9, p. {pagina}"
+)
+CITA_BMS_1941_1970_CONTINUACION = (
+    "Junta de Gobernadores del Sistema de la Reserva Federal, Banking and Monetary "
+    "Statistics, 1941-1970 (1976), Sección 1, p. 5 (continuación de la Tabla 9 para 1941-46)"
+)
+CITA_BMS_1941_1970_TABLA_1_1 = (
+    "Junta de Gobernadores del Sistema de la Reserva Federal, Banking and Monetary "
+    "Statistics, 1941-1970 (1976), Tabla 1.1 {parte}, p. {pagina}"
+)
+# Página del libro y del PDF de FRASER de cada tabla transcrita.
+PAGINAS_TRANSCRIPCION = {
+    "tabla_9": {"libro": "34-35", "pdf": "43-44"},
+    "continuacion_tabla_9": {"libro": "5", "pdf": "12"},
+    "tabla_1_1_A": {"libro": "17", "pdf": "24"},
+    "tabla_1_1_B": {"libro": "20", "pdf": "27"},
+}
+
+# Los dos volúmenes escaneados. Son copias bajadas a mano (A-D0-29: la
+# transcripción no las necesita para correr; si están en disco, su hash queda en
+# el manifiesto). No se versionan: 36 y 75 MB (A-D0-27). La licencia es una
+# inferencia: obra de una agencia federal sin aviso de copyright (FUENTES.md,
+# D0.3.1); FRASER pide atribución por la copia.
+_LICENCIA_JUNTA_INFERIDA = (
+    "Dominio público (publicación de la Junta sin aviso de copyright; inferencia, FUENTES.md D0.3.1)"
+)
+_ATRIBUCION_BMS = (
+    "Board of Governors of the Federal Reserve System, {titulo}. Copia digital: FRASER, Federal "
+    "Reserve Bank of St. Louis, {url}. Cifras transcritas a mano; se publican sin cambios."
+)
+DESCARGA_BMS_1914_1941 = Descarga(
+    clave="junta_bms_1914_1941",
+    descripcion="Junta de la Reserva Federal, Banking and Monetary Statistics, 1914-1941 (PDF de FRASER)",
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_JUNTA_INFERIDA,
+    url="https://fraser.stlouisfed.org/files/docs/publications/bms/1914-1941/BMS14-41_complete.pdf",
+    extension="pdf",
+    atribucion=_ATRIBUCION_BMS.format(
+        titulo="Banking and Monetary Statistics, 1914-1941 (1943)",
+        url="https://fraser.stlouisfed.org/title/banking-monetary-statistics-1914-1941-38",
+    ),
+    versionar=False,
+    manual=True,
+)
+DESCARGA_BMS_1941_1970 = Descarga(
+    clave="junta_bms_1941_1970",
+    descripcion="Junta de la Reserva Federal, Banking and Monetary Statistics, 1941-1970 (PDF de FRASER)",
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_JUNTA_INFERIDA,
+    url="https://fraser.stlouisfed.org/files/docs/publications/bms/1941-1970/BMS41-70_complete.pdf",
+    extension="pdf",
+    atribucion=_ATRIBUCION_BMS.format(
+        titulo="Banking and Monetary Statistics, 1941-1970 (1976)",
+        url="https://fraser.stlouisfed.org/title/banking-monetary-statistics-1941-1970-41",
+    ),
+    versionar=False,
+    manual=True,
+)
+# La segunda publicación de las fechas de balance: la Oficina del Censo
+# reimprime la Tabla 9 (y su continuación, tomada del Federal Reserve Bulletin
+# de enero de 1949) como series X 266-274. Copia bajada a mano; 4 MB.
+DESCARGA_HSUS_1960 = Descarga(
+    clave="censo_hsus_1960_cap_x",
+    descripcion=(
+        "Oficina del Censo de EE.UU., Historical Statistics of the United States, Colonial "
+        "Times to 1957 (1960), capítulo X, series X 266-274 (PDF)"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia="Dominio público (publicación de la Oficina del Censo de EE.UU.)",
+    url="https://www2.census.gov/library/publications/1960/compendia/hist_stats_colonial-1957/hist_stats_colonial-1957-chX.pdf",
+    extension="pdf",
+    atribucion=(
+        "U.S. Bureau of the Census, Historical Statistics of the United States, Colonial Times "
+        "to 1957 (1960), series X 266-274, p. 646. Cifras leídas a mano como anclas."
+    ),
+    versionar=False,
+    manual=True,
+)
+# La segunda fuente del tramo mensual: la serie m14144c del NBER (Friedman y
+# Schwartz), republicada por FRED. Se lee y se compara; no se versiona
+# (sin licencia declarada, FUENTES.md D0.3.3) y su crudo queda en data/privado.
+# data.nber.org veda a todo programa en su robots.txt: no se pide ahí.
+FRED_SERIE_NBER_M14144C = "M1444CUSM027SNBR"
+DESCARGA_FRED_NBER_M14144C = Descarga(
+    clave="fred_nber_m14144c",
+    descripcion=(
+        "FRED, serie M1444CUSM027SNBR: NBER Macrohistory m14144c, depósitos a la vista y a "
+        "plazo ajustados en bancos comerciales más efectivo, ajustada por estacionalidad, "
+        "promedio mensual de cifras diarias, 1947-1969"
+    ),
+    clase_licencia=CLASE_SIN_DECLARAR,
+    licencia="Sin licencia declarada por el NBER; FRED la marca con cita obligatoria. Solo contraste.",
+    url=URL_CSV.format(id=FRED_SERIE_NBER_M14144C),
+    extension="csv",
+    atribucion=(
+        "National Bureau of Economic Research, Macrohistory Database, serie m14144c, vía FRED. No se publica."
+    ),
+    versionar=False,
+)
+DESCARGAS_DINERO_HISTORICO = (
+    DESCARGA_BMS_1914_1941,
+    DESCARGA_BMS_1941_1970,
+    DESCARGA_HSUS_1960,
+    DESCARGA_FRED_NBER_M14144C,
+)
+
+# --- Tolerancias (A-D0-32), fijadas antes de comparar ------------------------
+#
+# La Tabla 9 y su continuación imprimen millones enteros y sus totales son
+# sumas exactas de sus componentes: la tolerancia de las identidades es cero.
+# La Tabla 1.1 imprime un decimal en miles de millones: dos componentes
+# redondeados pueden apartarse del total impreso hasta 0.1 (dos medios pasos),
+# y más que eso es un error de transcripción o una errata de la fuente.
+TOLERANCIA_SUMA_MILLONES = 0.0
+TOLERANCIA_SUMA_MILES_DE_MILLONES = 0.1
+# Las anclas del Censo son la misma cifra, en los mismos millones: igualdad.
+TOLERANCIA_ANCLAS_HSUS = 0.0
+# El NBER declara diferencias de una décima contra el Federal Reserve Bulletin
+# por el redondeo de sus componentes (FUENTES.md, D0.3.3). Es la tolerancia del
+# gate del tramo mensual, y se fijó antes de comparar. Se sabe también, antes de
+# comparar, que la serie del NBER es anterior a la revisión de 1976 que trae la
+# Tabla 1.1: una diferencia mayor puede ser una revisión de la Junta y no un
+# error de transcripción; si el gate no cierra, la serie queda NO MEDIDO y la
+# causa se investiga, no se cambia la tolerancia.
+TOLERANCIA_NBER_MILES_DE_MILLONES = 0.1
+# Un gate necesita al menos tres comparaciones (A-D0-25).
+MINIMO_COMPARACIONES_DINERO_HISTORICO = MINIMO_COMPARACIONES_GATE
+
+
+@dataclass(frozen=True)
+class AnclaFechaDeBalance:
+    """Una fila de una segunda publicación, leída a mano, con su cita.
+
+    Los valores van por componente de la Tabla 9, en millones de USD. Las
+    columnas X 266 y X 274 del Censo no se usan: X 266 excluye los depósitos
+    del gobierno y X 274 incluye depósitos en los bancos de la Reserva, de modo
+    que ninguna de las dos es una columna de la Tabla 9.
+    """
+
+    fecha: str  # la fecha de balance de la Tabla 9 a la que corresponde la fila
+    valores: dict[str, float]  # componente -> millones de USD
+    fuente: str
+    fuente_url: str
+    fecha_lectura: date
+
+
+_HSUS_1960 = (
+    "Oficina del Censo, Historical Statistics of the United States, Colonial Times to 1957 "
+    "(1960), series X 266-274, Deposits adjusted and currency outside banks: 1892 to 1957, "
+    "p. 646, fila {anio}; fuente declarada por el Censo: Banking and Monetary Statistics "
+    "pp. 34-35 para 1892-1941 y Federal Reserve Bulletin de enero de 1949 para 1942-1947"
+)
+_HSUS_LEIDO = date(2026, 10, 7)
+
+
+def _ancla_hsus(fecha, vista_y_efectivo, vista, efectivo, plazo_total, plazo_comerciales, plazo_cajas, plazo_postal):
+    valores = {
+        "total_vista_y_efectivo": vista_y_efectivo,
+        "vista_ajustados": vista,
+        "efectivo": efectivo,
+        "plazo_total": plazo_total,
+        "plazo_comerciales": plazo_comerciales,
+        "plazo_cajas": plazo_cajas,
+    }
+    if plazo_postal is not None:
+        valores["plazo_postal"] = plazo_postal
+    return AnclaFechaDeBalance(
+        fecha=fecha,
+        valores=valores,
+        fuente=_HSUS_1960.format(anio=fecha[:4]),
+        fuente_url=DESCARGA_HSUS_1960.url,
+        fecha_lectura=_HSUS_LEIDO,
+    )
+
+
+# Nueve filas de junio leídas a mano en el escaneo del Censo, ampliado a 600 ppp.
+# En esa tipografía el 3 y el 8 se confunden: cada fila se comprobó con las
+# identidades del propio Censo (X 267 = X 268 + X 269; X 266 = X 267 + X 270;
+# X 270 = X 271 + X 272 + X 273) antes de anotarla, sin mirar la Tabla 9.
+# Las dos últimas corresponden a la continuación (fuente del Censo: Bulletin de
+# enero de 1949), y entran al mismo gate con la misma tolerancia.
+ANCLAS_HSUS_1960 = (
+    _ancla_hsus("1892-06-30", 3895, 2880, 1015, 1929, 470, 1459, None),
+    _ancla_hsus("1900-06-30", 5751, 4420, 1331, 3015, 881, 2134, None),
+    _ancla_hsus("1914-06-30", 11615, 10082, 1533, 8350, 4441, 3866, 43),
+    _ancla_hsus("1920-06-30", 23721, 19616, 4105, 15834, 10509, 5168, 157),
+    _ancla_hsus("1929-06-29", 26179, 22540, 3639, 28611, 19557, 8905, 149),
+    _ancla_hsus("1933-06-30", 19172, 14411, 4761, 21656, 10849, 9621, 1186),
+    _ancla_hsus("1941-06-30", 45521, 37317, 8204, 27879, 15928, 10648, 1303),
+    _ancla_hsus("1942-06-30", 52806, 41870, 10936, 27320, 15610, 10395, 1315),
+    _ancla_hsus("1946-06-29", 105992, 79476, 26516, 51829, 32429, 16281, 3119),
+)
+
+# --- Las series (A-D0-17, A-D0-31) --------------------------------------------
+
+_SUP_HISTORICO = ("A-D0-17", "A-D0-18", "A-D0-19", "A-D0-31", "A-D0-32", "A-D0-33")
+_SUP_MENSUAL = ("A-D0-17", "A-D0-19", "A-D0-31", "A-D0-32", "A-D0-33")
+
+SERIE_DINERO_1892_1946 = SerieD0(
+    clave=CLAVE_DINERO_1892_1946,
+    nombre="Efectivo y depósitos en bancos comerciales de EE.UU., fechas de balance (1892-1946)",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BMS_1914_1941,
+    identificador=(
+        "Tabla 9 (1892-1941) y su continuación (1941-46): efectivo fuera de bancos + depósitos a la "
+        "vista ajustados + depósitos a plazo en bancos comerciales"
+    ),
+    emisor=_EMISOR_JUNTA,
+    unidad="millones de USD",
+    convencion=(
+        "saldo del día de balance (call date); anual, 30 de junio, hasta 1922; semestral, junio y "
+        "diciembre, desde 1923"
+    ),
+    frecuencia_nativa="fechas de balance",
+    ajuste="sin ajustar",
+    estado=ESTADO_FECHA_DE_BALANCE,
+    supuestos=_SUP_HISTORICO,
+    banda_plausible=(1_000.0, 1_000_000.0),
+    quiebres=(
+        Quiebre("1923-06", "la frecuencia pasa de anual (junio) a semestral (junio y diciembre)"),
+        Quiebre(
+            "1941-06",
+            "tres cajas de ahorro mutuas pasan a ser miembros del Sistema de la Reserva y salen de los "
+            "bancos comerciales (nota 5 de la Tabla 9)",
+        ),
+        Quiebre("1942-06", "cambia la publicación: de la Tabla 9 (1943) a su continuación en el volumen de 1976"),
+    ),
+)
+SERIE_DINERO_1947_1958 = SerieD0(
+    clave=CLAVE_DINERO_1947_1958,
+    nombre="Efectivo y depósitos en bancos comerciales de EE.UU., mensual, ajustada por estacionalidad (1947-1958)",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BMS_1941_1970,
+    identificador=(
+        "Tabla 1.1 A: money stock (efectivo + depósitos a la vista ajustados) + depósitos a plazo "
+        "ajustados en bancos comerciales"
+    ),
+    emisor=_EMISOR_JUNTA,
+    unidad="miles de millones de USD",
+    convencion="promedio mensual de cifras diarias",
+    frecuencia_nativa="mensual",
+    ajuste="ajustada por estacionalidad",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_MENSUAL,
+    banda_plausible=(100.0, 1_000.0),
+)
+SERIE_DINERO_1947_1958_SIN_AJUSTAR = SerieD0(
+    clave=CLAVE_DINERO_1947_1958_SIN_AJUSTAR,
+    nombre="Efectivo y depósitos en bancos comerciales de EE.UU., mensual, sin ajustar (1947-1958)",
+    familia=FAMILIA_DINERO,
+    descarga=DESCARGA_BMS_1941_1970,
+    identificador=(
+        "Tabla 1.1 B: money stock (efectivo + depósitos a la vista ajustados) + depósitos a plazo "
+        "ajustados en bancos comerciales"
+    ),
+    emisor=_EMISOR_JUNTA,
+    unidad="miles de millones de USD",
+    convencion="promedio mensual de cifras diarias",
+    frecuencia_nativa="mensual",
+    ajuste="sin ajustar",
+    estado=ESTADO_DATO,
+    supuestos=_SUP_MENSUAL,
+    banda_plausible=(100.0, 1_000.0),
+)
+SERIES_DINERO_HISTORICO = (SERIE_DINERO_1892_1946, SERIE_DINERO_1947_1958, SERIE_DINERO_1947_1958_SIN_AJUSTAR)
+
+# A-D0-31: la serie sin ajustar no tiene segunda fuente accesible a un
+# programa (m14144b no está en FRED y data.nber.org veda a los programas), así
+# que se transcribe, se controla con sus sumas y se publica como NO MEDIDO.
+NO_MEDIDO_SIN_AJUSTAR_1947_1958 = (
+    "NO MEDIDO: sin validación externa; la segunda fuente (NBER m14144b, 1955-1969) no está en FRED "
+    "y data.nber.org veda a los programas (A-D0-31)"
+)

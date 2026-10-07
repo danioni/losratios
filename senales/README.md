@@ -415,12 +415,16 @@ A-D0-29.
 | `balance_pboc` | BIS, WS_CBTA (emisor: PBoC) | 2002-01 | saldo a fin de mes | **NO MEDIDO: sin validación externa** |
 | `usd_por_eur`, `jpy_por_usd`, `cny_por_usd` | Junta, H.10 (XML) | 1999-01, 1971-01, 1981-01 | promedio del mes y último día del mes | moneda por USD (el euro, USD por EUR) |
 | Agregado | cálculo propio: EE.UU. + Eurozona + Japón, sin ajustar | 2003-04 | mixta, declarada (A-D0-10) | miles de millones de USD |
+| `dinero_eeuu_1892_1946` | Junta, *Banking and Monetary Statistics* 1914–1941 (Tabla 9) y 1941–1970 (su continuación), transcritas dos veces | 1892-06-30 a 1946-12-31 | saldo del día de balance; anual hasta 1922, semestral desde 1923; no es M2 (A-D0-17, A-D0-31) | millones de USD |
+| `dinero_eeuu_1947_1958` | Junta, *Banking and Monetary Statistics* 1941–1970 (Tabla 1.1 A), transcrita dos veces | 1947-01 a 1958-12 | promedio mensual de cifras diarias, ajustada; no es M2 (A-D0-17, A-D0-31) | miles de millones de USD |
+| `dinero_eeuu_1947_1958_sin_ajustar` | la misma, Tabla 1.1 B | 1947-01 a 1958-12 | transcrita y controlada; **NO MEDIDO: sin validación externa** (A-D0-31) | miles de millones de USD |
 | `oro_m2_eeuu`, `btc_m2_eeuu` | `ratios.py`, con el M2 ajustado en billones de USD | 1960-01, 2013-01 | promedio mensual en los dos lados | USD por onza (o por BTC) por billón de USD de M2 |
 
 China queda fuera del agregado: su definición no es comparable con las otras
 tres (A-D0-9). El Índice Denominador 60/40 del sitio no se reproduce (A-D0-13).
-Lo que no tiene serie —la oferta monetaria de EE.UU. antes de 1959, la riqueza
-por clase de activo— figura en `serie_D0.csv` como NO MEDIDO, con el motivo.
+Lo que no tiene serie —la riqueza por clase de activo, y la versión sin
+ajustar del tramo 1947–1958— figura en `serie_D0.csv` como NO MEDIDO, con el
+motivo.
 
 ### Cómo correr
 
@@ -430,6 +434,7 @@ Desde `senales/`:
 python -m senales.denominador                     # baja, valida, escribe las salidas y el changelog
 python -m senales.denominador --fecha-descarga 2026-10-05   # rehace una corrida con los crudos de ese día
 python -m senales.ratios --solo-denominador       # recalcula Oro / M2 y BTC / M2 sin descargar nada
+python -m senales.dinero_historico                # el dinero de EE.UU. antes de 1959, desde las transcripciones (A-D0-31)
 ```
 
 Antes de pedirle algo a un sitio, el pipeline lee su `robots.txt` (A-D0-29). Si
@@ -463,6 +468,9 @@ MEDIDO en esa corrida y sigue con las demás.
 | `data/series/denominador_descargas.csv` | El manifiesto: URL, fecha, bytes y SHA-256 de cada crudo, de fuente o de contraste. |
 | `data/series/denominador_ratios.csv`, `denominador_pares.csv` | Oro / M2 y BTC / M2 de EE.UU., con el formato de `ratios.csv` y `pares.csv`. |
 | `data/series/citas_terceros.csv` | Cifras puntuales de terceros (Savills, World Gold Council) con año, fuente y URL. Fuera del pipeline (A-D0-28). |
+| `data/series/dinero_eeuu_historico.csv` | `mes, fecha, serie, componente, valor, unidad, estado, control, cita, nota`: el dinero de EE.UU. antes de 1959, con cada cifra citada por publicación, tabla y página (A-D0-31). |
+| `data/series/dinero_historico_descargas.csv` | El manifiesto de ese tramo: los dos volúmenes escaneados, el capítulo del Censo y el CSV de FRED con la serie del NBER, con URL, fecha y SHA-256. Ninguno viaja con el repositorio. |
+| `data/raw/transcripcion_junta_1892_1958/` | Las dos lecturas independientes de cada tabla, las resoluciones y las notas al pie literales (A-D0-19). |
 
 Los crudos del BCE, el BoJ, la OCDE y el BIS (China) se versionan en
 `data/raw/`; los ZIP de la Junta y las fuentes de contraste quedan fuera del
@@ -484,12 +492,29 @@ Lo que estos gates prueban es que el dato publicado es el del emisor, sin
 errores de transporte, unidad ni fecha. Un agregado monetario tiene un solo
 compilador: no hay segunda medición.
 
+**El tramo histórico** (`dinero_historico.py`, A-D0-32) tiene sus propios
+gates, porque sus cifras no se descargan: se leen de un escaneo. Primero las
+dos lecturas independientes tienen que coincidir celda por celda; una celda
+distinta solo pasa con una resolución escrita que diga cómo se releyó la
+imagen. Después cada total impreso tiene que ser la suma de sus componentes
+impresos (igualdad en millones; ±0.1 en miles de millones, donde una fila que
+no cuadra es una errata de la fuente y se publica en disputa, A-D0-33). Y por
+último una segunda publicación: nueve filas de *Historical Statistics of the
+United States* (Censo, 1960), leídas a mano, con igualdad, para las fechas de
+balance; y la serie `m14144c` del NBER vía FRED, mes a mes con ±0.1, para el
+tramo mensual. Los dos cerraron el 2026-10-07. La serie sin ajustar de
+1947–58 no tiene segunda fuente accesible a un programa y queda NO MEDIDO.
+
 ### Lo que estas series no dicen
 
 - No hay "M2 global". El agregado suma tres economías con tres definiciones de
   M2 y dos convenciones, y lo declara.
 - Ningún valor anterior al inicio de cada fuente oficial. La historia de EE.UU.
-  antes de 1959 es otro agregado, y está pendiente de transcribir.
+  antes de 1959 son dos series aparte, con otra definición (efectivo y
+  depósitos en bancos comerciales, lo que Friedman y Schwartz llamaron M2) y,
+  hasta 1946, uno o dos puntos por año. No se empalman con el M2 del H.6: en
+  1959 el M2 actual es entre 38 % y 49 % más grande (A-D0-17). Un hueco es un
+  hueco.
 - El dinero amplio de China no es M2: es lo que la OCDE rotula M3.
 
 ## Estructura
@@ -504,7 +529,9 @@ senales/
 │   ├── grafico.py          El PNG de dos paneles
 │   ├── liquidez_neta.py    S2.x — punto de entrada
 │   ├── fuentes_precios.py  Fase R — descarga, manifiesto y lectura de cada fuente
-│   └── ratios.py           Fase R — punto de entrada
+│   ├── ratios.py           Fase R — punto de entrada
+│   ├── denominador.py      Fase D0 — punto de entrada
+│   └── dinero_historico.py Fase D0 — el dinero de EE.UU. antes de 1959, desde las transcripciones
 ├── tests/
 ├── data/raw/               Descargas crudas que se pueden redistribuir, versionadas por fecha
 ├── data/series/            Series publicadas, manifiesto de descargas y changelog

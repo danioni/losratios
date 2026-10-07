@@ -1,6 +1,9 @@
-# Los crudos de la fase R se verifican contra el SHA-256 publicado en
-# data/series/descargas_ratios.csv. Git no puede tocarles un solo byte: sin esto,
-# un checkout con autocrlf convertiría los saltos de línea y el hash dejaría de
-# coincidir (A-R0-15).
-data/raw/*.json -text
+# Todo lo que hay en data/raw/ es un crudo: los bytes exactos que entregó la
+# fuente, o una transcripción que se coteja byte a byte. Se verifican contra el
+# SHA-256 publicado en los manifiestos (descargas_ratios.csv,
+# denominador_descargas.csv, dinero_historico_descargas.csv) y se recalculan
+# salidas desde ellos (A-R0-15, A-D0-27, A-D0-30). Git no puede tocarles un solo
+# byte: sin esto, un checkout con autocrlf convertiría los saltos de línea y el
+# hash dejaría de coincidir, como pasó en Windows hasta el 2026-10-07.
+data/raw/** -text
 data/raw/*.xlsx binary
