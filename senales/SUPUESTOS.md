@@ -1490,9 +1490,10 @@ la ficha.
 como series separadas, con los dos quiebres a la vista. El concepto de los dos
 primeros es "efectivo y depósitos en bancos comerciales", el que Friedman y
 Schwartz llamaron M2; en la superposición de 1959-01 a 1969-09 el M2 del H.6
-es entre 38 % y 49 % más grande (`FUENTES.md`, D0.3.5). **En esta entrega los
-dos tramos históricos están NO MEDIDO: la transcripción se hace en un PR
-propio.**
+es entre 38 % y 49 % más grande (`FUENTES.md`, D0.3.5). **Los dos tramos
+históricos se transcribieron y se publicaron el 2026-10-07** (A-D0-31 a
+A-D0-33; `FUENTES.md`, D0.3.6). La superposición 1959-01 a 1969-09 de la
+Tabla 1.1 sigue sin transcribir.
 
 ## A-D0-18 · Las fechas de balance de 1892 a 1946 son datos estimados en parte por la Junta
 
@@ -1509,8 +1510,16 @@ estimado en parte", sin interpolar entre fechas.
 Protocolo: dos transcripciones independientes comparadas valor por valor; cada
 cifra lleva la página del escaneo de la que sale; cada fila tiene que cumplir
 que los subtotales sumen el total publicado; una discrepancia se lista y se
-resuelve releyendo la imagen, nunca eligiendo una de las dos. Pendiente de
-ejecutar.
+resuelve releyendo la imagen, nunca eligiendo una de las dos.
+
+**Ejecutado el 2026-10-07** (`FUENTES.md`, D0.3.6): 2.082 celdas leídas dos
+veces, una discrepancia (1955-11 de la Tabla 1.1 B), resuelta releyendo la
+celda a 900 ppp y registrada en
+`data/raw/transcripcion_junta_1892_1958/resoluciones.csv`; las dos lecturas
+viajan con el repositorio y `dinero_historico.py` las coteja en cada corrida:
+una celda distinta sin resolución detiene la corrida. Las sumas cuadran en
+las 81 filas de la Tabla 9 y su continuación; en la Tabla 1.1 hay dos erratas
+de la fuente (A-D0-33).
 
 ## A-D0-20 · La serie mensual del NBER (1907–1946) no se usa por ahora
 
@@ -1686,3 +1695,79 @@ abre la URL de la API en el navegador, guarda la respuesta como
 hash contra el manifiesto, y si falta o no coincide deja la serie NO MEDIDO en
 esa corrida. Las copias del 2026-10-05 son las que se bajaron en el paso 0,
 antes de leer ese `robots.txt`.
+
+## A-D0-31 · El dinero de EE.UU. antes de 1959 se publica en dos series transcritas; la sin ajustar queda NO MEDIDO
+
+**Estado: supuesto.** Ejecución del 2026-10-07 de lo decidido en A-D0-17 y A-D0-19.
+
+Lo que `dinero_historico.py` publica en `data/series/dinero_eeuu_historico.csv`:
+
+| Serie | Qué es | Unidad y convención | Observaciones | Estado |
+| --- | --- | --- | --- | --- |
+| `dinero_eeuu_1892_1946` | Efectivo fuera de bancos + depósitos a la vista ajustados + depósitos a plazo en bancos comerciales, Tabla 9 de *Banking and Monetary Statistics 1914–1941* (1892-06-30 a 1941-12-31) y su continuación en el volumen 1941–1970 (1942-06-30 a 1946-12-31) | millones de USD; saldo del día de balance; anual hasta 1922, semestral desde 1923 | 79 fechas de balance | dato de fecha de balance, estimado en parte (A-D0-18) |
+| `dinero_eeuu_1947_1958` | Money stock (efectivo + depósitos a la vista ajustados) + depósitos a plazo ajustados en bancos comerciales, Tabla 1.1 A del volumen 1941–1970 | miles de millones de USD; promedio mensual de cifras diarias; ajustada por estacionalidad | 144 meses | dato |
+| `dinero_eeuu_1947_1958_sin_ajustar` | La misma suma, Tabla 1.1 B, sin ajustar | miles de millones de USD; promedio mensual de cifras diarias | 144 meses, transcritos y no publicados | **NO MEDIDO: sin validación externa** |
+
+- Cada valor publicado lleva su componente, su cita (publicación, tabla y
+  página) y, si corresponde, la nota al pie de la Junta. Los componentes se
+  publican junto al total para que cualquiera rehaga la suma.
+- Las dos lecturas independientes viajan con el repositorio en
+  `data/raw/transcripcion_junta_1892_1958/`, con `resoluciones.csv` y las
+  notas al pie literales. La serie publicada se recalcula desde ellas en
+  `tests/test_salidas_publicadas.py` (A-D0-30).
+- La serie sin ajustar no tiene segunda fuente accesible a un programa: la
+  versión sin ajustar del NBER (`m14144b`, desde 1955-01) no está en FRED y
+  `data.nber.org` veda a todo programa en su `robots.txt` (A-D0-29). Queda
+  en la ficha como NO MEDIDO hasta que una persona la lea en un navegador o
+  aparezca otra publicación de la Junta; la transcripción ya está hecha y
+  controlada por sus sumas.
+- Las fichas de las tres series en `serie_D0.csv` las escribe
+  `dinero_historico.py`; `denominador.py` las conserva en cada corrida. La
+  columna `meses` de la ficha cuenta observaciones, y 79 fechas de balance no
+  son meses.
+- Ninguna de las tres se empalma con el M2 del H.6 ni entre sí (A-D0-17). La
+  superposición 1959-01 a 1969-09 de la Tabla 1.1, que D0.10.6 proponía
+  publicar para dejar a la vista la diferencia de definición, no se
+  transcribió: queda abierta.
+
+## A-D0-32 · Los gates del tramo histórico: sumas, el Censo y el NBER, con tolerancias fijadas antes de comparar
+
+**Estado: supuesto.** Tolerancias fijadas el 2026-10-07 antes de correr los gates, con una salvedad que se dice abajo.
+
+| Control | Clase | Tolerancia | Por qué esa | Resultado |
+| --- | --- | --- | --- | --- |
+| Las dos lecturas, celda por celda (A-D0-19) | gate | igualdad; una celda distinta solo pasa con una fila en `resoluciones.csv` que diga los dos valores y cómo se releyó | es el protocolo | 2.082 celdas, 1 resuelta |
+| Tabla 9 y continuación: cada total impreso contra la suma de sus componentes impresos; las dos filas de 1941 contra la Tabla 9 | gate | igualdad en millones | la Junta imprime millones enteros y sus totales son sumas | cuadran las 81 filas |
+| Tabla 1.1 A y B: money stock contra efectivo + vista | control | ±0.1 miles de millones | dos componentes redondeados a un decimal | 143 de 144 en cada una; el mes que no cuadra se publica en disputa (A-D0-33) |
+| Fechas de balance contra *Historical Statistics of the United States* (Censo, 1960), serie X 266-274, nueve filas de junio leídas a mano | gate | igualdad en millones; mínimo tres fechas | es la misma cifra reimpresa por otra agencia; la propia nota del Censo lo dice | 9 fechas, 61 cifras, todas iguales |
+| Tramo mensual ajustado contra NBER `m14144c` vía FRED (`M1444CUSM027SNBR`), mes a mes | gate | ±0.1 miles de millones; mínimo tres meses | la documentación del NBER declara diferencias de una décima por redondeo (`FUENTES.md`, D0.3.3); ya era la tolerancia propuesta en D0.11 | 144 meses, diferencia máxima 0.1, mediana 0.00 |
+
+- **La salvedad.** Antes de comparar quedó escrito que la serie del NBER es
+  anterior a la revisión de 1976 de la Tabla 1.1 y que una diferencia mayor
+  podía ser una revisión de la Junta y no un error de transcripción; en ese
+  caso la serie quedaba NO MEDIDO y la causa se investigaba, sin tocar la
+  tolerancia. No hizo falta. Y los cuatro primeros meses de `m14144c` se
+  vieron en el extracto de la descarga antes de correr el gate; no cambiaron
+  nada de lo declarado.
+- Las anclas del Censo se leyeron en el escaneo ampliado a 600 ppp; en esa
+  tipografía el 3 y el 8 se confunden, y cada fila se comprobó con las
+  identidades del propio Censo antes de anotarla, sin mirar la Tabla 9.
+- Un gate que no cierra deja la serie como "NO MEDIDO: sin validación
+  externa" y no detiene la corrida; una lectura que no coincide o una
+  identidad de la Tabla 9 que no cuadra detienen la corrida sin escribir nada
+  (código de salida 2), porque entonces la transcripción no sirve.
+
+## A-D0-33 · Una errata de la fuente se publica tal como está impresa y se marca como valor en disputa
+
+**Estado: supuesto.** Decisión del 2026-10-07.
+
+La Tabla 1.1 trae dos filas cuyo money stock impreso no es la suma de sus
+componentes impresos: **1949-03** de la parte A (efectivo 27.7 entre meses de
+25.7; 27.7 + 85.6 = 113.3 contra 111.2) y **1950-12** de la parte B (total
+119.2 contra 25.4 + 93.4 = 118.8). Las dos lecturas y el zoom confirman que
+así está impreso. No se sabe qué cifra es la errada, así que no se corrige
+ninguna: la fila se publica con sus cinco valores tal cual y con la columna
+`control` en "valor en disputa", con la cuenta a la vista. Un mes en disputa
+no entra a ninguna métrica, igual que los del control contra el FMI en la
+fase R (A-R0-20). La suma publicada (money stock + plazo) usa el money stock
+impreso, no la suma de componentes.
