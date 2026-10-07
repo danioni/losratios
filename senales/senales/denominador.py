@@ -44,7 +44,11 @@ from senales.configuracion import (
     BDE_CODIGO_M2_SIN_AJUSTAR,
     BOJ_CODIGO_BALANCE,
     BOJ_CODIGO_M2,
+    BOJ_CODIGO_M2CD_1967_1999,
+    BOJ_CODIGO_M2CD_1998_2008,
     CLAVE_DINERO_1947_1958,
+    CLAVE_M2CD_1967_1999,
+    CLAVE_M2CD_1998_2008,
     CLAVE_DINERO_1947_1958_SIN_AJUSTAR,
     CLAVES_DINERO_HISTORICO,
     COLUMNAS_D0_AGREGADO,
@@ -58,6 +62,7 @@ from senales.configuracion import (
     CONTRASTE_BIS_CAMBIO_JP,
     CONTRASTE_BIS_CAMBIO_XM,
     CONTRASTE_ESTAT,
+    CONTRASTE_FRED_FMI_JAPON,
     CONTRASTE_FRED_WALCL,
     CONTRASTE_H6_HTML,
     DESCARGA_BCE_BALANCE,
@@ -85,6 +90,7 @@ from senales.configuracion import (
     FAMILIA_CAMBIO,
     FAMILIA_DINERO,
     FORMATO_D0,
+    FRED_SERIE_FMI_M2_JAPON,
     JUNTA_MULTIPLICADOR_H6,
     JUNTA_MULTIPLICADOR_H10,
     JUNTA_MULTIPLICADOR_H41,
@@ -97,6 +103,7 @@ from senales.configuracion import (
     NO_MEDIDO_ACCESO_VEDADO,
     NO_MEDIDO_SIN_VALIDACION,
     NOMBRE_AGREGADO,
+    RANGO_CONTRASTE_M2CD,
     OCDE_AREA_CHINA,
     OCDE_MEDIDA_DINERO_AMPLIO,
     SERIES_D0,
@@ -107,8 +114,10 @@ from senales.configuracion import (
     TOLERANCIA_BIS_FED,
     TOLERANCIA_CAMBIO_PCT,
     TOLERANCIA_ESTAT,
+    TOLERANCIA_FRED_FMI_JAPON,
     TOLERANCIA_FRED_WALCL,
     TOLERANCIA_H6_HTML,
+    TRAMOS_AGREGADO,
     AnclaMensual,
     Descarga,
     SerieD0,
@@ -157,6 +166,7 @@ DESCARGAS_CONTRASTE = (
     CONTRASTE_BDE_SIN_AJUSTAR,
     DESCARGA_BIS_ACTIVOS_XM,
     CONTRASTE_ESTAT,
+    CONTRASTE_FRED_FMI_JAPON,
     DESCARGA_BIS_ACTIVOS_JP,
     CONTRASTE_BIS_CAMBIO_XM,
     CONTRASTE_BIS_CAMBIO_JP,
@@ -169,6 +179,8 @@ FUENTE_DE = {
     "m2_eurozona": DESCARGA_BCE_M2_AJUSTADA,
     "m2_eurozona_sin_ajustar": DESCARGA_BCE_M2_SIN_AJUSTAR,
     "m2_japon": DESCARGA_BOJ_M2,
+    CLAVE_M2CD_1967_1999: DESCARGA_BOJ_M2,
+    CLAVE_M2CD_1998_2008: DESCARGA_BOJ_M2,
     "dinero_amplio_china": DESCARGA_OCDE_CHINA,
     "balance_fed": DESCARGA_H41,
     "balance_eurosistema": DESCARGA_BCE_BALANCE,
@@ -351,6 +363,12 @@ def construir_series(crudos: Crudos) -> tuple[dict[str, SerieConstruida], dict[s
     # Banco de Japón.
     if DESCARGA_BOJ_M2.clave in rutas:
         series["m2_japon"] = SerieConstruida(leer_csv_boj(rutas[DESCARGA_BOJ_M2.clave], BOJ_CODIGO_M2))
+        # A-D0-34: las series antiguas vienen en el mismo crudo, cada una en su tramo.
+        for clave, codigo in (
+            (CLAVE_M2CD_1967_1999, BOJ_CODIGO_M2CD_1967_1999),
+            (CLAVE_M2CD_1998_2008, BOJ_CODIGO_M2CD_1998_2008),
+        ):
+            series[clave] = SerieConstruida(leer_csv_boj(rutas[DESCARGA_BOJ_M2.clave], codigo))
     if DESCARGA_BOJ_BALANCE.clave in rutas:
         series["balance_boj"] = SerieConstruida(
             leer_csv_boj(rutas[DESCARGA_BOJ_BALANCE.clave], BOJ_CODIGO_BALANCE)
@@ -517,6 +535,43 @@ def comparar_anclas(serie: str, valores: pd.Series, anclas: tuple[AnclaMensual, 
     return resultado
 
 
+def _recortar(serie: pd.Series, desde: str | None, hasta: str | None) -> pd.Series:
+    """Los meses de una serie entre dos meses "AAAA-MM", inclusive; None es sin límite."""
+    indice = serie.index
+    mascara = pd.Series(True, index=indice)
+    if desde is not None:
+        mascara &= indice >= pd.Timestamp(f"{desde}-01")
+    if hasta is not None:
+        mascara &= indice <= pd.Timestamp(f"{hasta}-01")
+    return serie.loc[mascara.to_numpy()]
+
+
+# Con qué serie se superpone cada tramo antiguo de Japón, y en qué meses.
+SUPERPOSICIONES_JAPON = {
+    CLAVE_M2CD_1967_1999: (CLAVE_M2CD_1998_2008, "1998-04", "1999-03"),
+    CLAVE_M2CD_1998_2008: ("m2_japon", "2003-04", "2008-04"),
+}
+
+
+def superposicion(series: dict[str, SerieConstruida], clave: str) -> str:
+    """Cuánto difiere la serie siguiente en los meses comunes: mínimo, máximo y media, en %."""
+    if clave not in SUPERPOSICIONES_JAPON:
+        return ""
+    otra, desde, hasta = SUPERPOSICIONES_JAPON[clave]
+    if otra not in series:
+        return ""
+    propia = _recortar(series[clave].valores.dropna(), desde, hasta)
+    ajena = _recortar(series[otra].valores.dropna(), desde, hasta)
+    comunes = propia.index.intersection(ajena.index)
+    if len(comunes) == 0:
+        return f"sin meses comunes con {otra}"
+    diferencia = (ajena.loc[comunes] / propia.loc[comunes] - 1.0) * 100.0
+    return (
+        f"superposición con {otra}: {len(comunes)} meses, {otra} entre {diferencia.min():+.3f} % y "
+        f"{diferencia.max():+.3f} % (media {diferencia.mean():+.3f} %); no se empalma"
+    )
+
+
 def _fin_de_semana_bis(mes: pd.Timestamp) -> pd.Timestamp:
     """El viernes de la semana que contiene el último día hábil del mes (regla del BIS)."""
     ultimo = mes + pd.offsets.MonthEnd(0)
@@ -666,6 +721,34 @@ def validar(series: dict[str, SerieConstruida], crudos: Crudos) -> dict[str, Val
                 "e-Stat Statistics Dashboard",
                 "100 millones de JPY",
             )
+    # Las series antiguas de Japón contra la copia del FMI en FRED, cada una en el
+    # tramo que esa copia sigue (A-D0-35). La superposición entre tramos va como
+    # nota: se mide y se publica, no se corrige (A-D0-34).
+    if any(clave in series for clave in RANGO_CONTRASTE_M2CD):
+        fmi = _referencia(
+            crudos,
+            CONTRASTE_FRED_FMI_JAPON,
+            lambda ruta: _a_mes(fuentes_precios.leer_fred_diario(ruta, FRED_SERIE_FMI_M2_JAPON)) / 1e8,
+        )
+        for clave, (desde, hasta) in RANGO_CONTRASTE_M2CD.items():
+            if clave not in series:
+                continue
+            if fmi is None:
+                resultados[clave] = _sin_fuente(
+                    crudos, clave, CONTRASTE_FRED_FMI_JAPON, f"±{TOLERANCIA_FRED_FMI_JAPON:g}"
+                )
+            else:
+                resultados[clave] = comparar(
+                    clave,
+                    series[clave].valores,
+                    _recortar(fmi, desde, hasta),
+                    TOLERANCIA_FRED_FMI_JAPON,
+                    f"FRED {FRED_SERIE_FMI_M2_JAPON} (FMI, IFS), {desde or 'desde el inicio'} a {hasta}",
+                    "100 millones de JPY",
+                )
+            nota = superposicion(series, clave)
+            if nota:
+                resultados[clave].nota = (resultados[clave].nota + "; " if resultados[clave].nota else "") + nota
     if "balance_boj" in series:
         bis = _referencia(crudos, DESCARGA_BIS_ACTIVOS_JP, lambda ruta: leer_csv_bis_activos(ruta, "JP"))
         if bis is None:
@@ -849,27 +932,76 @@ def _en_usd(nombre: str, dinero: str, valores: pd.Series, tipo: SerieConstruida 
     return valores / (tasa.reindex(valores.index) if tasa_fija is None else tasa) / 10.0
 
 
+def _dinero_del_agregado(nombre: str, dinero: str, series: dict[str, SerieConstruida]) -> tuple[pd.Series, pd.Series]:
+    """La serie de dinero de una economía y, mes a mes, de qué serie sale.
+
+    Con tramos (A-D0-36) se concatenan sin empalme: cada tramo hasta su mes de
+    corte, y el siguiente desde el mes posterior.
+    """
+    tramos = TRAMOS_AGREGADO.get(nombre, ((dinero, None),))
+    partes, etiquetas = [], []
+    for clave, hasta in tramos:
+        valores = _publicado(series[clave].valores.dropna())
+        if hasta is not None:
+            valores = _recortar(valores, None, hasta)
+        if partes:
+            valores = valores.loc[valores.index > partes[-1].index.max()]
+        partes.append(valores)
+        etiquetas.append(pd.Series(clave, index=valores.index))
+    return pd.concat(partes).sort_index(), pd.concat(etiquetas).sort_index()
+
+
+def _series_del_agregado() -> set[str]:
+    claves = set()
+    for nombre, dinero, cambio in ECONOMIAS_AGREGADO:
+        claves |= {clave for clave, _ in TRAMOS_AGREGADO.get(nombre, ((dinero, None),))}
+        if cambio is not None:
+            claves.add(cambio)
+    return claves
+
+
+def _quiebre_del_agregado(series: dict[str, SerieConstruida], tabla: pd.DataFrame, en_usd_japon: pd.Series) -> pd.Series:
+    """El mes en que Japón cambia de serie, con el salto medido en ese mes (A-D0-36)."""
+    quiebre = pd.Series("", index=tabla.index, dtype=object)
+    tramos = TRAMOS_AGREGADO.get("japon")
+    if not tramos or len(tramos) < 2:
+        return quiebre
+    for (anterior, hasta), (siguiente, _) in zip(tramos, tramos[1:]):
+        mes = pd.Timestamp(f"{hasta}-01") + pd.offsets.MonthBegin(1)
+        if mes not in tabla.index or anterior not in series or siguiente not in series:
+            continue
+        va = series[anterior].valores.get(mes)
+        vs = series[siguiente].valores.get(mes)
+        texto = f"Japón pasa de {anterior} a {siguiente}, sin empalme"
+        if va is not None and vs is not None and pd.notna(va) and pd.notna(vs) and va:
+            salto_pct = (float(vs) / float(va) - 1.0) * 100.0
+            salto_usd = float(en_usd_japon.loc[mes]) * (1.0 - float(va) / float(vs))
+            texto += (
+                f": en este mes {siguiente} es {salto_pct:+.3f} % respecto de {anterior}, "
+                f"{salto_usd:+.1f} miles de millones de USD del agregado"
+            )
+        quiebre.loc[mes] = texto
+    return quiebre
+
+
 def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[pd.DataFrame, list[str]]:
-    """El agregado en USD (A-D0-10, A-D0-11): meses comunes a las tres economías.
+    """El agregado en USD (A-D0-10, A-D0-11, A-D0-36): meses comunes a las tres economías.
 
     Cada serie entra con el tipo de cambio de su convención: promedio del mes
     para los promedios (EE.UU., Japón), último día del mes para los saldos de
-    fin de mes (Eurozona). La columna a tipo de cambio constante usa el del
-    primer mes común. Todo en miles de millones de USD.
+    fin de mes (Eurozona). Japón entra por tramos, sin empalme. La columna a
+    tipo de cambio constante usa el del primer mes común. Todo en miles de
+    millones de USD.
     """
     notas: list[str] = []
-    faltan = sorted(
-        {dinero for _, dinero, _ in ECONOMIAS_AGREGADO if dinero not in publicadas}
-        | {cambio for _, _, cambio in ECONOMIAS_AGREGADO if cambio is not None and cambio not in publicadas}
-    )
+    faltan = sorted(_series_del_agregado() - publicadas)
     if faltan:
         notas.append(f"el agregado no se calcula: faltan {', '.join(faltan)}")
         return pd.DataFrame(columns=COLUMNAS_D0_AGREGADO), notas
 
+    dinero_por_economia = {nombre: _dinero_del_agregado(nombre, dinero, series) for nombre, dinero, _ in ECONOMIAS_AGREGADO}
     en_usd = {
-        nombre: _en_usd(
-            nombre, dinero, _publicado(series[dinero].valores.dropna()), None if cambio is None else series[cambio]
-        )
+        nombre: _en_usd(nombre, dinero, dinero_por_economia[nombre][0], None if cambio is None else series[cambio])
         for nombre, dinero, cambio in ECONOMIAS_AGREGADO
     }
     tabla = pd.DataFrame(en_usd).dropna()
@@ -879,7 +1011,7 @@ def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[
     primero = tabla.index[0]
     constante = {}
     for nombre, dinero, cambio in ECONOMIAS_AGREGADO:
-        valores = _publicado(series[dinero].valores.reindex(tabla.index))
+        valores = dinero_por_economia[nombre][0].reindex(tabla.index)
         if cambio is None:
             constante[nombre] = valores
             continue
@@ -891,14 +1023,18 @@ def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[
         )
         constante[nombre] = _en_usd(nombre, dinero, valores, tipo, tasa_fija=fija)
     constante = pd.DataFrame(constante)
+    etiquetas_japon = dinero_por_economia["japon"][1].reindex(tabla.index)
+    quiebre = _quiebre_del_agregado(series, tabla, tabla["japon"])
     salida = pd.DataFrame(
         {
             "mes": [_mes(mes) for mes in tabla.index],
             "m2_eeuu_usd": tabla["eeuu"].to_numpy(),
             "m2_eurozona_usd": tabla["eurozona"].to_numpy(),
             "m2_japon_usd": tabla["japon"].to_numpy(),
+            "serie_japon": etiquetas_japon.to_numpy(),
             "agregado_usd": tabla.sum(axis=1).to_numpy(),
             "agregado_usd_tc_constante": constante.sum(axis=1).to_numpy(),
+            "quiebre": quiebre.to_numpy(),
             "estado": ESTADO_DATO,
         }
     )
@@ -906,6 +1042,8 @@ def agregado(series: dict[str, SerieConstruida], publicadas: set[str]) -> tuple[
         f"{NOMBRE_AGREGADO}: {salida['mes'].iloc[0]} a {salida['mes'].iloc[-1]}, {len(salida)} meses; "
         f"tipo de cambio constante del {_mes(primero)} (A-D0-11)"
     )
+    for texto in quiebre.loc[quiebre != ""]:
+        notas.append(f"quiebre declarado: {texto}")
     return salida, notas
 
 
