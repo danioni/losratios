@@ -712,6 +712,19 @@ precio del oro (índice y búsqueda de texto). Candidatos:
    la paridad legal sin convertibilidad, con el precio administrado como otra
    serie si alguna vez se publica.
 
+**Decisión del dueño (2026-10-07) y lo implementado.** Aprobado desde el 14
+de marzo de 1900 hasta 1959-12; antes de 1900, NO MEDIDO hasta verificar la
+base legal; el precio administrado de 1933–34 se declara como tal en la
+ficha y en las filas de esos meses; etiqueta visible "precio oficial fijado
+por ley, no precio de mercado". `senales/oro_oficial.py` deriva el precio de
+la fracción legal, expande los dos tramos a meses con la convención de la
+Junta para enero de 1934, corre el gate de nivel y fecha (±0,005 USD contra
+las cuatro cifras publicadas: cerró, diferencia máxima 0,0018) y escribe
+`data/series/oro_precio_oficial.csv` y la ficha en `series.csv`, que
+`ratios.py` conserva. Supuestos A-R0-21 a A-R0-26. El par oro oficial /
+dinero de EE.UU. según la Junta no se implementó: queda para después del
+merge del PR #6, como par aparte y fuera de las métricas.
+
 **Lo que queda abierto.** La base anterior a 1900 y las citas de volumen de
 los *Statutes at Large* (loc.gov exige una verificación humana; o buscar una
 reimpresión oficial de las "coinage laws" en un informe de la Casa de Moneda

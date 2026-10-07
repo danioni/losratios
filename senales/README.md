@@ -348,6 +348,24 @@ Hay dos controles más sobre los metales. Los promedios del segundo trimestre de
 trimestre. Y la corrida se detiene si el Banco Mundial cambia la descripción
 del oro o de la plata: ya cambió una vez, en junio de 2025.
 
+### Oro: el precio oficial antes de 1960
+
+`python -m senales.oro_oficial` escribe `data/series/oro_precio_oficial.csv`:
+el precio del oro en USD por onza troy que fijaba la ley de EE.UU., de
+1900-03 a 1959-12 (A-R0-21 a A-R0-26). Dos tramos derivados de la fracción
+legal: 20,6718 hasta 1934-01 (dólar de 25,8 granos de oro de 9/10 de fino,
+ley del 14 de marzo de 1900) y 35,00 desde 1934-02 (15 5/21 granos,
+proclamación del 31 de enero de 1934). Cada fila lleva la etiqueta **"precio
+oficial fijado por ley, no precio de mercado"**, la norma, la convertibilidad
+(que desaparece en marzo de 1933 aunque la paridad siga) y, de 1933-09 a
+1934-01, la nota de que hubo además un precio administrado para el oro recién
+extraído que no está en la serie. No descarga nada; su gate compara el precio
+derivado con las cifras del Tesoro, la Casa de Moneda, la Junta y el FMI
+(±0,005 USD) y exige que el primer mes a 35 sea 1934-02. Queda **fuera de
+`apto_metricas`**, no es lado de ningún ratio y no se empalma con el Pink
+Sheet: en 1960-01 empieza otra serie. Antes de 1900: NO MEDIDO hasta leer la
+base legal. Su ficha está en `series.csv` y `ratios.py` la conserva.
+
 ### Lo que estas series no dicen
 
 **Un ratio de precio no es un ratio de retorno.** Los índices no incluyen
