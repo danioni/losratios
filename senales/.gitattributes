@@ -4,3 +4,7 @@
 # coincidir (A-R0-15).
 data/raw/*.json -text
 data/raw/*.xlsx binary
+# Las dos transcripciones del dinero de EE.UU. antes de 1959 se cotejan celda
+# por celda y la serie publicada se recalcula desde ellas byte a byte
+# (A-D0-19, A-D0-30): se guardan tal cual, sin convertir saltos de línea.
+data/raw/transcripcion_junta_1892_1958/*.csv -text

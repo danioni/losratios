@@ -266,3 +266,26 @@ traen ninguna línea de copyright: la etiqueta es lo único que lo dice.
 Los demás crudos de la fase D0 (los ZIP de la Junta, que son de dominio público
 pero pesan entre 1.4 y 9 MB, y las fuentes de contraste) no están aquí
 (A-D0-27): su URL, fecha y SHA-256 están en `denominador_descargas.csv`.
+
+## `transcripcion_junta_1892_1958/`
+
+- **Fuente:** Board of Governors of the Federal Reserve System, *Banking and
+  Monetary Statistics, 1914–1941* (1943), Tabla 9, pp. 34–35; y *Banking and
+  Monetary Statistics, 1941–1970* (1976), Sección 1, p. 5 (continuación de la
+  Tabla 9) y Tabla 1.1, pp. 17 y 20. Cifras transcritas a mano, dos veces, de
+  los escaneos; no son descargas.
+- **Copia digital:** FRASER, Federal Reserve Bank of St. Louis,
+  <https://fraser.stlouisfed.org/title/banking-monetary-statistics-1914-1941-38>
+  y <https://fraser.stlouisfed.org/title/banking-monetary-statistics-1941-1970-41>.
+  Los PDF (36 y 75 MB) no viajan con el repositorio; su URL, fecha y SHA-256
+  están en `data/series/dinero_historico_descargas.csv`.
+- **Licencia:** publicaciones de una agencia federal de EE.UU. sin aviso de
+  copyright; que estén en dominio público como obra del gobierno de EE.UU. es
+  una inferencia (`FUENTES.md`, D0.3.1). Los términos de FRASER
+  (<https://fraser.stlouisfed.org/terms-of-use>, leídos el 2026-10-07) dan
+  acceso para usos no comerciales, educativos y personales, exigen atribución
+  y dejan la evaluación de los derechos de cada documento a quien lo usa.
+- **Condiciones:** atribución a la Junta y a FRASER, como arriba.
+- **Cambios:** ninguno en las cifras. Los archivos `A_*.csv` y `B_*.csv` son
+  las dos lecturas tal como se hicieron; `resoluciones.csv` dice qué celda se
+  releyó y por qué (A-D0-19).
