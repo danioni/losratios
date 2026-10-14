@@ -12,7 +12,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from senales import denominador, fuentes_denominador as fd
+from senales import denominador, fuentes_denominador as fd, fuentes_precios
 from senales.configuracion import (
     BCE_CLAVE_BALANCE,
     BCE_CLAVE_M2_AJUSTADA,
@@ -25,6 +25,8 @@ from senales.configuracion import (
     CLAVE_M2CD_1998_2008,
     COLUMNAS_D0_FICHAS,
     DESCARGA_BCE_M2_AJUSTADA,
+    DESCARGA_BOJ_BALANCE,
+    DESCARGA_BOJ_M2,
     ESTAT_INDICADOR_M2,
     NO_MEDIDO_ACCESO_VEDADO,
     NO_MEDIDO_SIN_VALIDACION,
@@ -210,6 +212,22 @@ def test_las_anclas_exigen_tres_y_cierran_dentro_del_medio_paso():
     assert denominador.comparar_anclas("s", serie, lejos).fuera == ["2026-03"]
 
 
+# --- Crudos del Banco de Japón (A-D0-8, A-D0-27) -----------------------------------
+
+
+def test_los_crudos_del_boj_viven_fuera_del_repositorio(tmp_path):
+    """Respuesta del BoJ del 2026-10-14: redistribuir sus datos sin modificar exige un formulario.
+
+    La licencia (b) dejaría versionar el crudo, pero el BoJ exige un permiso
+    aparte para redistribuirlo: va a data/privado/raw, como los ZIP de la Junta,
+    y el manifiesto lo declara fuera del repositorio.
+    """
+    for descarga in (DESCARGA_BOJ_M2, DESCARGA_BOJ_BALANCE):
+        assert not descarga.crudo_versionado
+        ruta = fuentes_precios.ruta_cruda(descarga, FECHA, tmp_path / "raw", tmp_path / "privado")
+        assert ruta == tmp_path / "privado" / f"{descarga.clave}_{FECHA.isoformat()}.csv"
+
+
 # --- Corrida de punta a punta -----------------------------------------------------
 
 
@@ -221,8 +239,9 @@ def _sembrar(crudo: Path, privado: Path, fecha: str, con_bce: bool = True) -> No
         (crudo / f"bce_m2_ajustada_{fecha}.csv").write_text(datos.csv_bce_m2(BCE_CLAVE_M2_AJUSTADA), encoding="utf-8")
         (crudo / f"bce_m2_sin_ajustar_{fecha}.csv").write_text(datos.csv_bce_m2(BCE_CLAVE_M2_SIN_AJUSTAR, 1000.0), encoding="utf-8")
         (crudo / f"bce_balance_eurosistema_{fecha}.csv").write_text(datos.csv_bce_balance(BCE_CLAVE_BALANCE), encoding="utf-8")
-    (crudo / f"boj_m2_{fecha}.csv").write_text(datos.csv_boj_m2_completo(), encoding="utf-8")
-    (crudo / f"boj_balance_{fecha}.csv").write_text(datos.csv_boj(BOJ_CODIGO_BALANCE, datos.balance_boj()), encoding="utf-8")
+    # Los crudos del BoJ no viajan con el repositorio (A-D0-27): el pipeline los lee de data/privado/raw.
+    (privado / f"boj_m2_{fecha}.csv").write_text(datos.csv_boj_m2_completo(), encoding="utf-8")
+    (privado / f"boj_balance_{fecha}.csv").write_text(datos.csv_boj(BOJ_CODIGO_BALANCE, datos.balance_boj()), encoding="utf-8")
     (crudo / f"ocde_china_dinero_amplio_{fecha}.csv").write_text(datos.csv_ocde(datos.dinero_china()), encoding="utf-8")
     balance_cn = pd.Series([40_000.0 + i for i in range(len(datos.MESES))], index=datos.meses_ts())
     (crudo / f"bis_cbta_cn_{fecha}.csv").write_text(datos.csv_bis_activos("CN", balance_cn), encoding="utf-8")
@@ -294,6 +313,12 @@ def test_corrida_completa_publica_y_es_idempotente(entorno):
     assert fichas.loc[fichas["serie"] == "dinero_amplio_china", "nombre"].iloc[0] == "Dinero amplio de China (M3 de la OCDE)"
     assert fichas.loc[fichas["serie"] == "dinero_eeuu_1947_1958", "estado"].iloc[0].startswith("NO MEDIDO")
 
+    # A-D0-27: el manifiesto dice que los crudos del BoJ no están en el repositorio, y están en privado.
+    descargas = pd.read_csv(series / "d0_descargas.csv", dtype=str, keep_default_na=False)
+    boj = descargas.loc[descargas["fuente"].isin([DESCARGA_BOJ_M2.clave, DESCARGA_BOJ_BALANCE.clave])]
+    assert len(boj) == 2 and set(boj["crudo_en_repo"]) == {"no"}
+    assert not list(crudo.glob("boj_*")) and len(list(privado.glob("boj_*"))) == 2
+
     dinero = pd.read_csv(series / "d0_dinero.csv", dtype={"mes": str})
     assert "balance_pboc" not in set(dinero["serie"])
     m2cd = dinero.loc[dinero["serie"] == CLAVE_M2CD_1998_2008]
@@ -344,7 +369,7 @@ def test_el_robots_veda_una_fuente_y_la_serie_lo_dice(entorno, monkeypatch):
     crudo, privado, series = entorno
     _sembrar(crudo, privado, FECHA.isoformat())
     # Falta el crudo del BoJ: habría que pedirlo, y el robots.txt fingido veda todo.
-    (crudo / f"boj_m2_{FECHA.isoformat()}.csv").unlink()
+    (privado / f"boj_m2_{FECHA.isoformat()}.csv").unlink()
     assert denominador.main(["--fecha-descarga", FECHA.isoformat()]) == 0
     fichas = pd.read_csv(series / "d0_fichas.csv", dtype=str, keep_default_na=False)
     assert fichas.loc[fichas["serie"] == "m2_japon", "estado"].iloc[0] == NO_MEDIDO_ACCESO_VEDADO
