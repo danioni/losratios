@@ -851,8 +851,11 @@ _ATRIBUCION_BCE = (
     "cambios; toda serie derivada se rotula como cálculo propio (A-D0-7)."
 )
 _LICENCIA_BOJ = "Reproducción con cita de la fuente, salvo fines comerciales (Banco de Japón)"
+# Respuesta del BoJ del 2026-10-14 (FUENTES.md, D0.5): calcular y graficar con sus
+# datos es "data usage" y exige citar la fuente con el nombre del sitio, "Time-Series
+# Data Search", Bank of Japan. El crédito de la API es aparte (D0.13, punto 1).
 _ATRIBUCION_BOJ = (
-    "Fuente: Bank of Japan, BOJ Time-Series Data Search ({base}). Este servicio usa la API "
+    "Fuente: Bank of Japan, Time-Series Data Search ({base}). Este servicio usa la API "
     "de «BOJ Time-Series Data Search»; el Banco de Japón no garantiza su contenido. Los "
     "valores se publican sin cambios. Válido mientras el sitio no tenga vínculo comercial "
     "(A-D0-8)."

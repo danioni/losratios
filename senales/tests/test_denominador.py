@@ -14,6 +14,7 @@ import pytest
 
 from senales import denominador, fuentes_denominador as fd, fuentes_precios
 from senales.configuracion import (
+    ARCHIVO_D0_FICHAS,
     BCE_CLAVE_BALANCE,
     BCE_CLAVE_M2_AJUSTADA,
     BCE_CLAVE_M2_SIN_AJUSTAR,
@@ -30,6 +31,7 @@ from senales.configuracion import (
     ESTAT_INDICADOR_M2,
     NO_MEDIDO_ACCESO_VEDADO,
     NO_MEDIDO_SIN_VALIDACION,
+    SERIES_D0,
     AnclaMensual,
 )
 from senales.fuentes_fred import ErrorDeFuente
@@ -215,17 +217,25 @@ def test_las_anclas_exigen_tres_y_cierran_dentro_del_medio_paso():
 # --- Crudos del Banco de Japón (A-D0-8, A-D0-27) -----------------------------------
 
 
-def test_los_crudos_del_boj_viven_fuera_del_repositorio(tmp_path):
-    """Respuesta del BoJ del 2026-10-14: redistribuir sus datos sin modificar exige un formulario.
+def test_los_crudos_del_boj_viven_fuera_del_repositorio_y_la_atribucion_nombra_el_sitio(tmp_path):
+    """Respuesta del BoJ del 2026-10-14: citar la fuente con el nombre del sitio; no redistribuir el crudo.
 
-    La licencia (b) dejaría versionar el crudo, pero el BoJ exige un permiso
-    aparte para redistribuirlo: va a data/privado/raw, como los ZIP de la Junta,
-    y el manifiesto lo declara fuera del repositorio.
+    Usar los datos para calcular y graficar es "data usage" y exige citar
+    "Time-Series Data Search", Bank of Japan: va en la atribución de cada ficha.
+    La licencia (b) dejaría versionar el crudo, pero redistribuirlo sin modificar
+    exige un formulario que no se presentó: va a data/privado/raw, como los ZIP
+    de la Junta, y el manifiesto lo declara fuera del repositorio.
     """
     for descarga in (DESCARGA_BOJ_M2, DESCARGA_BOJ_BALANCE):
+        assert "Bank of Japan, Time-Series Data Search" in descarga.atribucion
         assert not descarga.crudo_versionado
         ruta = fuentes_precios.ruta_cruda(descarga, FECHA, tmp_path / "raw", tmp_path / "privado")
         assert ruta == tmp_path / "privado" / f"{descarga.clave}_{FECHA.isoformat()}.csv"
+    # Las fichas publicadas ya la llevan, igual que la saca el código.
+    fichas = pd.read_csv(ARCHIVO_D0_FICHAS, dtype=str, keep_default_na=False)
+    for serie in SERIES_D0:
+        if serie.descarga in (DESCARGA_BOJ_M2, DESCARGA_BOJ_BALANCE):
+            assert fichas.loc[fichas["serie"] == serie.clave, "atribucion"].iloc[0] == serie.descarga.atribucion
 
 
 # --- Corrida de punta a punta -----------------------------------------------------
