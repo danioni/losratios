@@ -289,3 +289,74 @@ pero pesan entre 1.4 y 9 MB, y las fuentes de contraste) no están aquí
 - **Cambios:** ninguno en las cifras. Los archivos `A_*.csv` y `B_*.csv` son
   las dos lecturas tal como se hicieron; `resoluciones.csv` dice qué celda se
   releyó y por qué (A-D0-19).
+
+## `coin_metrics_btc_oferta_<fecha>.json`
+
+- **Fuente:** Coin Metrics, datos community. Métricas `SplyCur`, `BlkCnt` e
+  `IssTotNtv` de BTC (fase N0).
+- **URL:** `https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyCur,BlkCnt,IssTotNtv&frequency=1d&page_size=10000`
+- **Licencia:** Creative Commons Attribution-NonCommercial 4.0 International
+  (CC BY-NC 4.0), <https://creativecommons.org/licenses/by-nc/4.0/>.
+- **Dónde lo declara la fuente:**
+  <https://gitbook-docs.coinmetrics.io/packages/coin-metrics-community-data.md>,
+  releído el 2026-10-07.
+- **Condiciones:** atribución a Coin Metrics, y **uso no comercial**. Quien
+  redistribuya este archivo tiene que mantener las dos.
+- **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
+  Se registra en `data/series/numerador_descargas.csv`.
+
+## `usgs_ds140_oro_<fecha>.xlsx` y `usgs_ds140_plata_<fecha>.xlsx`
+
+- **Fuente:** U.S. Geological Survey, *Data Series 140, Historical Statistics
+  for Mineral and Material Commodities in the United States*: hojas "Gold"
+  (1900–2022, modificada el 20 de noviembre de 2023) y "Silver" (1900–2021,
+  modificada el 1 de septiembre de 2023).
+- **URL:** `https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-gold-2022.xlsx`
+  y `.../ds140-silver-2021.xlsx`, enlazadas desde
+  <https://www.usgs.gov/centers/national-minerals-information-center/historical-statistics-mineral-and-material-commodities>.
+- **Licencia:** dominio público de EE.UU. Política del USGS
+  (<https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits>,
+  leída el 2026-10-07): *"USGS-authored or produced data and information are
+  considered to be in the U.S. Public Domain."*
+- **Condiciones:** ninguna; se cita al USGS como fuente.
+- **Cambios:** ninguno. Entran por copia bajada a mano (A-N0-14) y se
+  registran en `data/series/numerador_descargas.csv`.
+
+## `z1_<tabla>_<fecha>.csv` (`F51_1_t`, `F51_1_s`, `F3_s`, `F3_t`, `D3_s`)
+
+- **Fuente:** Junta de Gobernadores del Sistema de la Reserva Federal, *Z.1
+  Financial Accounts of the United States*, paquete CSV de la publicación
+  vigente (`z1_csv_files.zip`): el miembro `csv/<tabla>.csv` de cada tabla.
+- **URL:** `https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip`;
+  en el manifiesto, con el fragmento `#csv/<tabla>.csv` que dice qué miembro es.
+- **Licencia:** dominio público. Descargo legal de la Junta
+  (<https://www.federalreserve.gov/disclaimer.htm>, leído el 2026-10-07):
+  *"Unless otherwise indicated, information on Board's website is in the
+  public domain and may be copied and distributed without permission. Please
+  cite to the Board as the source of the information."*
+- **Condiciones:** citar a la Junta como fuente.
+- **Cambios:** ninguno. Son los bytes exactos del miembro del ZIP; el ZIP
+  (8.3 MB) no se versiona (A-D0-27, A-N0-14) y su hash está en
+  `data/series/numerador_descargas.csv`.
+
+## `censo_hvs_tabla7_<fecha>.xlsx`, `censo_hvs_tabla7a_<fecha>.xlsx` y `censo_popest_viviendas_<fecha>.xlsx`
+
+- **Fuente:** U.S. Census Bureau. Las dos primeras, *Housing Vacancies and
+  Homeownership (CPS/HVS)*, tablas históricas 7 y 7a; la tercera, *Population
+  Estimates Program*, "Annual Estimates of Housing Units for the United
+  States, Regions, States, and the District of Columbia: April 1, 2020 to
+  July 1, 2025" (NST-EST2025-HU).
+- **URL:** `https://www.census.gov/housing/hvs/data/histtab7.xlsx`,
+  `https://www.census.gov/housing/hvs/data/hist_tab_7a_v2025.xlsx` y
+  `https://www2.census.gov/programs-surveys/popest/tables/2020-2025/housing/totals/NST-EST2025-HU.xlsx`.
+  Las dos últimas llevan la vintage en el nombre y cambian cada año.
+- **Licencia:** dominio público. Son obras del gobierno federal de EE.UU.,
+  sin copyright: 17 U.S.C. § 105(a), *"Copyright protection under this title
+  is not available for any work of the United States Government"* (leído en
+  <https://www.law.cornell.edu/uscode/text/17/105> el 2026-10-07). En las
+  páginas del Censo leídas no hay una cláusula propia sobre reutilizar los
+  archivos; la de citas (<https://www.census.gov/about/policies/citation.html>)
+  da el formato de cita.
+- **Condiciones:** ninguna; se cita al Censo como fuente, con la tabla y la
+  fecha de publicación.
+- **Cambios:** ninguno. Se registran en `data/series/numerador_descargas.csv`.

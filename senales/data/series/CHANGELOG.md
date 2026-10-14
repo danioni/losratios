@@ -11,6 +11,27 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-07 · A-N0-1 a A-N0-15 · Supuestos nuevos: la familia N0 (El Numerador),
+  las series anuales de oferta de activos.** Decisión del dueño (`FUENTES.md`,
+  N0.10.5). Nacen `numerador_series.csv`, `serie_N0.csv` y
+  `numerador_descargas.csv`, con 32 series publicadas de 34: BTC (emisión del
+  año según el calendario del protocolo por los bloques observados, oferta,
+  tasa de crecimiento y porcentaje minado; gate contra Coin Metrics con
+  0.001 %, fijado con el resultado del paso 0 a la vista; elasticidad cero
+  por construcción), la producción minera mundial de oro y plata del USGS
+  (Data Series 140 y Mineral Commodity Summaries, revisiones declaradas;
+  control del BGS con ±5 %: la plata queda en disputa en 2020, 2021, 2022 y
+  2024) y su cota superior de crecimiento del stock (estimación), la emisión
+  neta de acciones de EE.UU. por sector (Z.1, F51.1) en USD y como % del valor
+  de mercado, los títulos de deuda y la deuda no financiera de EE.UU. (Z.1,
+  F3.s y D3.s) con su variación, y el parque de viviendas de EE.UU. (HVS
+  Tabla 7 y Population Estimates). **La Tabla 7a del HVS queda NO MEDIDO:**
+  su identidad total = vacantes + ocupadas falla en 2017 por 2 mil con la
+  tolerancia de 1.5 mil fijada por construcción. Las existencias de oro y
+  plata, el stock-to-flow, lo global y las elasticidades estimadas quedan NO
+  MEDIDO o pendientes de prerregistro (A-N0-6, A-N0-12). No cambia ningún
+  valor de otras fases.
+
 - **2026-10-07 · A-R0-21 a A-R0-26 · Supuestos nuevos: el precio oficial del
   oro en EE.UU., 1900-03 a 1959-12, como serie de contexto.** Decisión del
   dueño. `oro_precio_oficial.csv` nace con 718 meses: 20,6718 USD por onza
@@ -338,6 +359,87 @@ cita.
   - oro_precio_oficial_usd: gate de nivel y fecha contra cifras publicadas por el Tesoro, la Casa de Moneda, la Junta y el FMI cerró: 6 cifras, tolerancia ±0.005 USD, diferencia máxima 0.0018; primer mes a 35: 1934-02
 - Revisiones de datos históricos: ninguna
 - Nota: primera publicación de la serie: no hay corrida anterior con que comparar
+
+## 2026-10-07 · numerador
+
+- Descargas:
+  - coin_metrics_btc_oferta: https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyCur,BlkCnt,IssTotNtv&frequency=1d&page_size=10000, sha256 ae3c1339354c7a7f8613aa9a701d4b3395d354fa332c55a081c870b3ff327a24
+  - usgs_ds140_oro: https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-gold-2022.xlsx, sha256 025f3eb98adb606cc214b82caa70646b80cf9debdf6544dbafce361283c1c480
+  - usgs_ds140_plata: https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-silver-2021.xlsx, sha256 e57b952a5fd469291341bf275fbaa1c20dfd0caa9b40f383a2a19076efa9e997
+  - censo_hvs_tabla7: https://www.census.gov/housing/hvs/data/histtab7.xlsx, sha256 335592c7de815c450495abeeea8a0d64d333e4760109a5b04b5eca4ee5ca8ebc
+  - censo_hvs_tabla7a: https://www.census.gov/housing/hvs/data/hist_tab_7a_v2025.xlsx, sha256 3777bf395606d5564c2fce3447f5e757f0628ce59354df057db0e0bcbc3338b2
+  - censo_popest_viviendas: https://www2.census.gov/programs-surveys/popest/tables/2020-2025/housing/totals/NST-EST2025-HU.xlsx, sha256 a1ff31e0dc318bb00e4ac546dbba45601adb17ab56f31893e01fc29b072f94a8
+  - z1_F51_1_t: https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip#csv/F51_1_t.csv, sha256 248c042f03760a82538174b106db0229dbede1d41cc1fd4aa23dd076f1b41f74
+  - z1_F51_1_s: https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip#csv/F51_1_s.csv, sha256 3c7fe82fe4ac8a0b6c9bd481cb750c0c631e7d85b447d5910d673839eb1fb851
+  - z1_F3_s: https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip#csv/F3_s.csv, sha256 c492030ef2bda0c92a9e73b8fa372f53642fb53763ba07f1fb5f6a4312bdeb2b
+  - z1_F3_t: https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip#csv/F3_t.csv, sha256 8420423aeacd990f3f1bdb018b3c120ad78bf769f0f72ab4a26ddc6b50c9aeea
+  - z1_D3_s: https://www.federalreserve.gov/releases/z1/current/z1_csv_files.zip#csv/D3_s.csv, sha256 50e6fbbd07de3f42a4ddf1f5be8eaf16dbf94032406de870ec3eaae3793fecf7
+  - z1_html_F51_1_t: https://www.federalreserve.gov/releases/z1/current/html/F51_1_t.htm, sha256 cda1b00773fc6b58cefe5be82d813f84d9a0157aefadb12b63e250b36c0fed3e
+  - z1_html_F51_1_s: https://www.federalreserve.gov/releases/z1/current/html/F51_1_s.htm, sha256 0b91363c5eb7b8e7acf46ce4b8aa7b5cd44650de84caa863c198f2950f506863
+  - z1_html_F3_s: https://www.federalreserve.gov/releases/z1/current/html/F3_s.htm, sha256 e228d32ec728bf94de5de98027277f49a389a5a4e9991b1be25694db15eb3305
+  - z1_html_D3_s: https://www.federalreserve.gov/releases/z1/current/html/D3_s.htm, sha256 dbdd070b2533fda842b414c2b8657f0529efead4eb0b1b684e82d48d2e72a7e4
+  - fred_hvs_trimestral: https://fred.stlouisfed.org/graph/fredgraph.csv?id=ETOTALUSQ176N, sha256 15e6a2d66c7e790b94f51c16e6e59cd684a4c1fac60013c9b85d593e98c0cd5b
+- Series:
+  - BTC: emisión del año según el calendario del protocolo: se publica, 2009 a 2025, 17 filas (flujo; BTC; suma de los bloques del año calendario (UTC); subsidio de cada bloque según Bitcoin Core, por los bloques observados del año; A-N0-1 A-N0-2 A-N0-13)
+  - BTC: emisión observada del año: se publica, 2009 a 2025, 17 filas (flujo; BTC; suma de los bloques del año calendario (UTC); suma de IssTotNtv; A-N0-1 A-N0-2 A-N0-13)
+  - BTC: oferta en circulación a fin de año: se publica, 2009 a 2025, 17 filas (stock; BTC; oferta al cierre del 31 de diciembre (00:00 UTC del 1 de enero), lectura de Coin Metrics; A-N0-1 A-N0-2 A-N0-13)
+  - BTC: tasa de crecimiento de la oferta en circulación: se publica, 2010 a 2025, 16 filas (tasa de crecimiento de la oferta; % anual; oferta a fin de año sobre la oferta a fin del año anterior, menos uno (cálculo propio); A-N0-1 A-N0-2 A-N0-13)
+  - BTC: porcentaje del máximo de 21 millones ya emitido, a fin de año: se publica, 2009 a 2025, 17 filas (proporción; % de 21000000 BTC; oferta al cierre del 31 de diciembre (00:00 UTC del 1 de enero), lectura de Coin Metrics dividida por MAX_MONEY (cálculo propio); A-N0-1 A-N0-2 A-N0-13)
+  - BTC: oferta en circulación a la fecha de la descarga: se publica, 2026 a 2026, 1 filas (stock; BTC; último día con dato en la descarga, cierre a las 00:00 UTC del día siguiente; A-N0-1 A-N0-2 A-N0-13)
+  - BTC: porcentaje del máximo de 21 millones ya emitido, a la fecha de la descarga: se publica, 2026 a 2026, 1 filas (proporción; % de 21000000 BTC; último día con dato en la descarga, dividido por MAX_MONEY (cálculo propio); A-N0-1 A-N0-2 A-N0-13)
+  - BTC: elasticidad de la oferta respecto del precio: se publica, 2026 a 2026, 1 filas (elasticidad de la oferta; d ln(oferta) / d ln(precio); cero por construcción: el subsidio por bloque es función de la altura del bloque y de nada más (Bitcoin Core, GetBlockSubsidy); A-N0-1 A-N0-12)
+  - Oro: producción minera mundial anual: se publica, 1900 a 2025, 126 filas (flujo; toneladas métricas de contenido de metal; producción de mina del año calendario; Data Series 140 en todo su rango y Mineral Commodity Summaries después, con el último año estimado; A-N0-1 A-N0-3 A-N0-4 A-N0-13)
+  - Oro: cota superior de la tasa de crecimiento del stock (producción del año / producción acumulada desde 1900): se publica, 1901 a 2025, 125 filas (cota superior de la tasa de crecimiento del stock; % anual; producción del año dividida por la suma de la producción mundial de 1900 al año anterior (cálculo propio); A-N0-1 A-N0-3 A-N0-5 A-N0-6 A-N0-13)
+  - Plata: producción minera mundial anual: se publica, 1900 a 2025, 126 filas (flujo; toneladas métricas de contenido de metal; producción de mina del año calendario; Data Series 140 en todo su rango y Mineral Commodity Summaries después, con el último año estimado; A-N0-1 A-N0-3 A-N0-4 A-N0-13)
+  - Plata: cota superior de la tasa de crecimiento del stock (producción del año / producción acumulada desde 1900): se publica, 1901 a 2025, 125 filas (cota superior de la tasa de crecimiento del stock; % anual; producción del año dividida por la suma de la producción mundial de 1900 al año anterior (cálculo propio); A-N0-1 A-N0-3 A-N0-5 A-N0-6 A-N0-13)
+  - Acciones de EE.UU.: emisión neta, todos los sectores: se publica, 1946 a 2025, 80 filas (flujo; millones de USD; flujo del año calendario a valor de transacción: hasta 1951 el dato anual de la Junta; desde 1952 la media de los cuatro trimestres a tasa anual ajustada; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: valor de mercado a fin de año, todos los sectores: se publica, 1945 a 2025, 81 filas (stock; millones de USD; saldo a fin del cuarto trimestre, a valor de mercado, sin ajuste estacional; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta como porcentaje del valor de mercado del año anterior, todos los sectores: se publica, 1946 a 2025, 80 filas (tasa de crecimiento de la oferta; % del valor de mercado de fin del año anterior; emisión neta del año dividida por el saldo a valor de mercado del cuarto trimestre del año anterior (cálculo propio); mezcla cantidades y precios y lo declara; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta, sociedades no financieras: se publica, 1946 a 2025, 80 filas (flujo; millones de USD; flujo del año calendario a valor de transacción: hasta 1951 el dato anual de la Junta; desde 1952 la media de los cuatro trimestres a tasa anual ajustada; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: valor de mercado a fin de año, sociedades no financieras: se publica, 1945 a 2025, 81 filas (stock; millones de USD; saldo a fin del cuarto trimestre, a valor de mercado, sin ajuste estacional; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta como porcentaje del valor de mercado del año anterior, sociedades no financieras: se publica, 1946 a 2025, 80 filas (tasa de crecimiento de la oferta; % del valor de mercado de fin del año anterior; emisión neta del año dividida por el saldo a valor de mercado del cuarto trimestre del año anterior (cálculo propio); mezcla cantidades y precios y lo declara; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta, sectores financieros internos: se publica, 1946 a 2025, 80 filas (flujo; millones de USD; flujo del año calendario a valor de transacción: hasta 1951 el dato anual de la Junta; desde 1952 la media de los cuatro trimestres a tasa anual ajustada; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: valor de mercado a fin de año, sectores financieros internos: se publica, 1945 a 2025, 81 filas (stock; millones de USD; saldo a fin del cuarto trimestre, a valor de mercado, sin ajuste estacional; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta como porcentaje del valor de mercado del año anterior, sectores financieros internos: se publica, 1946 a 2025, 80 filas (tasa de crecimiento de la oferta; % del valor de mercado de fin del año anterior; emisión neta del año dividida por el saldo a valor de mercado del cuarto trimestre del año anterior (cálculo propio); mezcla cantidades y precios y lo declara; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta, resto del mundo: se publica, 1946 a 2025, 80 filas (flujo; millones de USD; flujo del año calendario a valor de transacción: hasta 1951 el dato anual de la Junta; desde 1952 la media de los cuatro trimestres a tasa anual ajustada; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: valor de mercado a fin de año, resto del mundo: se publica, 1945 a 2025, 81 filas (stock; millones de USD; saldo a fin del cuarto trimestre, a valor de mercado, sin ajuste estacional; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Acciones de EE.UU.: emisión neta como porcentaje del valor de mercado del año anterior, resto del mundo: se publica, 1946 a 2025, 80 filas (tasa de crecimiento de la oferta; % del valor de mercado de fin del año anterior; emisión neta del año dividida por el saldo a valor de mercado del cuarto trimestre del año anterior (cálculo propio); mezcla cantidades y precios y lo declara; A-N0-1 A-N0-7 A-N0-9 A-N0-13)
+  - Deuda de EE.UU.: títulos de deuda en circulación, todos los sectores: se publica, 1945 a 2025, 81 filas (stock; millones de USD; saldo a fin del cuarto trimestre, sin ajuste estacional; incluye los títulos emitidos por el resto del mundo en manos de residentes; A-N0-1 A-N0-8 A-N0-9 A-N0-13)
+  - Deuda de EE.UU.: variación anual de los títulos de deuda en circulación: se publica, 1946 a 2025, 80 filas (tasa de crecimiento de la oferta; % anual; saldo de fin de año sobre el de fin del año anterior, menos uno (cálculo propio); A-N0-1 A-N0-8 A-N0-9 A-N0-13)
+  - Deuda de EE.UU.: deuda de los sectores no financieros internos (títulos y préstamos): se publica, 1945 a 2025, 81 filas (stock; millones de USD; saldo a fin del cuarto trimestre, ajustado por estacionalidad; A-N0-1 A-N0-8 A-N0-9 A-N0-13)
+  - Deuda de EE.UU.: variación anual de la deuda de los sectores no financieros internos: se publica, 1946 a 2025, 80 filas (tasa de crecimiento de la oferta; % anual; saldo de fin de año sobre el de fin del año anterior, menos uno (cálculo propio); A-N0-1 A-N0-8 A-N0-9 A-N0-13)
+  - Viviendas de EE.UU.: parque total (HVS, Tabla 7): se publica, 1965 a 2025, 61 filas (stock; miles de viviendas; promedio de las estimaciones mensuales del año; cada año con el valor de su base original, y la base revisada del Censo solo como denominador de la tasa del año siguiente (A-N0-10); A-N0-1 A-N0-10 A-N0-11 A-N0-13)
+  - Viviendas de EE.UU.: tasa de crecimiento del parque (HVS, Tabla 7): se publica, 1966 a 2025, 60 filas (tasa de crecimiento de la oferta; % anual; parque del año sobre el del año anterior en la misma base, menos uno (cálculo propio); A-N0-1 A-N0-10 A-N0-11 A-N0-13)
+  - Viviendas de EE.UU.: parque total revisado con los controles de vivienda (HVS, Tabla 7a): no se publica: NO MEDIDO: sin validación externa
+  - Viviendas de EE.UU.: tasa de crecimiento del parque revisado (HVS, Tabla 7a): no se publica: NO MEDIDO: sin validación externa
+  - Viviendas de EE.UU.: parque total al 1 de julio (Population Estimates): se publica, 2020 a 2025, 6 filas (stock; viviendas; existencias al 1 de julio, estimadas desde la base del Censo de 2020 (vintage 2025); A-N0-1 A-N0-10 A-N0-11 A-N0-13)
+  - Viviendas de EE.UU.: tasa de crecimiento del parque al 1 de julio (Population Estimates): se publica, 2021 a 2025, 5 filas (tasa de crecimiento de la oferta; % anual; parque al 1 de julio sobre el del 1 de julio anterior, menos uno (cálculo propio); A-N0-1 A-N0-10 A-N0-11 A-N0-13)
+  - Oro: existencias sobre la superficie: no se publica: NO MEDIDO como serie: la única serie de existencias es del World Gold Council, clase (c); su cifra va como estimación de terceros en citas_terceros.csv, fuera de todo cálculo (A-N0-6, A-D0-28)
+  - Oro: stock-to-flow: no se publica: NO MEDIDO como serie: sin existencias abiertas no hay cociente; la cota superior del crecimiento del stock es lo más que se puede publicar (A-N0-5, A-N0-6)
+  - Plata: existencias: no se publica: NO MEDIDO: no se encontró ninguna fuente abierta de existencias de plata (FUENTES.md, N0.5.5)
+  - Acciones: cantidad en circulación o emisión neta global: no se publica: NO MEDIDO: sin fuente abierta (la WFE es de clase (c), FUENTES.md D0.9); lo que hay es EE.UU. (A-N0-7)
+  - Viviendas: parque global: no se publica: NO MEDIDO: UN-Habitat no se leyó y no hay otra fuente abierta leída; lo que hay es EE.UU. (A-N0-10)
+  - Deuda: títulos de deuda en circulación, suma de economías: no se publica: NO MEDIDO: es la suma de 49 economías declarantes al BIS de A-D0-22, pendiente de implementar; nunca "global" (A-N0-8)
+  - Deuda de EE.UU.: elasticidad de la oferta respecto del precio: no se publica: NO MEDIDO: la deuda no tiene un precio comparable (decisión del dueño, FUENTES.md N0.10.5, punto 4; A-N0-12)
+  - Oro: respuesta observada de la oferta al precio: no se publica: pendiente: familia "respuesta observada de la oferta al precio"; antes de calcular, un paso 0 corto de las fuentes de precio y un prerregistro en SUPUESTOS.md con su propio commit (A-N0-12)
+  - Plata: respuesta observada de la oferta al precio: no se publica: pendiente: familia "respuesta observada de la oferta al precio"; antes de calcular, un paso 0 corto de las fuentes de precio y un prerregistro en SUPUESTOS.md con su propio commit (A-N0-12)
+  - Viviendas de EE.UU.: respuesta observada de la oferta al precio: no se publica: pendiente: familia "respuesta observada de la oferta al precio"; antes de calcular, un paso 0 corto de las fuentes de precio y un prerregistro en SUPUESTOS.md con su propio commit (A-N0-12)
+  - Acciones de EE.UU.: respuesta observada de la oferta al precio: no se publica: pendiente: familia "respuesta observada de la oferta al precio"; antes de calcular, un paso 0 corto de las fuentes de precio y un prerregistro en SUPUESTOS.md con su propio commit (A-N0-12)
+- Validación:
+  - btc: gate contra el calendario del protocolo (Bitcoin Core) a la misma altura de bloque cerró: 17 comparaciones, tolerancia oferta ≤ calendario y diferencia ≤ 0.001 %, diferencia máxima 0.0004
+  - oro_produccion_mundial_t: control contra el total mundial del BGS (World Mineral Production 2020-24) cerró: 5 comparaciones, tolerancia ±5 %, diferencia máxima 4.9180
+  - plata_produccion_mundial_t: control contra el total mundial del BGS (World Mineral Production 2020-24) cerró: 5 comparaciones, tolerancia ±5 %, diferencia máxima 10.8589; en disputa (control): 2020, 2021, 2022, 2024
+  - z1_F51_1_t: gate contra la tabla F51.1.t del Z.1 en HTML (mismo emisor) cerró: 36 comparaciones, tolerancia ±0.05 miles de millones de USD, diferencia máxima 0.0480
+  - z1_F51_1_s: gate contra la tabla F51.1.s del Z.1 en HTML (mismo emisor) cerró: 36 comparaciones, tolerancia ±0.05 miles de millones de USD, diferencia máxima 0.0490
+  - z1_F3_s: gate contra la tabla F3.s del Z.1 en HTML (mismo emisor) cerró: 9 comparaciones, tolerancia ±0.05 miles de millones de USD, diferencia máxima 0.0470
+  - z1_D3_s: gate contra la tabla D3.s del Z.1 en HTML (mismo emisor) cerró: 54 comparaciones, tolerancia ±0.05 miles de millones de USD, diferencia máxima 0.0490
+  - viviendas_eeuu_parque_hvs_miles: gate contra la identidad de la propia tabla, total = vacantes + ocupadas (gate de transporte) cerró: 66 comparaciones, tolerancia ±1.5 mil, diferencia máxima 1.0000
+  - viviendas_eeuu_parque_hvs_7a_miles: gate contra la identidad de la propia tabla, total = vacantes + ocupadas (gate de transporte) NO cerró: 26 comparaciones, tolerancia ±1.5 mil, diferencia máxima 2.0000; fuera de tolerancia: 2017: 137221 contra 17381 + 119842
+  - viviendas_eeuu_parque_hvs_7a_miles: control contra FRED ETOTALUSQ176N, media de los cuatro trimestres, hasta 2019 cerró: 19 comparaciones, tolerancia ±1 mil, diferencia máxima 3.7500; en disputa (control): 2001, 2002, 2004, 2006, 2007, 2011, 2017; de 2020 en adelante no se compara porque FRED no recoge la Vintage 2025; diferencia FRED menos Tabla 7a, en miles: 2020: -5.25, 2021: -20.00, 2022: -31.75, 2023: -40.25, 2024: -58.25, 2025: -24.75
+  - viviendas_eeuu_parque_popest_unidades: control contra Population Estimates (parque al 1 de julio) cerró: 6 comparaciones, tolerancia ±0.5 %, diferencia máxima 0.0661
+- Revisiones de datos históricos: ninguna
+- Nota: las tablas del Z.1 se extraen del paquete ZIP con sus bytes exactos; el ZIP, el HTML del Z.1 y el CSV de FRED quedan fuera del repositorio, con su hash en el manifiesto (A-N0-14)
+- Nota: las cifras del BGS son lecturas a mano de British Geological Survey, World Mineral Production 2020-24 (Idoine y otros, 2026), tablas "Mine production of gold" y "Mine production of silver", fila "World total", kilogramos de contenido de metal; incluye estimaciones de minería artesanal y redondea el total mundial (https://nora.nerc.ac.uk/id/eprint/541620/1/WMP_2020%20to%202024.pdf, SHA-256 260a9891d28082990e49a75b97c386da1499af1ba59aad8743407c0c57aa55c6, leído el 2026-10-07); "World Mineral Statistics contributed by permission of the British Geological Survey"
 
 ## 2026-10-07 · dinero histórico
 

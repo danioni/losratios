@@ -540,6 +540,113 @@ tramo mensual. Los dos cerraron el 2026-10-07. La serie sin ajustar de
   hueco.
 - El dinero amplio de China no es M2: es lo que la OCDE rotula M3.
 
+## Fase N0 · El Numerador: la oferta de los activos
+
+Las series anuales que alimentan elnumerador.com: cuánto hay de cada activo y
+cuánto se agrega por año. Qué se leyó de cada fuente está en `FUENTES.md`,
+sección N0; las decisiones, en `SUPUESTOS.md`, A-N0-1 a A-N0-15. Cada serie
+dice qué mide (flujo, stock, tasa de crecimiento, cota, proporción o
+elasticidad): una tasa de crecimiento y una elasticidad son cosas distintas
+(A-N0-1).
+
+### Qué se publica
+
+| Serie | Mide | Fuente | Desde | Convención | Unidad |
+| --- | --- | --- | --- | --- | --- |
+| `btc_emision_calendario_btc` | flujo | Bitcoin Core (subsidio por bloque) × Coin Metrics (bloques del año) | 2009 | suma de los bloques del año calendario (UTC) | BTC |
+| `btc_emision_observada_btc`, `btc_oferta_fin_de_anio_btc`, `btc_oferta_crecimiento_pct`, `btc_porcentaje_minado_pct` | flujo, stock, tasa, proporción | Coin Metrics (`IssTotNtv`, `SplyCur`) | 2009 | oferta al cierre del 31 de diciembre | BTC, % |
+| `btc_oferta_a_la_fecha_btc`, `btc_porcentaje_minado_a_la_fecha_pct` | stock, proporción | Coin Metrics | una fila, con la fecha de la descarga | último día con dato | BTC, % |
+| `btc_elasticidad_oferta` | elasticidad | Bitcoin Core | — | cero por construcción (A-N0-12) | d ln(oferta) / d ln(precio) |
+| `oro_produccion_mundial_t`, `plata_produccion_mundial_t` | flujo | USGS, Data Series 140 y Mineral Commodity Summaries | 1900 | producción de mina del año; el último año estimado | toneladas |
+| `oro_crecimiento_stock_cota_superior_pct`, `plata_crecimiento_stock_cota_superior_pct` | cota superior (estimación) | cálculo propio sobre el USGS | 1901 | producción del año sobre la acumulada desde 1900 (A-N0-5) | % anual |
+| `acciones_eeuu_emision_neta_<sector>_musd` (4 sectores) | flujo | Z.1, F51.1.t | 1946 | dato anual hasta 1951; media de los cuatro trimestres a tasa anual desde 1952 | millones de USD |
+| `acciones_eeuu_valor_de_mercado_<sector>_musd` | stock | Z.1, F51.1.s | 1945 | saldo del cuarto trimestre a valor de mercado | millones de USD |
+| `acciones_eeuu_emision_neta_<sector>_pct_vm` | tasa | cálculo propio sobre el Z.1 | 1946 | emisión neta sobre el valor de mercado de fin del año anterior | % |
+| `deuda_eeuu_titulos_deuda_musd`, `..._variacion_pct` | stock, tasa | Z.1, F3.s (`FL894122005`) | 1945 | saldo del cuarto trimestre | millones de USD, % |
+| `deuda_eeuu_no_financiera_musd`, `..._variacion_pct` | stock, tasa | Z.1, D3.s (`LA384104005`) | 1945 | saldo del cuarto trimestre, ajustado | millones de USD, % |
+| `viviendas_eeuu_parque_hvs_miles`, `..._crecimiento_pct` | stock, tasa | Censo, HVS Tabla 7 | 1965 | promedio del año; bases revisadas como denominador (A-N0-10) | miles de viviendas, % |
+| `viviendas_eeuu_parque_hvs_7a_miles`, `..._crecimiento_pct` | stock, tasa | Censo, HVS Tabla 7a | 2000 | promedio del año, revisado por vintage; **NO MEDIDO: sin validación externa** (A-N0-11) | miles de viviendas, % |
+| `viviendas_eeuu_parque_popest_unidades`, `..._crecimiento_pct` | stock, tasa | Censo, Population Estimates | 2020 | existencias al 1 de julio | viviendas, % |
+
+Lo que no tiene serie figura en `serie_N0.csv` como NO MEDIDO con su motivo:
+las existencias de oro y plata y el stock-to-flow (A-N0-6), las acciones y las
+viviendas globales, la suma de deuda de 49 economías (A-D0-22), la elasticidad
+de la deuda, y las cuatro series de "respuesta observada de la oferta al
+precio" que esperan su prerregistro (A-N0-12).
+
+### Cómo correr
+
+Desde `senales/`:
+
+```
+python -m senales.numerador                              # baja, valida, escribe las salidas y el changelog
+python -m senales.numerador --fecha-descarga 2026-10-07  # rehace una corrida con los crudos de ese día
+```
+
+Antes de pedirle algo a un sitio, el pipeline lee su `robots.txt` (A-D0-29).
+**La *Data Series 140* del USGS entra por copia bajada a mano** (A-N0-14): el
+host que la aloja responde 403 al `robots.txt`. Una persona guarda los xlsx en
+`data/raw/` como `usgs_ds140_oro_<AAAA-MM-DD>.xlsx` y
+`usgs_ds140_plata_<AAAA-MM-DD>.xlsx`:
+
+| Archivo | URL |
+| --- | --- |
+| `usgs_ds140_oro_<AAAA-MM-DD>.xlsx` | `https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-gold-2022.xlsx` |
+| `usgs_ds140_plata_<AAAA-MM-DD>.xlsx` | `https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-silver-2021.xlsx` |
+
+Las cifras de los *Mineral Commodity Summaries* y del BGS no se descargan: son
+lecturas a mano en `configuracion.py` (`LECTURAS_MCS`, `LECTURAS_BGS`), con la
+URL y el SHA-256 del PDF de donde salen. Las tablas del Z.1 se extraen del
+paquete ZIP de la publicación vigente con sus bytes exactos.
+
+### Salidas
+
+| Archivo | Contenido |
+| --- | --- |
+| `data/series/numerador_series.csv` | `serie, anio, fecha, valor, unidad, estado, control, cita, nota`: una fila por serie y año. `estado` es dato o estimación; `control` dice si el año está dentro del umbral de un control o en disputa; `cita` dice de qué publicación o edición sale la cifra; `nota` declara revisiones, bases y advertencias. |
+| `data/series/serie_N0.csv` | La ficha de cada serie: qué mide, fuente, identificador, URL, unidad, convención, licencia, atribución, validación, supuestos, quiebres, rango. Incluye las series NO MEDIDO y las pendientes con su motivo. |
+| `data/series/numerador_descargas.csv` | El manifiesto: URL, fecha, bytes y SHA-256 de cada crudo, de fuente o de contraste. |
+
+Los crudos de Coin Metrics, del USGS, del Censo y las cinco tablas del Z.1 se
+versionan en `data/raw/`; el ZIP y el HTML del Z.1, el CSV de FRED y los PDF
+del BGS y de los *Summaries* quedan fuera, con su hash (A-N0-14).
+
+### Cómo se valida
+
+- **BTC:** gate contra el calendario del protocolo a la misma altura de bloque:
+  la emisión observada no supera la del calendario, la oferta no supera la
+  suma de subsidios y le falta menos de 0.001 % (A-N0-2).
+- **Oro y plata:** control contra el total mundial del BGS, ±5 %; el BGS
+  incluye minería artesanal y la plata queda en disputa en cuatro de cinco
+  años (A-N0-4). Las revisiones entre ediciones del USGS se declaran fila por
+  fila (A-N0-3).
+- **Z.1:** gate de transporte, el CSV del paquete contra la tabla en HTML,
+  ±0.05 miles de millones (A-N0-9).
+- **Viviendas:** gate de transporte, la identidad total = vacantes + ocupadas
+  de la propia tabla, ±1.5 mil. Cerró en la Tabla 7 y **no cerró en la Tabla
+  7a** (2017 difiere en 2 mil), que queda NO MEDIDO. FRED y Population
+  Estimates son controles (A-N0-11).
+
+Lo que estos gates prueban es que el dato publicado es el del emisor, o el que
+el protocolo permite, sin errores de transporte ni de unidad. Para las acciones
+y la deuda la Junta es el único compilador; para las viviendas, el Censo.
+
+### Lo que estas series no dicen
+
+- **Acciones, deuda y viviendas son de EE.UU.** No hay fuente abierta de
+  acciones en circulación ni de viviendas globales; la deuda de 49 economías
+  es A-D0-22.
+- **La emisión neta de acciones está en dólares, no en acciones.** El Z.1 no
+  tiene la cantidad; el porcentaje sobre el valor de mercado mezcla cantidades
+  y precios y lo declara (A-N0-7).
+- **La cota superior del crecimiento del stock de oro no es la tasa real,** y
+  la de la plata ni siquiera es una cota (A-N0-5). Las existencias no se miden.
+- **Ninguna elasticidad está estimada.** La de BTC es cero por construcción;
+  la de la deuda no tiene precio comparable; las demás esperan su prerregistro
+  (A-N0-12).
+- **BTC: el año en curso no se publica como anual.** Las dos filas "a la
+  fecha" llevan la fecha de la descarga.
+
 ## Estructura
 
 ```
@@ -554,7 +661,9 @@ senales/
 │   ├── fuentes_precios.py  Fase R — descarga, manifiesto y lectura de cada fuente
 │   ├── ratios.py           Fase R — punto de entrada
 │   ├── denominador.py      Fase D0 — punto de entrada
-│   └── dinero_historico.py Fase D0 — el dinero de EE.UU. antes de 1959, desde las transcripciones
+│   ├── dinero_historico.py Fase D0 — el dinero de EE.UU. antes de 1959, desde las transcripciones
+│   ├── fuentes_numerador.py Fase N0 — lectura de Coin Metrics, el USGS, el Z.1 y el Censo
+│   └── numerador.py        Fase N0 — punto de entrada
 ├── tests/
 ├── data/raw/               Descargas crudas que se pueden redistribuir, versionadas por fecha
 ├── data/series/            Series publicadas, manifiesto de descargas y changelog
@@ -604,3 +713,10 @@ Y de la fase R, las que conviene leer antes que las demás:
 - **A-R0-17** — las métricas sobre un ratio solo usan los meses con error de redondeo de hasta 0.5 %.
 - **A-R0-19** — el oro y la plata se empalman: edición sin redondear del Pink Sheet hasta 2024-12, edición vigente después.
 - **A-R0-20** — el oro y la plata se comparan cada mes con el FMI; el mes que pasa del umbral se publica como valor en disputa y queda fuera de las métricas.
+
+Y de la fase N0, las que cambian lo que el sitio afirma hoy:
+
+- **A-N0-1** — una tasa de crecimiento y una elasticidad son magnitudes distintas; cada serie declara cuál mide.
+- **A-N0-2** — BTC: el calendario del protocolo es el dato y la oferta observada de Coin Metrics es el gate; la elasticidad es cero por construcción y la tasa de crecimiento no es 0 %.
+- **A-N0-5** — la cota superior del crecimiento del stock de oro no es la tasa real; la de la plata ni siquiera es una cota.
+- **A-N0-11** — la Tabla 7a del HVS queda NO MEDIDO: su propia identidad falla en 2017 por más que el redondeo.

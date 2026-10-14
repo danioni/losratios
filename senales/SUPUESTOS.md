@@ -1936,3 +1936,311 @@ impreso, no la suma de componentes.
   (A-D0-11): toda esa columna cambia de nivel.
 - El tramo `m2cd_japon_1967_1999` no entra al agregado mientras el euro no
   tenga tipo de cambio anterior a 1999.
+
+## Fase N0 · El Numerador: los supuestos A-N0-\*
+
+Las decisiones de la familia N0, las series anuales de oferta de activos que
+alimentan elnumerador.com. Salen del paso 0 (`FUENTES.md`, sección N0) y de lo
+que decidió el dueño el 2026-10-07 (`FUENTES.md`, N0.10.5). El código es
+`senales/numerador.py`; las fuentes, `senales/fuentes_numerador.py`; la
+configuración, el bloque N0 de `configuracion.py`.
+
+## A-N0-1 · Tasa de crecimiento y elasticidad son magnitudes distintas; cada serie declara qué mide
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07.
+
+La tasa de crecimiento de la oferta es cuánto crece el stock por año: un
+cociente entre lo que se agregó y lo que había, y un dato cuando los dos están
+medidos. La elasticidad es cuánto responde la oferta a un cambio del precio:
+una pendiente estimada, con rezago y con intervalo, nunca un número único.
+El sitio hoy usa una por la otra ("Cada activo tiene una tasa a la que se crean
+nuevas unidades — su elasticidad de oferta", `FUENTES.md` N0.0, fila 11).
+
+Cada fila de `serie_N0.csv` lleva la columna `mide` con uno de: flujo, stock,
+tasa de crecimiento de la oferta, cota superior de la tasa de crecimiento del
+stock, proporción, elasticidad de la oferta. El sitio no llama "elasticidad" a
+una tasa ni "tasa" a una elasticidad.
+
+## A-N0-2 · BTC: el calendario del protocolo es el dato; la oferta observada de Coin Metrics es el gate
+
+**Estado: dato el calendario y los bloques; supuesto el gate y su tolerancia.**
+Decisión del dueño del 2026-10-07.
+
+- **El subsidio por bloque** sale de Bitcoin Core (`GetBlockSubsidy`: 50 BTC,
+  partidos en dos cada 210000 bloques; `MAX_MONEY` = 21 millones), leído en el
+  commit `9dfde64cc3262329051fd05fffe40eecc786a99f` del 2026-10-07 (`FUENTES.md`,
+  N0.3.1). Es una función de la altura del bloque y de nada más.
+- **Cuántos bloques caen en cada año** es un dato observado: `BlkCnt` de Coin
+  Metrics, sumado por año calendario en UTC. La emisión del año según el
+  calendario es la suma del subsidio de cada bloque minado ese año.
+- **`BlkCnt` acumulado es la altura del último bloque del día**, es decir, no
+  cuenta al bloque génesis, cuyos 50 BTC no están en el conjunto de salidas no
+  gastadas. Es una inferencia: con la otra convención la oferta observada de
+  2012-11-28 superaría al calendario, y eso es imposible (`FUENTES.md`,
+  N0.3.2).
+- **El gate**, por año completo: la emisión observada (`IssTotNtv`) no supera
+  la del calendario; la oferta al 31 de diciembre (`SplyCur`) no supera la
+  suma de subsidios de los bloques 1 a N; y lo que le falta a la oferta
+  respecto del calendario no pasa de **0.001 %**. Mínimo tres años. **La
+  tolerancia se fijó con el resultado del paso 0 a la vista:** la diferencia
+  era de −80 BTC (−0.0004 %) al 2026-10-06. Lo que no depende del resultado es
+  el signo, que es lo que el gate exige primero.
+- Se publica también el porcentaje minado (oferta sobre 21 millones) a fin de
+  cada año y a la fecha de la descarga, con su fecha.
+- **La elasticidad de BTC es cero por construcción** y se publica como dato
+  (A-N0-12). La tasa de crecimiento observada (0.838 % en 2025) reemplaza al
+  "0 %" del sitio.
+- blockchain.com no entró como control: su cifra no es comparable sin alinear
+  la altura (`FUENTES.md`, N0.3.3). Queda abierto.
+
+## A-N0-3 · Oro y plata: la producción minera mundial del USGS, con la Data Series 140 en todo su rango y los Mineral Commodity Summaries después
+
+**Estado: dato; supuesto la regla de empalme entre publicaciones.** Decisión
+del dueño del 2026-10-07.
+
+- La *Data Series 140* (oro 1900–2022, plata 1900–2021) se usa en todo su
+  rango. Para los años posteriores, cada año toma la cifra de la edición más
+  reciente de los *Mineral Commodity Summaries* que lo publica como final; si
+  solo hay estimaciones, la más reciente, con estado "estimación" (hoy, 2025).
+- Las cifras de los *Summaries* se transcriben a mano en `configuracion.py`
+  (`LECTURAS_MCS`), con la edición, la URL, el SHA-256 y el tamaño del PDF y
+  la frase del texto que las confirma. Los PDF se leyeron con `pdftotext` en
+  modo `-raw` (el modo `-layout` mezcla columnas) y la fila "World total
+  (rounded)" se cotejó con la frase del texto corrido.
+- **Las revisiones se declaran y no se corrigen.** Oro 2022: la DS140 publica
+  3160 t y el MCS 2024 publica 3060; se publica la DS140, con la nota. Oro
+  2023: 3000 estimado (MCS 2024) y 3250 final (MCS 2025). Oro 2024: 3300
+  estimado (MCS 2025) y 3280 final (MCS 2026). Plata 2023: 26000 estimado y
+  25500 final. Plata 2024: 25000 estimado y 25300 final. Cada fila publicada
+  lleva la nota "revisión declarada" cuando otra edición dijo otra cosa.
+- El USGS cita el *World Silver Survey* (Silver Institute, Metals Focus) en
+  una nota del capítulo de plata: las dos fuentes no son del todo
+  independientes.
+
+## A-N0-4 · El BGS es control de consistencia de la producción, con ±5 %, y la plata queda en disputa
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07; tolerancia fijada el
+2026-10-07 antes de correr el pipeline.
+
+- El total mundial de *World Mineral Production 2020–24* del British
+  Geological Survey (kilogramos de contenido de metal, 2020 a 2024) se compara
+  con la producción del USGS año a año. Es un **control**: marca el año como
+  "valor en disputa" y no decide la publicación. Mínimo tres comparaciones.
+- **La tolerancia, ±5 %, se fijó antes de correr y con los resultados del
+  paso 0 a la vista:** oro entre 0.6 % y 4.4 % en 2021–2024 (y 4.9 % en 2020,
+  que se vio en la corrida), plata entre 7.6 % y 9.9 %. Se sabía que la plata
+  iba a quedar en disputa: 2020, 2021, 2022 y 2024 (2023 queda a 4.9 %). No se
+  ajustó la tolerancia para que cerrara.
+- **Por qué difieren.** El BGS suma estimaciones de minería artesanal que el
+  USGS no declara, y en plata incluye producción de fundición o refinería en
+  algunos países. La ficha de las dos series lo dice; "valor en disputa" aquí
+  significa que los dos compiladores no miden lo mismo, no un error de
+  transporte.
+- Las diez cifras del BGS se transcriben en `configuracion.py` (`LECTURAS_BGS`)
+  con la URL y el SHA-256 del PDF. Sus términos permiten el uso académico y de
+  investigación no comercial y exigen el reconocimiento *"World Mineral
+  Statistics contributed by permission of the British Geological Survey"*, que
+  el changelog y la ficha llevan; publicar la serie del BGS en el sitio puede
+  leerse como entregarla a terceros, y por eso es contraste y no fuente
+  (`FUENTES.md`, N0.4.3 y N0.13). El PDF no se versiona.
+
+## A-N0-5 · La cota superior de la tasa de crecimiento del stock de oro y plata: producción del año sobre la acumulada desde 1900
+
+**Estado: estimación.** Decisión del dueño del 2026-10-07.
+
+- `producción_t / Σ_{1900}^{t−1} producción`, en %, desde 1901, sobre la serie
+  de A-N0-3. Estado "estimación" en todas las filas.
+- **Es una cota superior, no la tasa real,** porque el denominador excluye
+  todo lo producido antes de 1900 (el stock real es mayor) y supone que las
+  pérdidas son despreciables. Para el oro los dos supuestos van en la misma
+  dirección y la cota vale. **Para la plata no es una cota:** el consumo
+  industrial no recuperado reduce el stock real, en la dirección contraria, y
+  la cifra es solo indicativa. La ficha y la nota de cada fila lo dicen.
+- Nunca se presenta como la tasa real ni entra a ninguna métrica.
+
+## A-N0-6 · Las existencias de oro y plata y el stock-to-flow quedan NO MEDIDO como serie
+
+**Estado: no medido.** Decisión del dueño del 2026-10-07.
+
+No hay ninguna serie abierta de existencias sobre la superficie: el World Gold
+Council exige cuenta y sus términos son de uso personal (`FUENTES.md`, N0.4.4);
+de plata no se encontró ninguna (N0.5.5). La cifra del World Gold Council
+(222600 t a fin del segundo trimestre de 2026) sigue en
+`data/series/citas_terceros.csv` como estimación de terceros, fuera de todo
+cálculo (A-D0-28). Sin existencias no hay stock-to-flow: no se publica, ni se
+proyecta.
+
+## A-N0-7 · Acciones de EE.UU.: la emisión neta del Z.1 por sector, en millones de USD y como porcentaje del valor de mercado del año anterior
+
+**Estado: dato, con limitación declarada; no medido lo global.** Decisión del
+dueño del 2026-10-07.
+
+- Fuente: Z.1, tabla F51.1 (la antigua F.224/L.224). Cuatro sectores: todos
+  los sectores (`FA893064105`, la línea "Net issues"), sociedades no
+  financieras (`FA103164105`), sectores financieros internos (`FA793164105`)
+  y resto del mundo (`FA263164105`), con sus saldos a valor de mercado
+  (`LM...`).
+- **El flujo anual:** hasta 1951 la Junta publica un dato por año (fechado
+  :Q4) y se toma tal cual; desde 1952 es la media de los cuatro trimestres a
+  tasa anual ajustada por estacionalidad (la suma dividida por cuatro). Solo
+  años con los cuatro trimestres.
+- **El porcentaje:** la emisión neta del año sobre el saldo a valor de mercado
+  del cuarto trimestre del año anterior, del mismo sector. Mezcla cantidades y
+  precios y lo declara. Sin interpretar: un valor negativo es más recompras
+  que emisiones en ese año.
+- **La limitación:** es un flujo en dólares a valor de transacción, no una
+  cantidad de acciones; la cantidad no existe en el Z.1.
+- Una serie global no tiene fuente abierta (la WFE es (c), D0.9): NO MEDIDO.
+
+## A-N0-8 · Deuda de EE.UU.: los títulos de deuda (F3.s) y la deuda de los sectores no financieros (D3.s), saldo de fin de año y variación
+
+**Estado: dato.** Decisión del dueño del 2026-10-07.
+
+- `FL894122005` (F3.s, línea 1: todos los sectores, títulos de deuda, pasivo),
+  saldo del cuarto trimestre, sin ajuste estacional, y su variación anual.
+  Incluye los títulos emitidos por el resto del mundo en manos de residentes;
+  el BIS queda 6.65 % por debajo en 2025-Q4 porque cuenta solo emisores
+  residentes (`FUENTES.md`, N0.7.2). Es una comparación declarada; no se
+  implementó como control.
+- `LA384104005` (D3.s, línea 1: sectores no financieros internos, títulos y
+  préstamos), saldo del cuarto trimestre, ajustado, y su variación.
+- La suma de las 49 economías declarantes al BIS es la de A-D0-22, pendiente.
+
+## A-N0-9 · El gate de transporte del Z.1: el CSV del paquete contra la tabla en HTML, ±0.05 miles de millones
+
+**Estado: supuesto.** Tolerancia fijada el 2026-10-07 antes de correr, por
+construcción.
+
+- Cada tabla del paquete `z1_csv_files.zip` que alimenta una serie (F51.1.t,
+  F51.1.s, F3.s, D3.s) se compara con la misma tabla en HTML del mismo
+  emisor, trimestre a trimestre y en las columnas anuales. El HTML publica
+  miles de millones con un decimal: la tolerancia es medio paso, 0.05.
+  Mínimo tres comparaciones. Un gate que no cierra deja las series de esa
+  tabla como "NO MEDIDO: sin validación externa".
+- Es un gate de transporte: la Junta es el único compilador y no existe una
+  segunda medición (como en D0.11).
+- Las tablas de la familia D vienen traspuestas en el HTML (períodos como
+  filas) y con los mnemónicos solo en los enlaces de los encabezados; el
+  lector los toma del orden de esos enlaces.
+- FRED como espejo del Z.1 queda como control pendiente.
+
+## A-N0-10 · Viviendas de EE.UU.: la Tabla 7 del HVS con sus bases revisadas, la Tabla 7a aparte y Population Estimates como contexto
+
+**Estado: dato; supuesto el trato de las bases revisadas.** Decisión del
+dueño del 2026-10-07.
+
+- **Tabla 7** (1965 a hoy, promedio de las estimaciones mensuales del año,
+  miles): el Censo trae cinco años dos veces, en la base original y en la
+  revisada (1979r1, 1981r2, 1989r3, 1993r4, 2002r5). Se publica el valor
+  original de cada año, y la base revisada se usa solo como denominador de
+  la tasa del año siguiente, que es lo que la hace comparable; la fila lo
+  dice. 2025 promedia once meses (el HVS no relevó octubre de 2025) y la fila
+  lo dice.
+- **Tabla 7a** (2000 a hoy) es el mismo inventario revisado con los controles
+  de vivienda de las vintages 2010, 2020 y 2025: se publica aparte, no se
+  mezcla con la Tabla 7. Hoy queda NO MEDIDO por A-N0-11.
+- **Population Estimates** (viviendas al 1 de julio, 2020 a 2025, unidades):
+  otra estimación del Censo, con otra convención; se publica como contexto y
+  sirve de control.
+- Un parque global no tiene fuente leída (UN-Habitat no se leyó): NO MEDIDO.
+  Los nombres dicen "de EE.UU." (A-N0-13).
+
+## A-N0-11 · Los gates y controles de viviendas: la identidad de la tabla como gate; FRED y Population Estimates como controles
+
+**Estado: supuesto.** Tolerancias fijadas el 2026-10-07 antes de correr; la
+clase de la comparación con FRED, con el resultado a la vista, y se dice.
+
+| Comparación | Clase | Tolerancia | Cómo se fijó | Resultado del 2026-10-07 |
+| --- | --- | --- | --- | --- |
+| "All housing units" = "Vacant" + "Total occupied", en cada columna de la tabla | gate de transporte | ±1.5 mil (tres cifras redondeadas a miles) | por construcción | Tabla 7: cerró, 66 columnas, máxima 1.0. **Tabla 7a: no cerró: en 2017 el total (137221) difiere en 2 mil de la suma (17381 + 119842)** |
+| Tabla 7a contra la media de los cuatro trimestres de FRED `ETOTALUSQ176N`, hasta 2019 | control | ±1 mil | por construcción la tolerancia; **la clase, con el resultado a la vista**: en 2001–2019 la diferencia llega a 3.75 mil en siete años | siete años en disputa |
+| Population Estimates (1 de julio) contra la Tabla 7a (promedio del año) | control | ±0.5 % | **con el resultado a la vista:** −0.07 % en 2025 | cerró, máxima 0.07 % |
+
+- **La Tabla 7a queda NO MEDIDO: sin validación externa.** El archivo del
+  Censo no cumple su propia identidad en 2017 por 2 mil, más que el redondeo
+  de tres cifras. La tolerancia no se tocó. Si el dueño prefiere que esa
+  identidad sea un control (marcar 2017 en disputa y publicar el resto), es un
+  cambio de supuesto, no de código.
+- **FRED no reproduce la Tabla 7a al redondeo** (hasta 3.75 mil, 0.003 %) y no
+  se sabe por qué; por eso es control y no gate. De 2020 en adelante no se
+  compara: la Tabla 7a reexpresa esos años con la Vintage 2025 y FRED trae los
+  trimestres como se publicaron (diferencias de 5 a 58 mil, vistas en el paso
+  0). La diferencia de cada año va a la ficha.
+- Population Estimates y el HVS comparten los controles de vivienda: el
+  control prueba la consistencia de dos estimaciones del mismo emisor, no una
+  medición independiente.
+
+## A-N0-12 · Elasticidad: BTC cero por construcción; deuda NO MEDIDO; oro, plata, viviendas y acciones esperan el prerregistro de la familia "respuesta observada de la oferta al precio"
+
+**Estado: dato (BTC); no medido (deuda); pendiente (los demás).** Decisión del
+dueño del 2026-10-07.
+
+- **BTC:** cero por construcción. La emisión depende de la altura del bloque y
+  no del precio (A-N0-2). Se publica como dato, con la cita del código.
+- **Deuda de EE.UU.:** NO MEDIDO. No tiene un precio comparable.
+- **Oro, plata, viviendas de EE.UU. y acciones de EE.UU.:** van en una familia
+  nueva, "respuesta observada de la oferta al precio", con estado
+  "estimación", que no se calcula en esta entrega. Antes de descargar o cruzar
+  precios hay que prerregistrar aquí la especificación completa: variables,
+  deflactor, rezagos de 0 a 5 años, ventana, método (por ejemplo, regresión en
+  logaritmos con errores robustos), cómo se reportan los intervalos y qué
+  resultado se leería como "responde" o "no responde", en un commit propio
+  anterior al cálculo. Pares: oro y plata (producción contra precio real),
+  viviendas de EE.UU. (construcción contra el índice de precios de la FHFA; el
+  Case-Shiller tiene licencia de S&P y queda fuera) y acciones de EE.UU.
+  (emisión neta contra valuación). Rótulo fijo: "asociación observada, no
+  elasticidad causal: precio y cantidad se determinan juntos". Intervalos, no
+  un número único. Las fuentes que N0 no verificó (FHFA, deflactor, valuación)
+  pasan primero por un paso 0 corto, con parada para mostrarlo.
+- Lo que el sitio llama `elasticity_*` (un cociente de variaciones a diez años
+  sobre anclas interpoladas) no se reproduce.
+
+## A-N0-13 · Frecuencia anual, solo años completos, convención por serie y nombres "de EE.UU."
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07.
+
+- Toda la familia es anual. BTC se suma por año calendario en UTC y el año en
+  curso no se publica como anual (solo las dos filas "a la fecha", con su
+  fecha); el USGS es anual; el Z.1 se toma a fin de año; el HVS es el promedio
+  del año; Population Estimates, el 1 de julio.
+- La convención de cada serie va en su ficha (`convencion`) y la tasa de
+  crecimiento es siempre el valor del año sobre el del año anterior en la
+  misma convención, menos uno.
+- Acciones, deuda y viviendas se llaman "de EE.UU." en todas partes; "mundo"
+  solo la producción minera del USGS, que así lo declara; ningún nombre dice
+  "global".
+- Ninguna serie de N0 entra a un ratio contra precio ni contra M2 en esta
+  entrega.
+
+## A-N0-14 · Crudos de N0: qué se versiona, qué entra a mano y qué queda fuera
+
+**Estado: supuesto.** Con A-R0-15 y A-D0-27.
+
+- **Se versionan en `data/raw/`:** la descarga de Coin Metrics (CC BY-NC,
+  773 KB), los dos xlsx de la *Data Series 140* y los tres del Censo (dominio
+  público), y los CSV de las cinco tablas del Z.1 (dominio público) extraídos
+  del paquete ZIP con sus bytes exactos; su URL en el manifiesto es la del
+  ZIP con el fragmento `#csv/<tabla>.csv`.
+- **La *Data Series 140* entra por copia bajada a mano** (como las series del
+  BCE, A-D0-29): el host que la aloja (`d9-wret.s3.us-west-2.amazonaws.com`)
+  responde HTTP 403 al propio `robots.txt`, y la regla de
+  `fuentes_denominador.interpretar_robots` lee un 403 como veda total. Las
+  copias del 2026-10-07 se bajaron con `python-requests` en el paso 0, antes
+  de aplicar esa lectura; se declara. El pipeline no vuelve a pedirlas.
+- **Quedan fuera del repositorio, con su hash en el manifiesto:** el ZIP del
+  Z.1 (8.3 MB), el HTML de las cuatro tablas del Z.1 y el CSV de FRED (solo
+  contraste), el PDF del BGS (términos restrictivos) y los PDF de los
+  *Mineral Commodity Summaries* (leídos a mano; su hash está en
+  `configuracion.py`).
+- Las URL del Censo llevan la vintage en el nombre (`hist_tab_7a_v2025.xlsx`,
+  `NST-EST2025-HU.xlsx`) y cambian cada año: cambiarlas es un cambio de
+  configuración que se registra en el changelog.
+
+## A-N0-15 · Un cambio en un año ya publicado es una revisión y se reporta
+
+**Estado: supuesto.**
+
+El umbral es 0.0005 en la unidad de cada serie, por (serie, año); el changelog
+lista hasta 40 revisiones y resume el resto. El Z.1 revisa la historia en cada
+publicación; el USGS revisa el último año en cada edición; el HVS reexpresa
+por vintage.

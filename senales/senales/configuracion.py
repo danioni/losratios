@@ -2166,3 +2166,834 @@ NO_MEDIDO_ORO_ANTES_DE_1900 = (
     "antes de 1900-03: NO MEDIDO hasta verificar la base legal (sección 3511 de los Revised Statutes y las leyes "
     "de 1834, 1837 y 1873, no leídas: loc.gov exige una verificación humana)"
 )
+
+
+# ---------------------------------------------------------------------------
+# Fase N0: El Numerador. La oferta de los activos, su tasa de crecimiento y su
+# elasticidad. Lo que se leyó de cada fuente está en FUENTES.md, sección N0;
+# las decisiones, en SUPUESTOS.md, A-N0-1 en adelante.
+# ---------------------------------------------------------------------------
+
+FAMILIA_BTC = "btc"
+FAMILIA_METALES = "metales"
+FAMILIA_ACCIONES = "acciones"
+FAMILIA_DEUDA = "deuda"
+FAMILIA_VIVIENDAS = "viviendas"
+FAMILIA_ELASTICIDAD = "elasticidad"
+
+# A-N0-1: cada serie dice qué mide. Una tasa de crecimiento y una elasticidad
+# son magnitudes distintas y el sitio no usa una por la otra.
+MIDE_FLUJO = "flujo"
+MIDE_STOCK = "stock"
+MIDE_TASA = "tasa de crecimiento de la oferta"
+MIDE_COTA = "cota superior de la tasa de crecimiento del stock"
+MIDE_PROPORCION = "proporción"
+MIDE_ELASTICIDAD = "elasticidad de la oferta"
+
+ESTADO_NO_MEDIDO = "NO MEDIDO"
+
+_LICENCIA_USGS = "Dominio público (USGS)"
+_ATRIBUCION_USGS = (
+    "U.S. Geological Survey, {publicacion}. Dominio público: \"USGS-authored or produced data and "
+    "information are considered to be in the U.S. Public Domain.\""
+)
+_LICENCIA_CENSO = "Dominio público (obra del gobierno federal de EE.UU., 17 U.S.C. § 105)"
+_ATRIBUCION_CENSO = (
+    "U.S. Census Bureau, {producto}. Obra del gobierno federal de EE.UU., sin copyright "
+    "(17 U.S.C. § 105). Los valores se publican sin cambios; las tasas son cálculo propio."
+)
+_LICENCIA_COIN_METRICS = "CC BY-NC 4.0"
+_ATRIBUCION_COIN_METRICS_OFERTA = (
+    "Coin Metrics, Community Network Data: SplyCur, BlkCnt e IssTotNtv de BTC, CC BY-NC 4.0 "
+    "(https://creativecommons.org/licenses/by-nc/4.0/). Los valores diarios se publican sin cambios; "
+    "las sumas anuales, las tasas y el calendario del protocolo son cálculo propio. "
+    "Válido mientras el sitio no tenga vínculo comercial (A-R0-4)."
+)
+
+# --- Descargas ---------------------------------------------------------------
+
+DESCARGA_COIN_METRICS_OFERTA = Descarga(
+    clave="coin_metrics_btc_oferta",
+    descripcion=(
+        "Coin Metrics, API community: oferta en circulación (SplyCur), bloques (BlkCnt) y "
+        "emisión (IssTotNtv) diarios de BTC"
+    ),
+    clase_licencia=CLASE_NO_COMERCIAL,
+    licencia=_LICENCIA_COIN_METRICS,
+    url=(
+        "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics"
+        "?assets=btc&metrics=SplyCur,BlkCnt,IssTotNtv&frequency=1d&page_size=10000"
+    ),
+    extension="json",
+    atribucion=_ATRIBUCION_COIN_METRICS_OFERTA,
+)
+
+# A-N0-14: el host que aloja los xlsx de la Data Series 140 responde HTTP 403 al
+# propio robots.txt, y la regla de fuentes_denominador.interpretar_robots lee
+# un 403 como veda total. Los archivos entran por copia bajada a mano, como las
+# series del BCE (A-D0-29): usgs_ds140_<metal>_<AAAA-MM-DD>.xlsx en data/raw.
+_URL_DS140 = (
+    "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/"
+    "media/files/ds140-{metal}-{anio}.xlsx"
+)
+DESCARGA_USGS_DS140_ORO = Descarga(
+    clave="usgs_ds140_oro",
+    descripcion=(
+        "USGS, Data Series 140, Gold statistics (1900-2022): producción mundial anual en toneladas "
+        "(copia bajada a mano)"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_USGS,
+    url=_URL_DS140.format(metal="gold", anio=2022),
+    extension="xlsx",
+    atribucion=_ATRIBUCION_USGS.format(publicacion="Data Series 140, Historical Statistics for Mineral and Material Commodities, Gold"),
+    manual=True,
+)
+DESCARGA_USGS_DS140_PLATA = Descarga(
+    clave="usgs_ds140_plata",
+    descripcion=(
+        "USGS, Data Series 140, Silver statistics (1900-2021): producción mundial anual en toneladas "
+        "(copia bajada a mano)"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_USGS,
+    url=_URL_DS140.format(metal="silver", anio=2021),
+    extension="xlsx",
+    atribucion=_ATRIBUCION_USGS.format(publicacion="Data Series 140, Historical Statistics for Mineral and Material Commodities, Silver"),
+    manual=True,
+)
+
+_Z1 = "Z.1 Financial Accounts of the United States"
+Z1_URL_BASE = "https://www.federalreserve.gov/releases/z1/current/"
+DESCARGA_Z1_ZIP = Descarga(
+    clave="z1_csv_files",
+    descripcion=f"Junta de la Reserva Federal, {_Z1}: paquete CSV de la publicación vigente (un CSV por tabla)",
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_JUNTA,
+    url=Z1_URL_BASE + "z1_csv_files.zip",
+    extension="zip",
+    atribucion=_ATRIBUCION_JUNTA.format(publicacion=_Z1),
+    versionar=False,  # A-D0-27: pesa 8 MB; se versionan los CSV de las tablas usadas
+)
+# Las tablas del paquete que alimentan series. F51.1 es la antigua F.224/L.224
+# (acciones); F3, la antigua F.208/L.208 (títulos de deuda); D3, la D.3.
+Z1_TABLAS = ("F51_1_t", "F51_1_s", "F3_s", "F3_t", "D3_s")
+
+
+def _descarga_z1_tabla(tabla: str) -> Descarga:
+    """A-N0-14: el CSV de una tabla, con los bytes exactos del miembro csv/<tabla>.csv del ZIP."""
+    return Descarga(
+        clave=f"z1_{tabla}",
+        descripcion=(
+            f"Junta de la Reserva Federal, {_Z1}, tabla {tabla.replace('_', '.')}: CSV extraído del "
+            f"paquete z1_csv_files.zip (miembro csv/{tabla}.csv, bytes sin cambios)"
+        ),
+        clase_licencia=CLASE_ABIERTA,
+        licencia=_LICENCIA_JUNTA,
+        url=f"{DESCARGA_Z1_ZIP.url}#csv/{tabla}.csv",
+        extension="csv",
+        atribucion=_ATRIBUCION_JUNTA.format(publicacion=_Z1),
+    )
+
+
+DESCARGAS_Z1_TABLAS = tuple(_descarga_z1_tabla(tabla) for tabla in Z1_TABLAS)
+DESCARGA_Z1_POR_TABLA = {tabla: descarga for tabla, descarga in zip(Z1_TABLAS, DESCARGAS_Z1_TABLAS)}
+
+# A-N0-9: la misma tabla en HTML, del mismo emisor, como gate de transporte.
+Z1_TABLAS_HTML = ("F51_1_t", "F51_1_s", "F3_s", "D3_s")
+CONTRASTES_Z1_HTML = {
+    tabla: _contraste(
+        f"z1_html_{tabla}",
+        f"Junta de la Reserva Federal, {_Z1}, tabla {tabla.replace('_', '.')} en HTML: gate de transporte del CSV",
+        Z1_URL_BASE + f"html/{tabla}.htm",
+        "htm",
+    )
+    for tabla in Z1_TABLAS_HTML
+}
+
+# A-N0-14: las URL del Censo llevan la vintage en el nombre y cambian cada año.
+DESCARGA_CENSO_HVS_T7 = Descarga(
+    clave="censo_hvs_tabla7",
+    descripcion=(
+        "Census Bureau, Housing Vacancies and Homeownership (CPS/HVS), Tabla 7: estimaciones del "
+        "inventario total de viviendas de EE.UU., 1965 a hoy, en miles"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_CENSO,
+    url="https://www.census.gov/housing/hvs/data/histtab7.xlsx",
+    extension="xlsx",
+    atribucion=_ATRIBUCION_CENSO.format(producto="Current Population Survey/Housing Vacancy Survey, Table 7"),
+)
+DESCARGA_CENSO_HVS_T7A = Descarga(
+    clave="censo_hvs_tabla7a",
+    descripcion=(
+        "Census Bureau, Housing Vacancies and Homeownership (CPS/HVS), Tabla 7a: inventario total de "
+        "viviendas de EE.UU., 2000 a hoy, revisado con los controles de vivienda de las vintages 2010, "
+        "2020 y 2025"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_CENSO,
+    url="https://www.census.gov/housing/hvs/data/hist_tab_7a_v2025.xlsx",
+    extension="xlsx",
+    atribucion=_ATRIBUCION_CENSO.format(producto="Current Population Survey/Housing Vacancy Survey, Table 7a"),
+)
+DESCARGA_CENSO_POPEST = Descarga(
+    clave="censo_popest_viviendas",
+    descripcion=(
+        "Census Bureau, Population Estimates, NST-EST2025-HU: estimaciones anuales de viviendas de "
+        "EE.UU. al 1 de julio, 2020 a 2025"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_CENSO,
+    url="https://www2.census.gov/programs-surveys/popest/tables/2020-2025/housing/totals/NST-EST2025-HU.xlsx",
+    extension="xlsx",
+    atribucion=_ATRIBUCION_CENSO.format(producto="Population Estimates Program, Annual Estimates of Housing Units (NST-EST2025-HU)"),
+)
+FRED_ID_HVS = "ETOTALUSQ176N"
+CONTRASTE_FRED_HVS = _contraste(
+    "fred_hvs_trimestral",
+    f"FRED {FRED_ID_HVS}: inventario de viviendas del HVS, trimestral, en miles (emisor: Censo); "
+    "gate de transporte de la Tabla 7a",
+    URL_CSV.format(id=FRED_ID_HVS),
+    "csv",
+)
+
+DESCARGAS_N0_FUENTE = (
+    DESCARGA_COIN_METRICS_OFERTA,
+    DESCARGA_USGS_DS140_ORO,
+    DESCARGA_USGS_DS140_PLATA,
+    DESCARGA_CENSO_HVS_T7,
+    DESCARGA_CENSO_HVS_T7A,
+    DESCARGA_CENSO_POPEST,
+)
+DESCARGAS_N0_CONTRASTE = tuple(CONTRASTES_Z1_HTML.values()) + (CONTRASTE_FRED_HVS,)
+
+# --- El protocolo de Bitcoin (dato) --------------------------------------------
+
+# A-N0-2: leído de Bitcoin Core. El subsidio por bloque es función de la altura
+# y de nada más: por eso la elasticidad de la oferta es cero por construcción.
+BTC_SUBSIDIO_INICIAL_SAT = 50 * 100_000_000
+BTC_INTERVALO_HALVING = 210_000
+BTC_SATOSHIS_POR_BTC = 100_000_000
+BTC_MAXIMO = 21_000_000
+BTC_CITA_PROTOCOLO = (
+    "Bitcoin Core (bitcoin/bitcoin, master, commit 9dfde64cc3262329051fd05fffe40eecc786a99f, "
+    "2026-10-07): src/validation.cpp, líneas 1833-1844, GetBlockSubsidy (50 * COIN, >>= halvings); "
+    "src/kernel/chainparams.cpp, línea 114, nSubsidyHalvingInterval = 210000; "
+    "src/consensus/amount.h, líneas 15 y 26, COIN = 100000000 y MAX_MONEY = 21000000 * COIN. Licencia MIT."
+)
+BTC_FECHA_CITA_PROTOCOLO = "2026-10-07"
+
+# --- Lecturas a mano del USGS (Mineral Commodity Summaries) --------------------
+
+
+@dataclass(frozen=True)
+class LecturaMCS:
+    """La producción mundial de un año, leída de una edición de los Mineral Commodity Summaries.
+
+    `estimado` es la marca "e" de la propia tabla: el último año de cada edición.
+    """
+
+    metal: str
+    anio: int
+    valor_t: float
+    estimado: bool
+    edicion: int
+    url: str
+    sha256: str
+    bytes: int
+    cita: str
+
+
+_MCS_URL = "https://pubs.usgs.gov/periodicals/mcs{edicion}/mcs{edicion}-{metal}.pdf"
+_MCS_LEIDO = date(2026, 10, 7)
+
+
+def _mcs(metal: str, edicion: int, sha256: str, bytes_: int, previo: tuple[int, float], estimado: tuple[int, float], frase: str) -> tuple[LecturaMCS, LecturaMCS]:
+    nombre = {"oro": "gold", "plata": "silver"}[metal]
+    url = _MCS_URL.format(edicion=edicion, metal=nombre)
+    cita = (
+        f"USGS, Mineral Commodity Summaries {edicion}, capítulo {nombre.capitalize()}, tabla \"World Mine "
+        f"Production and Reserves\", fila \"World total (rounded)\"; texto: \"{frase}\". Leído el {_MCS_LEIDO}."
+    )
+    return (
+        LecturaMCS(metal, previo[0], previo[1], False, edicion, url, sha256, bytes_, cita),
+        LecturaMCS(metal, estimado[0], estimado[1], True, edicion, url, sha256, bytes_, cita),
+    )
+
+
+LECTURAS_MCS: tuple[LecturaMCS, ...] = (
+    *_mcs(
+        "oro", 2024, "3b551dcc4dbc7e21b3b1789c4552dab12d370e7a839288744196105e4767946c", 743608,
+        (2022, 3060), (2023, 3000),
+        "In 2023, worldwide gold mine production was estimated to be essentially unchanged compared with that in 2022.",
+    ),
+    *_mcs(
+        "oro", 2025, "d4ec1750249005b4ad91dd59aaa7978932ecb7b7a410d8f6a135e6f8f8cc136f", 743291,
+        (2023, 3250), (2024, 3300),
+        "In 2024, worldwide gold mine production was an estimated 3,300 tons compared with 3,250 tons in 2023.",
+    ),
+    *_mcs(
+        "oro", 2026, "c2fef62f665d3334302b8b9bd32e2da6f40b3f8136d1ae00ffa102e196943627", 138864,
+        (2024, 3280), (2025, 3300),
+        "In 2025, worldwide gold mine production was an estimated 3,300 tons compared with 3,280 tons in 2024.",
+    ),
+    *_mcs(
+        "plata", 2024, "7c74bb6f756c5b801882a487aac1053d1791af2d91a20c4fbc260ca678d72336", 808370,
+        (2022, 25600), (2023, 26000),
+        "World silver mine production increased slightly in 2023 to an estimated 26,000 tons",
+    ),
+    *_mcs(
+        "plata", 2025, "1aa6e68c9700f88e97d4cbf31fc039d45d4b1b738a09f6bfece8edac0ec59b24", 744783,
+        (2023, 25500), (2024, 25000),
+        "World silver mine production decreased in 2024 to an estimated 25,000 tons compared with 25,500 tons in 2023.",
+    ),
+    *_mcs(
+        "plata", 2026, "f0dfe407304855a51f7647fc711f6c32081188a86269d011cd45e297aa673855", 138760,
+        (2024, 25300), (2025, 26000),
+        "World silver mine production increased slightly in 2025 to an estimated 26,000 tons compared with 25,300 tons in 2024.",
+    ),
+)
+
+# --- Lecturas a mano del BGS (control de consistencia, A-N0-4) ----------------
+
+
+@dataclass(frozen=True)
+class LecturaBGS:
+    metal: str
+    anio: int
+    valor_kg: float
+    pagina_pdf: int
+
+
+BGS_PUBLICACION = (
+    "British Geological Survey, World Mineral Production 2020-24 (Idoine y otros, 2026), tablas "
+    "\"Mine production of gold\" y \"Mine production of silver\", fila \"World total\", kilogramos de "
+    "contenido de metal; incluye estimaciones de minería artesanal y redondea el total mundial"
+)
+BGS_URL = "https://nora.nerc.ac.uk/id/eprint/541620/1/WMP_2020%20to%202024.pdf"
+BGS_SHA256 = "260a9891d28082990e49a75b97c386da1499af1ba59aad8743407c0c57aa55c6"
+BGS_LEIDO = date(2026, 10, 7)
+# Texto de reconocimiento que exigen los términos del BGS.
+BGS_RECONOCIMIENTO = "World Mineral Statistics contributed by permission of the British Geological Survey"
+LECTURAS_BGS: tuple[LecturaBGS, ...] = (
+    LecturaBGS("oro", 2020, 3_200_000, 37),
+    LecturaBGS("oro", 2021, 3_200_000, 37),
+    LecturaBGS("oro", 2022, 3_300_000, 37),
+    LecturaBGS("oro", 2023, 3_300_000, 37),
+    LecturaBGS("oro", 2024, 3_300_000, 37),
+    LecturaBGS("plata", 2020, 26_717_000, 74),
+    LecturaBGS("plata", 2021, 26_895_000, 74),
+    LecturaBGS("plata", 2022, 26_945_000, 74),
+    LecturaBGS("plata", 2023, 26_754_000, 74),
+    LecturaBGS("plata", 2024, 27_815_000, 74),
+)
+
+# A-N0-5: la cota superior empieza en el primer año de la DS140.
+METALES_ANIO_BASE = 1900
+
+# --- Z.1: series y sectores ------------------------------------------------------
+
+# (clave del sector, flujo F51.1.t, saldo F51.1.s, cómo lo llama la Junta)
+SECTORES_ACCIONES = (
+    ("total", "FA893064105", "LM893064105", "All sectors; corporate equities; asset (línea \"Net issues\")"),
+    ("no_financieras", "FA103164105", "LM103164105", "Nonfinancial corporate business; corporate equities; liability"),
+    ("financieras", "FA793164105", "LM793164105", "Domestic financial sectors; corporate equities; liability"),
+    ("resto_del_mundo", "FA263164105", "LM263164105", "Rest of the world; corporate equities; liability"),
+)
+Z1_TITULOS_DEUDA = "FL894122005"  # F3.s, línea 1: All sectors; total debt securities; liability
+Z1_DEUDA_NO_FINANCIERA = "LA384104005"  # D3.s, línea 1: Domestic nonfinancial sectors; debt securities and loans; liability
+# Hasta 1951 las tablas de flujos traen una fila por año (fechada :Q4); desde
+# 1952 son trimestrales y el flujo anual es la media de los cuatro trimestres a
+# tasa anual (A-N0-7).
+Z1_ULTIMO_ANIO_ANUAL = 1951
+Z1_PUBLICACION = "Z.1, publicación del 11 de septiembre de 2026 (2026:Q2)"
+
+# --- Tolerancias (A-N0-2, A-N0-4, A-N0-9, A-N0-11), fijadas antes de comparar ---
+
+# BTC: la oferta observada nunca puede superar lo que el calendario permite, y
+# lo que falta (subsidios no reclamados enteros, salidas fuera del conjunto no
+# gastado) tiene que ser ínfimo. Fijada con el resultado del paso 0 a la vista:
+# -80 BTC (-0.0004 %) al 2026-10-06 (FUENTES.md, N0.3.2).
+TOLERANCIA_BTC_CALENDARIO_PCT = 0.001
+# Oro y plata contra el BGS: los dos compiladores no miden lo mismo (el BGS suma
+# minería artesanal y, en plata, producción de fundición en algunos países).
+# Fijada antes de correr, con lo visto en el paso 0: oro entre 0.6 % y 4.4 %,
+# plata entre 7.6 % y 9.9 %. La plata va a quedar en disputa; se declara.
+TOLERANCIA_BGS_PCT = 5.0
+# Z.1: el HTML publica miles de millones con un decimal; medio paso.
+TOLERANCIA_Z1_HTML_MILES_DE_MILLONES = 0.05
+# A-N0-11, gate de transporte de las tablas del HVS: la identidad de la propia
+# tabla, "All housing units" = "Vacant" + "Total occupied", con tres cifras
+# redondeadas a miles (±0.5 cada una). Por construcción.
+TOLERANCIA_HVS_SUMA_MILES = 1.5
+# Tabla 7a contra FRED (media de los cuatro trimestres): el Censo redondea a
+# miles (±0.5) y la media de cuatro trimestres redondeados aporta hasta ±0.5
+# más. Por construcción. Es un CONTROL, no un gate, y esa clase se fijó con el
+# resultado a la vista: en 2001-2019 la diferencia llega a 3.75 mil en ocho
+# años, así que FRED no reproduce los promedios de la Tabla 7a al redondeo.
+# No se sabe por qué; el control lo marca y no decide.
+TOLERANCIA_HVS_FRED_MILES = 1.0
+# FRED trae los trimestres como se publicaron; la Tabla 7a reexpresa 2020 en
+# adelante con la Vintage 2025 (diferencias de 5 a 58 mil, vistas en el paso 0).
+# El control rige hasta la última vintage cerrada; de 2020 en adelante no se
+# compara y la diferencia va a la ficha.
+HVS_FRED_CONTROL_HASTA = 2019
+# Population Estimates (1 de julio) contra la Tabla 7a (promedio del año):
+# conceptos distintos; control. Fijada con el resultado a la vista: -0.07 %.
+TOLERANCIA_POPEST_PCT = 0.5
+MINIMO_COMPARACIONES_N0 = MINIMO_COMPARACIONES_GATE
+
+# --- Salidas ----------------------------------------------------------------------
+
+ARCHIVO_N0_SERIES = DIR_SERIES / "numerador_series.csv"
+ARCHIVO_N0_FICHAS = DIR_SERIES / "serie_N0.csv"
+ARCHIVO_N0_DESCARGAS = DIR_SERIES / "numerador_descargas.csv"
+FORMATO_N0 = "%.12g"
+EPSILON_REVISION_N0 = 0.0005
+COLUMNAS_N0_SERIES = ["serie", "anio", "fecha", "valor", "unidad", "estado", "control", "cita", "nota"]
+COLUMNAS_N0_FICHAS = [
+    "serie",
+    "nombre",
+    "familia",
+    "mide",
+    "publicada",
+    "estado",
+    "unidad",
+    "convencion",
+    "frecuencia",
+    "emisor",
+    "fuente",
+    "identificador",
+    "url",
+    "licencia",
+    "atribucion",
+    "validacion",
+    "supuestos",
+    "quiebres",
+    "primer_anio",
+    "ultimo_anio",
+    "anios",
+]
+CONTROL_DENTRO = CONTRASTE_FMI_DENTRO
+CONTROL_DISPUTA = VALOR_EN_DISPUTA
+CONTROL_SIN_COMPARAR = CONTRASTE_FMI_SIN_COMPARAR
+
+
+@dataclass(frozen=True)
+class SerieN0:
+    """Una serie anual de N0 y todo lo que su ficha tiene que decir."""
+
+    clave: str
+    nombre: str
+    familia: str
+    mide: str
+    unidad: str
+    convencion: str
+    emisor: str
+    descarga: Descarga | None
+    identificador: str
+    supuestos: tuple[str, ...]
+    frecuencia: str = "anual"
+    nota: str = ""
+
+
+_SUP_BTC = ("A-N0-1", "A-N0-2", "A-N0-13")
+_SUP_METALES = ("A-N0-1", "A-N0-3", "A-N0-4", "A-N0-13")
+_SUP_COTA = ("A-N0-1", "A-N0-3", "A-N0-5", "A-N0-6", "A-N0-13")
+_SUP_ACCIONES = ("A-N0-1", "A-N0-7", "A-N0-9", "A-N0-13")
+_SUP_DEUDA = ("A-N0-1", "A-N0-8", "A-N0-9", "A-N0-13")
+_SUP_VIVIENDAS = ("A-N0-1", "A-N0-10", "A-N0-11", "A-N0-13")
+_EMISOR_COIN_METRICS = "Coin Metrics (lectura de la cadena de Bitcoin)"
+_EMISOR_USGS = "U.S. Geological Survey"
+_EMISOR_JUNTA_Z1 = "Junta de Gobernadores del Sistema de la Reserva Federal"
+_EMISOR_CENSO = "U.S. Census Bureau"
+BTC_CONVENCION_FIN_DE_ANIO = "oferta al cierre del 31 de diciembre (00:00 UTC del 1 de enero), lectura de Coin Metrics"
+BTC_CONVENCION_ANIO = "suma de los bloques del año calendario (UTC)"
+
+
+def _serie_btc(clave: str, nombre: str, mide: str, unidad: str, convencion: str, identificador: str, nota: str = "") -> SerieN0:
+    return SerieN0(clave, nombre, FAMILIA_BTC, mide, unidad, convencion, _EMISOR_COIN_METRICS, DESCARGA_COIN_METRICS_OFERTA, identificador, _SUP_BTC, nota=nota)
+
+
+def _serie_metal(metal: str, cota: bool) -> SerieN0:
+    descarga = DESCARGA_USGS_DS140_ORO if metal == "oro" else DESCARGA_USGS_DS140_PLATA
+    nombre_metal = {"oro": "Oro", "plata": "Plata"}[metal]
+    if not cota:
+        return SerieN0(
+            f"{metal}_produccion_mundial_t",
+            f"{nombre_metal}: producción minera mundial anual",
+            FAMILIA_METALES,
+            MIDE_FLUJO,
+            "toneladas métricas de contenido de metal",
+            "producción de mina del año calendario; Data Series 140 en todo su rango y Mineral Commodity Summaries después, con el último año estimado",
+            _EMISOR_USGS,
+            descarga,
+            "DS140, columna World production; MCS, World total (rounded)",
+            _SUP_METALES,
+        )
+    advertencia = (
+        "cota superior: el denominador excluye lo producido antes de 1900 y supone pérdidas despreciables"
+        if metal == "oro"
+        else "no es una cota: el consumo industrial no recuperado reduce el stock real y la cifra es solo indicativa"
+    )
+    return SerieN0(
+        f"{metal}_crecimiento_stock_cota_superior_pct",
+        f"{nombre_metal}: cota superior de la tasa de crecimiento del stock (producción del año / producción acumulada desde 1900)",
+        FAMILIA_METALES,
+        MIDE_COTA,
+        "% anual",
+        "producción del año dividida por la suma de la producción mundial de 1900 al año anterior (cálculo propio)",
+        _EMISOR_USGS,
+        descarga,
+        "cálculo propio sobre la producción mundial",
+        _SUP_COTA,
+        nota=advertencia,
+    )
+
+
+def _series_acciones() -> tuple[SerieN0, ...]:
+    series = []
+    for sector, flujo, saldo, rotulo in SECTORES_ACCIONES:
+        nombre_sector = {
+            "total": "todos los sectores",
+            "no_financieras": "sociedades no financieras",
+            "financieras": "sectores financieros internos",
+            "resto_del_mundo": "resto del mundo",
+        }[sector]
+        series.append(
+            SerieN0(
+                f"acciones_eeuu_emision_neta_{sector}_musd",
+                f"Acciones de EE.UU.: emisión neta, {nombre_sector}",
+                FAMILIA_ACCIONES,
+                MIDE_FLUJO,
+                "millones de USD",
+                "flujo del año calendario a valor de transacción: hasta 1951 el dato anual de la Junta; desde 1952 la media de los cuatro trimestres a tasa anual ajustada",
+                _EMISOR_JUNTA_Z1,
+                DESCARGA_Z1_POR_TABLA["F51_1_t"],
+                f"{flujo}.Q ({rotulo})",
+                _SUP_ACCIONES,
+                nota="en dólares, no en acciones: la cantidad de acciones no existe en el Z.1",
+            )
+        )
+        series.append(
+            SerieN0(
+                f"acciones_eeuu_valor_de_mercado_{sector}_musd",
+                f"Acciones de EE.UU.: valor de mercado a fin de año, {nombre_sector}",
+                FAMILIA_ACCIONES,
+                MIDE_STOCK,
+                "millones de USD",
+                "saldo a fin del cuarto trimestre, a valor de mercado, sin ajuste estacional",
+                _EMISOR_JUNTA_Z1,
+                DESCARGA_Z1_POR_TABLA["F51_1_s"],
+                f"{saldo}.Q",
+                _SUP_ACCIONES,
+            )
+        )
+        series.append(
+            SerieN0(
+                f"acciones_eeuu_emision_neta_{sector}_pct_vm",
+                f"Acciones de EE.UU.: emisión neta como porcentaje del valor de mercado del año anterior, {nombre_sector}",
+                FAMILIA_ACCIONES,
+                MIDE_TASA,
+                "% del valor de mercado de fin del año anterior",
+                "emisión neta del año dividida por el saldo a valor de mercado del cuarto trimestre del año anterior (cálculo propio); mezcla cantidades y precios y lo declara",
+                _EMISOR_JUNTA_Z1,
+                DESCARGA_Z1_POR_TABLA["F51_1_t"],
+                f"{flujo}.Q / {saldo}.Q",
+                _SUP_ACCIONES,
+                nota="sin interpretar: un valor negativo es más recompras que emisiones en ese año",
+            )
+        )
+    return tuple(series)
+
+
+SERIES_N0: tuple[SerieN0, ...] = (
+    _serie_btc(
+        "btc_emision_calendario_btc",
+        "BTC: emisión del año según el calendario del protocolo",
+        MIDE_FLUJO,
+        "BTC",
+        BTC_CONVENCION_ANIO + "; subsidio de cada bloque según Bitcoin Core, por los bloques observados del año",
+        "subsidio(altura) × BlkCnt",
+        nota="el calendario fija el subsidio por bloque; cuántos bloques caen en un año es un dato observado",
+    ),
+    _serie_btc(
+        "btc_emision_observada_btc",
+        "BTC: emisión observada del año",
+        MIDE_FLUJO,
+        "BTC",
+        BTC_CONVENCION_ANIO + "; suma de IssTotNtv",
+        "IssTotNtv",
+    ),
+    _serie_btc(
+        "btc_oferta_fin_de_anio_btc",
+        "BTC: oferta en circulación a fin de año",
+        MIDE_STOCK,
+        "BTC",
+        BTC_CONVENCION_FIN_DE_ANIO,
+        "SplyCur",
+    ),
+    _serie_btc(
+        "btc_oferta_crecimiento_pct",
+        "BTC: tasa de crecimiento de la oferta en circulación",
+        MIDE_TASA,
+        "% anual",
+        "oferta a fin de año sobre la oferta a fin del año anterior, menos uno (cálculo propio)",
+        "SplyCur",
+    ),
+    _serie_btc(
+        "btc_porcentaje_minado_pct",
+        "BTC: porcentaje del máximo de 21 millones ya emitido, a fin de año",
+        MIDE_PROPORCION,
+        "% de 21000000 BTC",
+        BTC_CONVENCION_FIN_DE_ANIO + " dividida por MAX_MONEY (cálculo propio)",
+        "SplyCur / 21000000",
+    ),
+    _serie_btc(
+        "btc_oferta_a_la_fecha_btc",
+        "BTC: oferta en circulación a la fecha de la descarga",
+        MIDE_STOCK,
+        "BTC",
+        "último día con dato en la descarga, cierre a las 00:00 UTC del día siguiente",
+        "SplyCur",
+        nota="una sola fila, con la fecha; no es una serie anual",
+    ),
+    _serie_btc(
+        "btc_porcentaje_minado_a_la_fecha_pct",
+        "BTC: porcentaje del máximo de 21 millones ya emitido, a la fecha de la descarga",
+        MIDE_PROPORCION,
+        "% de 21000000 BTC",
+        "último día con dato en la descarga, dividido por MAX_MONEY (cálculo propio)",
+        "SplyCur / 21000000",
+        nota="una sola fila, con la fecha; no es una serie anual",
+    ),
+    SerieN0(
+        "btc_elasticidad_oferta",
+        "BTC: elasticidad de la oferta respecto del precio",
+        FAMILIA_ELASTICIDAD,
+        MIDE_ELASTICIDAD,
+        "d ln(oferta) / d ln(precio)",
+        "cero por construcción: el subsidio por bloque es función de la altura del bloque y de nada más (Bitcoin Core, GetBlockSubsidy)",
+        "Bitcoin Core (código del protocolo)",
+        None,
+        "GetBlockSubsidy",
+        ("A-N0-1", "A-N0-12"),
+        frecuencia="sin frecuencia: propiedad del protocolo",
+        nota="dato del protocolo, no una estimación; no hay elasticidad que estimar",
+    ),
+    _serie_metal("oro", cota=False),
+    _serie_metal("oro", cota=True),
+    _serie_metal("plata", cota=False),
+    _serie_metal("plata", cota=True),
+    *_series_acciones(),
+    SerieN0(
+        "deuda_eeuu_titulos_deuda_musd",
+        "Deuda de EE.UU.: títulos de deuda en circulación, todos los sectores",
+        FAMILIA_DEUDA,
+        MIDE_STOCK,
+        "millones de USD",
+        "saldo a fin del cuarto trimestre, sin ajuste estacional; incluye los títulos emitidos por el resto del mundo en manos de residentes",
+        _EMISOR_JUNTA_Z1,
+        DESCARGA_Z1_POR_TABLA["F3_s"],
+        f"{Z1_TITULOS_DEUDA}.Q (All sectors; total debt securities; liability)",
+        _SUP_DEUDA,
+    ),
+    SerieN0(
+        "deuda_eeuu_titulos_deuda_variacion_pct",
+        "Deuda de EE.UU.: variación anual de los títulos de deuda en circulación",
+        FAMILIA_DEUDA,
+        MIDE_TASA,
+        "% anual",
+        "saldo de fin de año sobre el de fin del año anterior, menos uno (cálculo propio)",
+        _EMISOR_JUNTA_Z1,
+        DESCARGA_Z1_POR_TABLA["F3_s"],
+        f"{Z1_TITULOS_DEUDA}.Q",
+        _SUP_DEUDA,
+    ),
+    SerieN0(
+        "deuda_eeuu_no_financiera_musd",
+        "Deuda de EE.UU.: deuda de los sectores no financieros internos (títulos y préstamos)",
+        FAMILIA_DEUDA,
+        MIDE_STOCK,
+        "millones de USD",
+        "saldo a fin del cuarto trimestre, ajustado por estacionalidad",
+        _EMISOR_JUNTA_Z1,
+        DESCARGA_Z1_POR_TABLA["D3_s"],
+        f"{Z1_DEUDA_NO_FINANCIERA}.Q (Domestic nonfinancial sectors; debt securities and loans; liability)",
+        _SUP_DEUDA,
+    ),
+    SerieN0(
+        "deuda_eeuu_no_financiera_variacion_pct",
+        "Deuda de EE.UU.: variación anual de la deuda de los sectores no financieros internos",
+        FAMILIA_DEUDA,
+        MIDE_TASA,
+        "% anual",
+        "saldo de fin de año sobre el de fin del año anterior, menos uno (cálculo propio)",
+        _EMISOR_JUNTA_Z1,
+        DESCARGA_Z1_POR_TABLA["D3_s"],
+        f"{Z1_DEUDA_NO_FINANCIERA}.Q",
+        _SUP_DEUDA,
+    ),
+    SerieN0(
+        "viviendas_eeuu_parque_hvs_miles",
+        "Viviendas de EE.UU.: parque total (HVS, Tabla 7)",
+        FAMILIA_VIVIENDAS,
+        MIDE_STOCK,
+        "miles de viviendas",
+        "promedio de las estimaciones mensuales del año; cada año con el valor de su base original, y la base revisada del Censo solo como denominador de la tasa del año siguiente (A-N0-10)",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_HVS_T7,
+        "Tabla 7, fila All housing units",
+        _SUP_VIVIENDAS,
+    ),
+    SerieN0(
+        "viviendas_eeuu_parque_hvs_crecimiento_pct",
+        "Viviendas de EE.UU.: tasa de crecimiento del parque (HVS, Tabla 7)",
+        FAMILIA_VIVIENDAS,
+        MIDE_TASA,
+        "% anual",
+        "parque del año sobre el del año anterior en la misma base, menos uno (cálculo propio)",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_HVS_T7,
+        "Tabla 7, fila All housing units",
+        _SUP_VIVIENDAS,
+    ),
+    SerieN0(
+        "viviendas_eeuu_parque_hvs_7a_miles",
+        "Viviendas de EE.UU.: parque total revisado con los controles de vivienda (HVS, Tabla 7a)",
+        FAMILIA_VIVIENDAS,
+        MIDE_STOCK,
+        "miles de viviendas",
+        "promedio de las estimaciones mensuales del año, revisado con las vintages 2010, 2020 y 2025 de Population Estimates",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_HVS_T7A,
+        "Tabla 7a, fila All housing units",
+        _SUP_VIVIENDAS,
+    ),
+    SerieN0(
+        "viviendas_eeuu_parque_hvs_7a_crecimiento_pct",
+        "Viviendas de EE.UU.: tasa de crecimiento del parque revisado (HVS, Tabla 7a)",
+        FAMILIA_VIVIENDAS,
+        MIDE_TASA,
+        "% anual",
+        "parque del año sobre el del año anterior, menos uno (cálculo propio)",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_HVS_T7A,
+        "Tabla 7a, fila All housing units",
+        _SUP_VIVIENDAS,
+    ),
+    SerieN0(
+        "viviendas_eeuu_parque_popest_unidades",
+        "Viviendas de EE.UU.: parque total al 1 de julio (Population Estimates)",
+        FAMILIA_VIVIENDAS,
+        MIDE_STOCK,
+        "viviendas",
+        "existencias al 1 de julio, estimadas desde la base del Censo de 2020 (vintage 2025)",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_POPEST,
+        "NST-EST2025-HU, fila United States",
+        _SUP_VIVIENDAS,
+    ),
+    SerieN0(
+        "viviendas_eeuu_parque_popest_crecimiento_pct",
+        "Viviendas de EE.UU.: tasa de crecimiento del parque al 1 de julio (Population Estimates)",
+        FAMILIA_VIVIENDAS,
+        MIDE_TASA,
+        "% anual",
+        "parque al 1 de julio sobre el del 1 de julio anterior, menos uno (cálculo propio)",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_POPEST,
+        "NST-EST2025-HU, fila United States",
+        _SUP_VIVIENDAS,
+    ),
+)
+SERIES_N0_POR_CLAVE = {serie.clave: serie for serie in SERIES_N0}
+
+
+@dataclass(frozen=True)
+class PendienteN0:
+    """Algo que el sitio afirma o afirmaría y que no tiene serie: va a la ficha como NO MEDIDO o pendiente."""
+
+    clave: str
+    nombre: str
+    familia: str
+    mide: str
+    estado: str
+    fuente: str
+    supuestos: tuple[str, ...]
+
+
+_PENDIENTE_RESPUESTA = (
+    "pendiente: familia \"respuesta observada de la oferta al precio\"; antes de calcular, un paso 0 corto "
+    "de las fuentes de precio y un prerregistro en SUPUESTOS.md con su propio commit (A-N0-12)"
+)
+PENDIENTES_N0: tuple[PendienteN0, ...] = (
+    PendienteN0(
+        "oro_stock_sobre_tierra_t",
+        "Oro: existencias sobre la superficie",
+        FAMILIA_METALES,
+        MIDE_STOCK,
+        "NO MEDIDO como serie: la única serie de existencias es del World Gold Council, clase (c); su cifra va como estimación de terceros en citas_terceros.csv, fuera de todo cálculo (A-N0-6, A-D0-28)",
+        "World Gold Council (c); USGS no publica existencias",
+        ("A-N0-6",),
+    ),
+    PendienteN0(
+        "oro_stock_to_flow",
+        "Oro: stock-to-flow",
+        FAMILIA_METALES,
+        MIDE_PROPORCION,
+        "NO MEDIDO como serie: sin existencias abiertas no hay cociente; la cota superior del crecimiento del stock es lo más que se puede publicar (A-N0-5, A-N0-6)",
+        "cálculo propio imposible sin existencias",
+        ("A-N0-5", "A-N0-6"),
+    ),
+    PendienteN0(
+        "plata_stock_t",
+        "Plata: existencias",
+        FAMILIA_METALES,
+        MIDE_STOCK,
+        "NO MEDIDO: no se encontró ninguna fuente abierta de existencias de plata (FUENTES.md, N0.5.5)",
+        "ninguna",
+        ("A-N0-6",),
+    ),
+    PendienteN0(
+        "acciones_global_en_circulacion",
+        "Acciones: cantidad en circulación o emisión neta global",
+        FAMILIA_ACCIONES,
+        MIDE_STOCK,
+        "NO MEDIDO: sin fuente abierta (la WFE es de clase (c), FUENTES.md D0.9); lo que hay es EE.UU. (A-N0-7)",
+        "WFE (c)",
+        ("A-N0-7", "A-N0-13"),
+    ),
+    PendienteN0(
+        "viviendas_global",
+        "Viviendas: parque global",
+        FAMILIA_VIVIENDAS,
+        MIDE_STOCK,
+        "NO MEDIDO: UN-Habitat no se leyó y no hay otra fuente abierta leída; lo que hay es EE.UU. (A-N0-10)",
+        "UN-Habitat (no leído)",
+        ("A-N0-10", "A-N0-13"),
+    ),
+    PendienteN0(
+        "deuda_global_titulos",
+        "Deuda: títulos de deuda en circulación, suma de economías",
+        FAMILIA_DEUDA,
+        MIDE_STOCK,
+        "NO MEDIDO: es la suma de 49 economías declarantes al BIS de A-D0-22, pendiente de implementar; nunca \"global\" (A-N0-8)",
+        "BIS, Debt securities statistics (a)",
+        ("A-N0-8", "A-D0-22"),
+    ),
+    PendienteN0(
+        "deuda_eeuu_elasticidad_oferta",
+        "Deuda de EE.UU.: elasticidad de la oferta respecto del precio",
+        FAMILIA_ELASTICIDAD,
+        MIDE_ELASTICIDAD,
+        "NO MEDIDO: la deuda no tiene un precio comparable (decisión del dueño, FUENTES.md N0.10.5, punto 4; A-N0-12)",
+        "ninguna",
+        ("A-N0-12",),
+    ),
+    PendienteN0("oro_respuesta_oferta_precio", "Oro: respuesta observada de la oferta al precio", FAMILIA_ELASTICIDAD, MIDE_ELASTICIDAD, _PENDIENTE_RESPUESTA, "USGS DS140 (producción y valor unitario) o Pink Sheet; deflactor por leer", ("A-N0-12",)),
+    PendienteN0("plata_respuesta_oferta_precio", "Plata: respuesta observada de la oferta al precio", FAMILIA_ELASTICIDAD, MIDE_ELASTICIDAD, _PENDIENTE_RESPUESTA, "USGS DS140 (producción y valor unitario) o Pink Sheet; deflactor por leer", ("A-N0-12",)),
+    PendienteN0("viviendas_eeuu_respuesta_oferta_precio", "Viviendas de EE.UU.: respuesta observada de la oferta al precio", FAMILIA_ELASTICIDAD, MIDE_ELASTICIDAD, _PENDIENTE_RESPUESTA, "Censo (construcción) e índice de precios de la FHFA, por leer", ("A-N0-12",)),
+    PendienteN0("acciones_eeuu_respuesta_oferta_precio", "Acciones de EE.UU.: respuesta observada de la oferta al precio", FAMILIA_ELASTICIDAD, MIDE_ELASTICIDAD, _PENDIENTE_RESPUESTA, "Z.1 (emisión neta) y una medida de valuación por definir", ("A-N0-12",)),
+)
