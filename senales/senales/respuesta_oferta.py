@@ -164,7 +164,7 @@ def _buscar_copia_bls(fecha_descarga: date, dir_privado: Path):
         candidatas.append((fecha, descarga))
     if not candidatas:
         raise CopiaFaltante(
-            f"{DESCARGA_BLS_CPI_COPIA.clave}: no hay una copia del BLS bajada a mano en {dir_privado} con fecha hasta "
+            f"{DESCARGA_BLS_CPI_COPIA.clave}: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta "
             f"{fecha_descarga}. Abrir {DESCARGA_BLS_CPI_COPIA.url} en un navegador, guardar la tabla como "
             f"{DESCARGA_BLS_CPI_COPIA.clave}_<AAAA-MM-DD>.<{'|'.join(BLS_CPI_EXTENSIONES)}> ahí, y volver a correr "
             "(A-N1-6). Sin ella, el CPI y los tres pares deflactados quedan NO MEDIDO."
