@@ -11,6 +11,23 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-14 · A-N1-3, A-N1-4, A-N1-11 · El paso 2 de N1 precisa tres
+  cosas que el prerregistro no había escrito, sin tocar ningún número.**
+  (i) La producción de un año que el control del BGS marca "valor en
+  disputa" (A-N0-4; la plata en 2020, 2021, 2022 y 2024) no entra a la
+  regresión, ni ese año ni el siguiente, por la regla general de
+  `CLAUDE.md` sobre lo que marca un control: la misma que ya regía para el
+  precio. (ii) FRED tiene la copia del índice de la FHFA (`USSTHPI`,
+  verificada el 2026-10-14): el gate de A-N1-4 es contra ella y el control
+  alternativo no se implementó. (iii) Una descarga que falla deja sus pares
+  NO MEDIDO y la corrida sigue (código 2); solo el gate de construcción de
+  la B.103 la detiene (código 1). Además se leyeron las notas incrustadas
+  de la DS140 y las fichas del valor unitario las citan (`FUENTES.md`,
+  N1.3). La primera corrida, desde la sesión en la nube, dejó los ocho
+  pares NO MEDIDO (solo FRED era alcanzable y no había copia del BLS) y
+  corrió el control de la DS140 contra el Pink Sheet: el oro queda en
+  disputa en 1987. **No cambia ningún valor publicado.**
+
 - **2026-10-14 · A-N1-1 a A-N1-12 · Supuestos nuevos: el prerregistro de la
   familia "respuesta observada de la oferta al precio" (N1); A-N0-12 pasa de
   "pendiente" a "prerregistrado".** Decisión del dueño (encargo del

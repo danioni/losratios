@@ -2400,6 +2400,32 @@ prerregistro.
   por debajo de la cotización anual del USGS (A-R0-16, A-R0-18); de 1960 a
   2020 no se comparó nunca. El número se elige ahora y no se ajusta. Los
   años anteriores a 1960 quedan "sin comparar" y entran.
+- **Lo que fijó el paso 2 (2026-10-14), sin tocar ningún número de arriba:**
+  - *La cantidad en disputa también sale.* Un año de producción que el
+    control del BGS marca "valor en disputa" (A-N0-4; hoy la plata en 2020,
+    2021, 2022 y 2024) no entra a la regresión: ni ese año ni el siguiente
+    tienen Δlog de la cantidad, por la regla general de `CLAUDE.md` sobre lo
+    que marca un control. El prerregistro no lo había escrito; es la misma
+    regla que ya aplica al precio. La salida lista el año como excluido con
+    el motivo.
+  - *Las notas incrustadas de la DS140 se leyeron* (`FUENTES.md`, N1.3) y la
+    ficha las cita. Oro: *"Unit value is the value in actual U.S. dollars of
+    1 metric ton (t) of gold apparent consumption. Unit values were
+    estimated using average world market gold price for 1900–67 and the
+    Englehard's average gold price quotation of refined gold for 1968 to
+    current year as reported in the MP91 and the MYB."* Plata: *"the average
+    value per metric ton of silver of a minimum purity of 99.9 percent"*
+    (MP98 hasta 1998, MYB después). Es una cotización de EE.UU., no el
+    fixing de Londres: por eso el control, y por eso la tolerancia. La
+    columna en dólares de 1998 usa *"The Consumer Price Index conversion
+    factor, with 1998 as the base year"*, sin decir qué índice: sigue sin
+    usarse.
+  - *Resultado del control en la primera corrida* (crudos versionados del
+    2026-10-07 y `precios_mensuales.csv`; dato): el oro queda **en disputa
+    en 1987** (DS140 7.28 % por encima del Pink Sheet; los otros 62 años
+    dentro) y la plata cierra en sus 62 años (máxima 1.80 %). 1987 sale de
+    las dos ventanas (b) del oro, con 1988 (usa el nivel de 1987). La
+    tolerancia no se toca.
 
 ## A-N1-4 · Viviendas de EE.UU.: viviendas terminadas del Censo contra el índice all-transactions de la FHFA, 1976–2025
 
@@ -2438,6 +2464,11 @@ prerregistro.
   porcentuales**; marca el año y lo excluye de la regresión. Se sabe que los
   dos índices no miden lo mismo (el all-transactions incluye tasaciones de
   refinanciaciones); el número se elige ahora, sin ver ninguna diferencia.
+  **El paso 2 verificó que la copia existe** (2026-10-14, `FUENTES.md` N1.1):
+  FRED `USSTHPI`, "All-Transactions House Price Index for the United
+  States", trimestral, sin ajuste estacional, fuente FHFA, 1975:Q1 = 60.04 y
+  2026:Q2 = 719.87, iguales al CSV de la FHFA de N0.16.1. El gate es contra
+  esa copia; el control alternativo no hizo falta y no se implementó.
 - **Ventana 1976–2025:** por A-N1-8, la primera variación del precio es la
   de 1976 (sobre el nivel de 1975) y el primer año utilizable es 1981.
 - Ni la calidad ni la composición de lo construido se corrigen: el índice es
@@ -2700,6 +2731,33 @@ encargo no fija se fijan aquí, antes de ver un dato.
 - Tests sin red con fixtures; idempotencia (dos corridas con los mismos
   crudos dan los mismos bytes); una entrada por corrida en el changelog
   (A-S2-11).
+- **Lo que fijó el paso 2 (2026-10-14):**
+  - *Una descarga que falla no detiene la corrida.* Un host que no responde,
+    un `robots.txt` que veda, una copia a mano que falta o un crudo cuyo
+    SHA-256 no es el del manifiesto dejan sus pares "NO MEDIDO" con el
+    motivo en la ficha, el resumen y el changelog; las salidas se escriben
+    igual y el código de salida es 2. Solo el gate de construcción de la
+    B.103 detiene la corrida sin escribir nada (código 1, A-N1-5). Es lo que
+    `CLAUDE.md` pide de un gate que falla: "la corrida se detiene o la serie
+    se publica como NO MEDIDO".
+  - *La copia del BLS* se llama `bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt>` en
+    `data/privado/raw/`; el pipeline toma la más reciente con fecha hasta
+    la de la corrida y, la primera vez que la usa, la registra en
+    `respuesta_oferta_descargas.csv` con la URL de `configuracion.py`
+    (`BLS_CPI_URL_COPIA`, la página de la serie `CUUR0000SA0`, declarada por
+    el dueño), la fecha, los bytes y el SHA-256, con `crudo_en_repo = no`.
+    Desde entonces, la copia tiene que coincidir con ese hash o no se usa.
+  - *La regresión se calcula en aritmética pura de Python* (sin numpy), en
+    un orden fijo, para que `respuesta_oferta.csv` se recalcule byte a byte
+    desde `respuesta_oferta_insumos.csv` en cualquier máquina
+    (`test_salidas_publicadas.py`).
+  - *Primera corrida, desde la sesión en la nube* (`FUENTES.md`, N1.4): solo
+    `fred.stlouisfed.org` era alcanzable. Quedaron en el manifiesto
+    `fred_cpiaucns` (25093 bytes, `data/raw/`) y `fred_ussthpi` (3713
+    bytes, fuera del repositorio); la FHFA, el Censo, la Junta y la copia
+    del BLS faltaron, y los ocho pares salieron NO MEDIDO con su motivo. La
+    corrida completa se hace en la máquina principal con el mismo comando y
+    reemplaza esas salidas.
 
 ## A-N1-12 · Un coeficiente que cambia entre corridas es una revisión y se reporta; el prerregistro no se reescribe
 
