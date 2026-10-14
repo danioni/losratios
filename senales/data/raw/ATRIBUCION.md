@@ -7,6 +7,8 @@ con su URL, su fecha y su SHA-256.
 Solo están aquí los crudos cuya licencia permite redistribuirlos. Los de Shiller
 y de FRED `NASDAQCOM` no están: ver A-R0-15 en `SUPUESTOS.md`. Los de las
 fuentes de contraste de BTC y de los índices tampoco: no se guardan (A-R0-12).
+Los del Banco de Japón salieron el 2026-10-14: ver su sección, más abajo, y
+A-D0-27.
 
 Los CSV de FRED de S2 están desde antes de esa regla (A-S2-10). Lo que se leyó
 de sus términos y la decisión de mantenerlos están al final.
@@ -217,23 +219,26 @@ traen ninguna línea de copyright: la etiqueta es lo único que lo dice.
   archivo tiene que mantener la cita y no modificarlo.
 - **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
 
-## `boj_m2_<fecha>.csv`, `boj_balance_<fecha>.csv`
+## `boj_m2_<fecha>.csv`, `boj_balance_<fecha>.csv`: ya no están aquí
 
-- **Fuente:** Bank of Japan, BOJ Time-Series Data Search, API `getDataCode`.
-  Base MD02 (Money Stock: M2 y las series anteriores M2+CDs) y base BS01 (Bank
-  of Japan Accounts: total de activos y tres rubros).
-- **URL:** la que figura en `data/series/denominador_descargas.csv`.
-- **Licencia:** aviso de copyright del Banco de Japón
-  (<https://www.boj.or.jp/en/about/copyright.htm>) y del sitio de series
-  (<https://www.stat-search.boj.or.jp/info/notice_en.html>): copia y
-  reproducción permitidas citando al Banco de Japón como fuente, **salvo con
-  fines comerciales**, que exigen permiso previo; el contenido no se altera.
-  Instrucciones de la API (<https://www.stat-search.boj.or.jp/info/api_notice_en.pdf>):
-  aviso por correo al publicar un servicio que la use, y crédito. Leídos el
-  2026-10-05 (`FUENTES.md`, D0.5).
-- **Condiciones:** atribución al Banco de Japón y uso no comercial (A-D0-8).
-  Quien redistribuya este archivo tiene que mantener las dos.
-- **Cambios:** ninguno. El archivo es la respuesta de la API, byte por byte.
+- **Dónde viven.** Hasta el 2026-10-14 estaban en este directorio. Salieron
+  del repositorio y quedan en `data/privado/raw/`, que git ignora, como los
+  ZIP de la Junta (A-D0-27). El pipeline los lee de ahí.
+- **Por qué.** El Banco de Japón respondió el 2026-10-14 (Public Relations
+  Department) que usar sus datos para calcular y graficar es "data usage" y
+  solo exige citar la fuente con el nombre del sitio ("Time-Series Data
+  Search", Bank of Japan); redistribuir los datos sin modificar exige
+  presentar un Application Form, que no se presentó (`FUENTES.md`, D0.5 y
+  D0.13; A-D0-8).
+- **Lo que sí viaja.** La URL, la fecha, los bytes y el SHA-256 de cada
+  descarga, en `data/series/denominador_descargas.csv`, con
+  `crudo_en_repo = no`. Quien baje el mismo archivo puede comprobar el hash y
+  rehacer la serie con `--fecha-descarga`.
+- **La atribución de las series derivadas** va en la columna `atribucion` de
+  `data/series/serie_D0.csv`: "Fuente: Bank of Japan, Time-Series Data
+  Search (...)", más el crédito que piden las instrucciones de la API.
+- **Lo que estuvo versionado** sigue en el historial de git; reescribirlo es
+  una decisión del dueño del repositorio.
 
 ## `ocde_china_dinero_amplio_<fecha>.csv`
 
