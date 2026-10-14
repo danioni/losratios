@@ -850,7 +850,13 @@ _ATRIBUCION_BCE = (
     "Source: ECB statistics (ECB Data Portal, {conjunto}). Los valores se publican sin "
     "cambios; toda serie derivada se rotula como cálculo propio (A-D0-7)."
 )
-_LICENCIA_BOJ = "Reproducción con cita de la fuente, salvo fines comerciales (Banco de Japón)"
+# Respuesta del BoJ del 2026-10-14 (FUENTES.md, D0.5 y D0.13): lo que vale para las
+# series derivadas y lo que no se pidió para el crudo.
+_LICENCIA_BOJ = (
+    "Uso de datos (cálculo y gráficos) con cita del sitio 'Bank of Japan, Time-Series Data "
+    "Search'; la redistribución sin modificar exige autorización escrita del Banco de Japón "
+    "(no solicitada)"
+)
 # Respuesta del BoJ del 2026-10-14 (FUENTES.md, D0.5): calcular y graficar con sus
 # datos es "data usage" y exige citar la fuente con el nombre del sitio, "Time-Series
 # Data Search", Bank of Japan. El crédito de la API es aparte (D0.13, punto 1).

@@ -24,7 +24,12 @@ cita.
   su URL, fecha, bytes y SHA-256, y sus cuatro filas pasan a
   `crudo_en_repo = no`. En `serie_D0.csv`, la columna `atribucion` de las
   cuatro series del BoJ pasa de "Bank of Japan, BOJ Time-Series Data Search"
-  a "Bank of Japan, Time-Series Data Search". El pipeline lee esos crudos de
+  a "Bank of Japan, Time-Series Data Search", y la columna `licencia` pasa de
+  "Reproducción con cita de la fuente, salvo fines comerciales (Banco de
+  Japón)" a "Uso de datos (cálculo y gráficos) con cita del sitio 'Bank of
+  Japan, Time-Series Data Search'; la redistribución sin modificar exige
+  autorización escrita del Banco de Japón (no solicitada)". El pipeline lee
+  esos crudos de
   `data/privado/raw/`, y el test de salidas publicadas recalcula las series
   de Japón desde ahí cuando están y se omite cuando no. **No cambia ningún
   valor publicado.** Las copias que entraron al historial de git siguen ahí;

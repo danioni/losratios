@@ -217,25 +217,30 @@ def test_las_anclas_exigen_tres_y_cierran_dentro_del_medio_paso():
 # --- Crudos del Banco de Japón (A-D0-8, A-D0-27) -----------------------------------
 
 
-def test_los_crudos_del_boj_viven_fuera_del_repositorio_y_la_atribucion_nombra_el_sitio(tmp_path):
+def test_los_crudos_del_boj_viven_fuera_del_repositorio_y_la_ficha_cita_el_sitio(tmp_path):
     """Respuesta del BoJ del 2026-10-14: citar la fuente con el nombre del sitio; no redistribuir el crudo.
 
     Usar los datos para calcular y graficar es "data usage" y exige citar
-    "Time-Series Data Search", Bank of Japan: va en la atribución de cada ficha.
-    La licencia (b) dejaría versionar el crudo, pero redistribuirlo sin modificar
-    exige un formulario que no se presentó: va a data/privado/raw, como los ZIP
-    de la Junta, y el manifiesto lo declara fuera del repositorio.
+    "Time-Series Data Search", Bank of Japan: va en la licencia y en la
+    atribución de cada ficha. La clase (b) dejaría versionar el crudo, pero
+    redistribuirlo sin modificar exige una autorización escrita que no se pidió:
+    va a data/privado/raw, como los ZIP de la Junta, y el manifiesto lo declara
+    fuera del repositorio.
     """
     for descarga in (DESCARGA_BOJ_M2, DESCARGA_BOJ_BALANCE):
         assert "Bank of Japan, Time-Series Data Search" in descarga.atribucion
+        assert "cita del sitio 'Bank of Japan, Time-Series Data Search'" in descarga.licencia
+        assert "autorización escrita del Banco de Japón (no solicitada)" in descarga.licencia
         assert not descarga.crudo_versionado
         ruta = fuentes_precios.ruta_cruda(descarga, FECHA, tmp_path / "raw", tmp_path / "privado")
         assert ruta == tmp_path / "privado" / f"{descarga.clave}_{FECHA.isoformat()}.csv"
-    # Las fichas publicadas ya la llevan, igual que la saca el código.
+    # Las fichas publicadas ya las llevan, igual que las saca el código.
     fichas = pd.read_csv(ARCHIVO_D0_FICHAS, dtype=str, keep_default_na=False)
     for serie in SERIES_D0:
         if serie.descarga in (DESCARGA_BOJ_M2, DESCARGA_BOJ_BALANCE):
-            assert fichas.loc[fichas["serie"] == serie.clave, "atribucion"].iloc[0] == serie.descarga.atribucion
+            ficha = fichas.loc[fichas["serie"] == serie.clave].iloc[0]
+            assert ficha["licencia"] == serie.descarga.licencia
+            assert ficha["atribucion"] == serie.descarga.atribucion
 
 
 # --- Corrida de punta a punta -----------------------------------------------------

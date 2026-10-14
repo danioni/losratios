@@ -1462,11 +1462,14 @@ columna `atribucion` de `serie_D0.csv`.
 `FUENTES.md`, D0.5 y D0.13). Usar sus datos para calcular y graficar es
 "data usage" y solo exige citar la fuente con el nombre del sitio:
 "Time-Series Data Search", Bank of Japan. Redistribuir los datos sin
-modificar exige presentar un Application Form, que no se presentó. Dos
-consecuencias: la columna `atribucion` cita "Bank of Japan, Time-Series Data
-Search" (antes decía "BOJ Time-Series Data Search"), y los crudos del BoJ
-salen del repositorio (A-D0-27). La condición no comercial y el crédito de
-la API no cambian.
+modificar exige presentar un Application Form, que no se presentó. Tres
+consecuencias: la columna `licencia` de `serie_D0.csv` describe la respuesta
+("Uso de datos (cálculo y gráficos) con cita del sitio 'Bank of Japan,
+Time-Series Data Search'; la redistribución sin modificar exige autorización
+escrita del Banco de Japón (no solicitada)"), la columna `atribucion` cita
+"Bank of Japan, Time-Series Data Search" (antes decía "BOJ Time-Series Data
+Search"), y los crudos del BoJ salen del repositorio (A-D0-27). La condición
+no comercial y el crédito de la API no cambian.
 
 ## A-D0-9 · China entra por la OCDE y el BIS, con el rótulo de la fuente, fuera del agregado y sin ninguna descarga del PBoC
 
