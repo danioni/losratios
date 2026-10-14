@@ -3254,8 +3254,8 @@ D0.10.11: vale lo que dice `SUPUESTOS.md`.
 
 ### D0.13 Permisos, avisos y preguntas
 
-El Banco de Japón respondió el 2026-10-14 (punto 1). De los demás no hay nada
-enviado ni registrado.
+El aviso al Banco de Japón (punto 1) se envió el 2026-10-08 y tuvo respuesta el
+2026-10-14. De los demás no hay nada enviado ni registrado.
 
 1. **Banco de Japón: aviso por usar la API.** Sus instrucciones piden avisar
    por correo cuando se publica un servicio que la usa, y mostrar un crédito
@@ -3285,14 +3285,17 @@ enviado ni registrado.
    El sitio lo muestra junto a las dos series de Japón y en el pie, con ese
    texto exacto (`src/lib/creditos.ts` de eldenominador).
 
+   **Aviso enviado el 2026-10-08**, por correo a `post.rsd17@boj.or.jp` con
+   el asunto "[Release of the service using the API]".
+
    **Respuesta del Banco de Japón, 2026-10-14** (Public Relations
    Department): usar los datos para calcular y graficar es "data usage" y
    solo exige citar la fuente con el nombre del sitio ("Time-Series Data
    Search", Bank of Japan); redistribuir los datos sin modificar exige
    presentar un Application Form, que no se presentó. Lo que cambió con eso:
-   D0.5, A-D0-8, A-D0-27 y la columna `atribucion` de `serie_D0.csv`. De la
-   pregunta sobre "fines comerciales" y del aviso por la API no hay nada
-   registrado aquí: siguen abiertos (D0.14, puntos 2 y 17).
+   D0.5, A-D0-8, A-D0-27 y las columnas `licencia` y `atribucion` de
+   `serie_D0.csv`. De la pregunta sobre "fines comerciales" no hay nada
+   registrado aquí: sigue abierta (D0.14, punto 2).
 2. **NBER: permiso para publicar las series 14144 de la Macrohistory
    Database.** La página de la base da `data@nber.org` para reportar errores;
    la de los libros tiene un formulario de permisos. Destraba la alternativa
@@ -3330,8 +3333,9 @@ enviado ni registrado.
 ### D0.14 Lo que sigue abierto
 
 1. **Las decisiones de D0.10.** Ninguna está tomada.
-2. **Los avisos y preguntas de D0.13.** El Banco de Japón respondió el
-   2026-10-14 (D0.13, punto 1); del resto no hay nada enviado ni registrado.
+2. **Los avisos y preguntas de D0.13.** El aviso al Banco de Japón se envió
+   el 2026-10-08 y tuvo respuesta el 2026-10-14 (D0.13, punto 1); del resto
+   no hay nada enviado ni registrado.
 3. **El retiro del programa de descarga de la Junta.** Los ZIP de XML siguen
    en las páginas de cada publicación, pero la Junta anuncia más cambios para
    2027. Si los retira, la vía que queda es la API de FRED, que pide clave.
@@ -3374,8 +3378,10 @@ enviado ni registrado.
     de leer el `robots.txt` de su API, que veda a ese cliente (D0.15). No se
     repiten: las series del BCE entran por copia a mano (A-D0-29), y la
     consulta al BCE está redactada en D0.13.
-17. **El aviso al Banco de Japón** por el uso de su API, antes de desplegar el
-    sitio con esas series (A-D0-8).
+17. **El aviso al Banco de Japón** por el uso de su API (A-D0-8): **enviado
+    el 2026-10-08** a `post.rsd17@boj.or.jp`, con el asunto que piden sus
+    instrucciones. **Respuesta recibida el 2026-10-14** (Public Relations
+    Department; D0.13, punto 1). Cerrado.
 18. **El test de los crudos contra el manifiesto fallaba en Windows** (visto el
     2026-10-07, también en `main`): `core.autocrlf=true` extraía los CSV de
     `data/raw/` con CRLF, y los hashes publicados de `bce_m2_ajustada`,

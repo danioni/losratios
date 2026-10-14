@@ -1458,8 +1458,9 @@ por correo al publicar un servicio que la use y mostrar un crédito. El aviso
 es un paso previo a desplegar el sitio con estas series; el crédito va en la
 columna `atribucion` de `serie_D0.csv`.
 
-**Respuesta del Banco de Japón, 2026-10-14** (Public Relations Department;
-`FUENTES.md`, D0.5 y D0.13). Usar sus datos para calcular y graficar es
+**Aviso enviado el 2026-10-08 y respuesta del Banco de Japón del 2026-10-14**
+(Public Relations Department; `FUENTES.md`, D0.5 y D0.13). Usar sus datos
+para calcular y graficar es
 "data usage" y solo exige citar la fuente con el nombre del sitio:
 "Time-Series Data Search", Bank of Japan. Redistribuir los datos sin
 modificar exige presentar un Application Form, que no se presentó. Tres
