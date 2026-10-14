@@ -2220,9 +2220,9 @@ dueño del 2026-10-07.
   pasan primero por un paso 0 corto, con parada para mostrarlo.
 - Lo que el sitio llama `elasticity_*` (un cociente de variaciones a diez años
   sobre anclas interpoladas) no se reproduce.
-- **Prerregistrado el 2026-10-14** en A-N1-1 a A-N1-12, sin calcular. Tres
-  decisiones esperan al dueño antes de la primera corrida (cabecera de la
-  sección N1).
+- **Prerregistrado el 2026-10-14** en A-N1-1 a A-N1-12, sin calcular. Las
+  tres decisiones que la primera versión dejó propuestas se cerraron el
+  mismo día (cabecera de la sección N1).
 
 ## A-N0-13 · Frecuencia anual, solo años completos, convención por serie y nombres "de EE.UU."
 
@@ -2284,29 +2284,28 @@ precio, en un commit propio, como manda A-N0-12 y el punto 5 de N0.10.5
 (`FUENTES.md`). Las decisiones son del dueño (encargo del 2026-10-14; resumen
 en `FUENTES.md`, N0.16.7); lo que aquí se agrega para que la especificación
 quede cerrada antes de ver un dato se marca como "fijado en el prerregistro".
-El paso 0 que pedía el encargo (la definición de la línea 48 de la B.103)
-**no se pudo leer** desde el entorno de la sesión y queda como pregunta
-abierta (`FUENTES.md`, N0.16.4); el prerregistro lo contempla.
+El paso 0 que pedía el encargo (la definición de `FL103164106.Q`, la razón
+"corporate equities as a percentage of net worth" de la tabla B.103) no se
+pudo leer desde el entorno de la sesión y **lo resolvió el dueño el mismo
+día** con la nota 2 de la tabla (`FUENTES.md`, N0.16.4): la razón suma la
+inversión extranjera directa (`LM103192105.Q`) al valor de las acciones.
 
-**Pendiente del dueño antes de calcular.** Tres puntos donde el encargo y los
-datos ya leídos no cierran solos; se proponen y se esperan:
+**Decisiones del dueño del 2026-10-14, segunda ronda.** La primera versión
+de este bloque dejó tres puntos propuestos, donde el encargo y los datos ya
+leídos no cerraban solos; el dueño los decidió el mismo día, sin que
+existiera ningún resultado:
 
-1. **Acciones, variable de cantidad (A-N1-5).** La tasa de emisión neta toma
-   valores negativos (todos los años de 2015 a 2025 en las sociedades no
-   financieras, `FUENTES.md` N0.6.1), así que Δlog no existe. Se propone la
-   primera diferencia de la tasa.
-2. **Acciones, valuación sin deflactar (A-N1-5).** La valuación es un
-   cociente de dos valores nominales de la misma fecha; se propone no
-   dividirla por el CPI.
-3. **Línea 48: qué hace la marca del control (A-N1-5).** Con la diferencia
-   conocida (223.82 contra 194.11 en 2025:Q4), un control por año marcaría
-   cada año y, con la regla de `CLAUDE.md` (lo marcado sale de las métricas),
-   vaciaría la regresión. Se propone marcar la serie, no excluir años, con la
-   razón escrita.
+1. **Acciones, variable de cantidad (A-N1-5):** el nivel de la tasa de
+   emisión neta, no una diferencia, porque la tasa ya es Δlog del stock. Una
+   sola especificación, sin alternativa secundaria.
+2. **Acciones, valuación sin deflactar (A-N1-5):** confirmado; es un cociente
+   de dos nominales de la misma fecha.
+3. **`FL103164106.Q` (A-N1-5):** deja de ser control de la valuación, porque
+   mide otro perímetro, y pasa a ser gate de construcción del pipeline, con
+   ±0.05 puntos porcentuales; si no cierra, la corrida se detiene.
 
-Si el dueño elige otra cosa, se cambia aquí antes de correr y queda en el
-changelog; si confirma, se corre tal cual. Ninguna de las tres se decide
-mirando un resultado: no hay ninguno.
+La versión propuesta queda en el historial de git (commit `36fde1d`); lo
+que rige es lo de abajo.
 
 ## A-N1-1 · Qué mide la familia: una asociación observada entre la variación de la cantidad y la variación del precio real, nunca una elasticidad causal
 
@@ -2338,7 +2337,7 @@ mirando un resultado: no hay ninguno.
 | Oro | `oro_produccion_mundial_t` (USGS, A-N0-3), toneladas | (a) Pink Sheet: promedio de los doce meses de `oro_usd_oz` de `precios_mensuales.csv` (fase R); (b) *Data Series 140*: valor unitario anual, USD por tonelada | (a) 1960–2025; (b) 1900–2022 y 1971–2022 |
 | Plata | `plata_produccion_mundial_t` (USGS, A-N0-3), toneladas | (a) ídem, `plata_usd_oz`; (b) *Data Series 140*: valor unitario anual | (a) 1960–2025; (b) 1900–2021 y 1971–2021 |
 | Viviendas de EE.UU. | viviendas terminadas, miles (Censo; serie nueva, A-N1-4) | índice all-transactions de la FHFA, EE.UU., promedio de los cuatro trimestres | 1976–2025 |
-| Acciones de EE.UU. | tasa de emisión neta de las sociedades no financieras, `acciones_eeuu_emision_neta_no_financieras_pct_vm` (A-N0-7) | valuación: `LM103164105.Q / FL102090005.Q`, promedio de los cuatro trimestres (A-N1-5) | 1946–2025 |
+| Acciones de EE.UU. | tasa de emisión neta de las sociedades no financieras, en nivel, `acciones_eeuu_emision_neta_no_financieras_pct_vm` (A-N0-7, A-N1-5) | valuación: `LM103164105.Q / FL102090005.Q`, promedio de los cuatro trimestres, sin deflactar (A-N1-5) | 1946–2025 |
 
 - **Todo es anual.** Los promedios anuales (doce meses del Pink Sheet y del
   CPI, cuatro trimestres de la FHFA y de la B.103) son promedios simples,
@@ -2444,65 +2443,73 @@ prerregistro.
 - Ni la calidad ni la composición de lo construido se corrigen: el índice es
   de ventas repetidas y la cantidad son unidades. Lo dice la ficha.
 
-## A-N1-5 · Acciones de EE.UU.: la tasa de emisión neta de las sociedades no financieras contra la valuación de la B.103, 1946–2025
+## A-N1-5 · Acciones de EE.UU.: la tasa de emisión neta de las sociedades no financieras, en nivel, contra la valuación de la B.103 sin inversión extranjera directa, 1946–2025
 
-**Estado: supuesto las reglas; dato las series; PENDIENTE del dueño los tres
-puntos marcados.** Decisión del dueño del 2026-10-14 sobre la valuación y la
-línea 48; el resto, propuesto en el prerregistro.
+**Estado: supuesto las reglas; dato las series.** Decisión del dueño del
+2026-10-14, en dos rondas: la valuación y la ventana, en el encargo; la
+variable de cantidad, la no deflactación y el gate de `FL103164106.Q`, el
+mismo día, sobre la propuesta de la primera versión de este bloque
+(historial de git). Todo quedó fijado antes de la primera corrida.
 
 - **Sector:** sociedades no financieras en los dos lados, porque la tabla
   B.103 ("Balance sheet of nonfinancial corporate business") solo da la
-  valuación de ese sector. La cantidad es
-  `acciones_eeuu_emision_neta_no_financieras_pct_vm` (A-N0-7:
-  `FA103164105.Q` del año sobre `LM103164105.Q` del cuarto trimestre del año
-  anterior). El total de todos los sectores no se usa en esta familia.
-- **Variable de cantidad [PENDIENTE 1]:** la tasa toma valores negativos
-  (cuando las recompras superan a las emisiones; todos los años de 2015 a
-  2025, `FUENTES.md` N0.6.1), así que Δlog no está definido. Se propone **la
-  primera diferencia de la tasa**, en fracción: `y_t = tasa_t − tasa_{t−1}`.
-  Es el análogo más cercano de Δlog del flujo en los otros activos
-  (Δ(flujo / valor de mercado) ≈ Δflujo / valor de mercado). El coeficiente
-  se lee entonces en puntos porcentuales de la tasa por cada 1 % de
-  variación de la valuación, y **no es comparable en unidades** con el oro,
-  la plata o las viviendas; la lectura (signo e intervalo de la suma,
-  A-N1-10) es la misma. La alternativa, el nivel de la tasa (`y_t = tasa_t`),
-  queda escrita para que el dueño elija; la que elija rige antes de correr.
-- **Precio = valuación, cociente propio:** `LM103164105.Q` (valor de mercado
-  de las acciones, línea 45 de la B.103) sobre `FL102090005.Q` (patrimonio
-  neto, línea 47), por cien, trimestre a trimestre, y el promedio simple de
-  los cuatro trimestres del año; primer año completo, 1946 (los saldos
-  empiezan en 1945:Q4). Es la principal porque sus dos componentes están
-  publicados y se reproducen.
-- **Sin deflactar [PENDIENTE 2]:** la valuación es un cociente de dos
-  valores nominales de la misma fecha y no tiene unidad monetaria; dividirla
-  por el CPI le pondría una tendencia que no es suya. Se propone usar
-  Δlog(valuación) tal cual como "variación del precio real".
-- **La línea 48 (`FL103164106.Q`, "corporate equities as a percentage of net
-  worth") es control de consistencia, no fuente:** su definición no se pudo
-  leer (`FUENTES.md`, N0.16.4) y no reproduce el cociente propio (223.82
-  contra 194.11 en 2025:Q4). Comparación: línea 48 contra el cociente
-  propio, trimestre a trimestre, con tolerancia de medio paso de la cifra
-  publicada (±0.005 puntos). **El resultado ya se conoce en un trimestre: no
-  cierra.** Marca, no detiene.
-- **Qué hace la marca [PENDIENTE 3]:** la regla general (`CLAUDE.md`) saca
-  de las métricas lo que un control marca. Aplicada por año, con la
-  diferencia conocida, vaciaría la regresión y las acciones quedarían
-  "evidencia insuficiente" hasta leer la guía. Se propone que esta marca sea
-  **de serie, no de año**: la ficha y cada fila de salida de las acciones
-  dicen "la línea 48 de la Junta no reproduce el cociente propio; diferencia
-  sin explicar (N0.16.4)", y ningún año se excluye por ella, porque la
-  diferencia es de definición y no de transporte, y los dos componentes del
-  cociente pasan su propio gate. Cuando la guía se lea, el control se
-  reescribe con lo que diga (cambio de supuesto, en el changelog).
+  valuación de ese sector. El total de todos los sectores no se usa en esta
+  familia.
+- **Cantidad: el nivel de la tasa de emisión neta,** en fracción:
+  `y_t = tasa_t = FA103164105.Q del año t / LM103164105.Q del cuarto
+  trimestre de t−1` (la serie `acciones_eeuu_emision_neta_no_financieras_pct_vm`
+  de A-N0-7, dividida por cien). No se toma Δlog ni primera diferencia: la
+  tasa de emisión neta ya es la variación del stock a valor de mercado
+  sobre el stock, es decir, el análogo exacto de Δlog(stock). Toma valores
+  negativos (recompras por encima de emisiones; todos los años de 2015 a
+  2025, `FUENTES.md` N0.6.1), y un nivel puede ser negativo.
+- **La asimetría con los otros pares se declara, no se esconde:** en oro y
+  plata la variable es Δlog(flujo) porque el stock no está medido (A-N0-6);
+  en viviendas, porque la cantidad fijada es el flujo de terminadas
+  (A-N1-4), aunque el parque del HVS exista en N0. En las acciones el flujo
+  ya está medido como proporción del stock. Por eso el coeficiente de las
+  acciones es la variación de la tasa, en fracción, por unidad de Δlog de
+  la valuación (por cada 1 % de variación de la valuación, β/100), y **no
+  es comparable en unidades** con el oro, la plata o las viviendas; la
+  lectura (signo e intervalo de la suma, A-N1-10) es la misma. Una sola
+  especificación; sin alternativa secundaria.
+- **Precio = valuación, cociente propio sin inversión extranjera directa:**
+  `LM103164105.Q` (sociedades no financieras; acciones; pasivo, a valor de
+  mercado) sobre `FL102090005.Q` (patrimonio neto), por cien, trimestre a
+  trimestre, y el promedio simple de los cuatro trimestres del año; primer
+  año completo, 1946 (los saldos empiezan en 1945:Q4). Se elige porque
+  numerador y denominador de la familia miden el mismo perímetro: la
+  emisión neta `FA103164105.Q` que hace de cantidad tampoco incluye la
+  inversión extranjera directa.
+- **Sin deflactar:** la valuación es un cociente de dos valores nominales de
+  la misma fecha y no tiene unidad monetaria; dividirla por el CPI le
+  pondría una tendencia que no es suya. En la ecuación de A-N1-8, Δlog de
+  la valuación ocupa el lugar de Δlog del precio real, y la ficha lo dice.
+- **`FL103164106.Q` es un gate de construcción del pipeline, no una
+  valuación alternativa ni un control.** La nota 2 de la tabla B.103
+  (publicación del 2024-09-12, `FUENTES.md` N0.16.4) dice que la razón se
+  calcula con el "total equity", que suma `LM103164105.Q` y `LM103192105.Q`
+  (inversión extranjera directa en EE.UU., a valor de mercado): mide otro
+  perímetro que el cociente propio. Lo que sí prueba es que el CSV se leyó
+  bien: `(LM103164105 + LM103192105) / FL102090005 × 100` debe reproducir
+  `FL103164106` **en cada trimestre, con ±0.05 puntos porcentuales** (medio
+  paso del redondeo publicado, fijado por el dueño). Si un trimestre no
+  cierra, la lectura del CSV está mal y **la corrida se detiene**: no se
+  publica nada de las acciones. El dueño comprobó la identidad en 2024:Q2
+  con la publicación del 2024-09-12 (215.30 %, N0.16.4); la primera corrida
+  la comprueba en todos los trimestres, 2025:Q4 incluido.
 - **Gate de transporte de la B.103 (como A-N0-9):** el CSV de la tabla
   B.103 del paquete (`S11_1_b.csv` según N0.16.4) contra la tabla B.103 en
-  HTML del mismo emisor, para las tres series (`LM103164105`, `FL102090005`,
-  `FL103164106`), con medio paso de la última cifra que publique el HTML
-  por serie (±0.05 miles de millones en los saldos, como A-N0-9). Mínimo tres
-  comparaciones por serie; si no cierra, las acciones quedan NO MEDIDO en
-  esa corrida.
-- **Ventana 1946–2025:** por A-N1-8, la primera variación de la valuación es
-  la de 1947 y el primer año utilizable es 1952.
+  HTML del mismo emisor, para las cuatro series (`LM103164105`,
+  `LM103192105`, `FL102090005`, `FL103164106`), con medio paso de la última
+  cifra que publique el HTML por serie (±0.05 miles de millones en los
+  saldos, como A-N0-9). Mínimo tres comparaciones por serie; si no cierra,
+  las acciones quedan NO MEDIDO en esa corrida.
+- **Se cita por código de serie, nunca por número de línea:** las líneas
+  cambian entre publicaciones (decisión del dueño del 2026-10-14).
+- **Ventana 1946–2025:** por A-N1-8, la tasa existe desde 1946, la primera
+  variación de la valuación es la de 1947 y el primer año utilizable es
+  1952.
 - La limitación de A-N0-7 sigue: la emisión neta está en dólares, no en
   acciones.
 
@@ -2557,12 +2564,14 @@ y del 2026-10-14.
 encargo no fija se fijan aquí, antes de ver un dato.
 
 - **Ecuación, una por (activo, ventana):**
-  `Δlog q_t = α + Σ_{k=0}^{5} β_k · Δlog p_{t−k} + ε_t`,
-  con q la cantidad (A-N1-2; en las acciones, `y_t` de A-N1-5 en lugar de
-  Δlog q_t), p el precio real (A-N1-6; en las acciones, la valuación sin
-  deflactar) y Δlog x_t = ln x_t − ln x_{t−1}. Los seis rezagos entran
-  juntos en una sola regresión con constante; los coeficientes publicados
-  por rezago son los de esa regresión conjunta, no de seis regresiones.
+  `y_t = α + Σ_{k=0}^{5} β_k · Δlog p_{t−k} + ε_t`,
+  con `y_t = Δlog q_t = ln q_t − ln q_{t−1}` en oro, plata y viviendas (q el
+  flujo de A-N1-2) y `y_t = tasa_t` en las acciones (el nivel de la tasa de
+  emisión neta, que ya es Δlog del stock; la asimetría está declarada en
+  A-N1-5); p es el precio real (A-N1-6) y, en las acciones, la valuación sin
+  deflactar (A-N1-5). Los seis rezagos entran juntos en una sola regresión
+  con constante; los coeficientes publicados por rezago son los de esa
+  regresión conjunta, no de seis regresiones.
 - **Estimación:** mínimos cuadrados ordinarios.
 - **Errores estándar:** robustos a heterocedasticidad y autocorrelación
   (Newey y West, 1987), con núcleo de Bartlett y rezago máximo **L = 4**,
@@ -2580,8 +2589,8 @@ encargo no fija se fijan aquí, antes de ver un dato.
 - **Ventanas y años utilizables:** la ventana acota los años de las
   variables en diferencias; la primera diferencia de la ventana usa el nivel
   del año anterior al inicio cuando ese nivel existe como año completo. El
-  año t entra si existen Δlog q_t y Δlog p_{t−k} para los seis k, y no está
-  excluido por un control (A-N1-3, A-N1-4, A-N1-5). El primer t utilizable
+  año t entra si existen y_t y Δlog p_{t−k} para los seis k, y no está
+  excluido por un control (A-N1-3, A-N1-4). El primer t utilizable
   es, como mínimo, el del primer Δlog p más cinco. Ningún valor se interpola
   ni se arrastra: un hueco saca el año (eliminación por lista) y la salida
   lista los años que faltan.
@@ -2597,7 +2606,7 @@ encargo no fija se fijan aquí, antes de ver un dato.
   | Plata | (b) DS140 1900–2021 | 1914 | 1919 | 2021 | 103, menos lo que marque el control |
   | Plata | (b) DS140 1971–2021 | 1971 | 1976 | 2021 | 46, ídem |
   | Viviendas de EE.UU. | 1976–2025 | 1976 | 1981 | 2025 | 45 |
-  | Acciones de EE.UU. | 1946–2025 | 1947 | 1952 | 2025 | 74 |
+  | Acciones de EE.UU. | 1946–2025 | 1947 (la tasa existe desde 1946) | 1952 | 2025 | 74 |
 
 - **n mínimo = 30** observaciones utilizables después de los rezagos y las
   exclusiones. Por debajo, el par y la ventana salen como **"evidencia
@@ -2618,8 +2627,9 @@ encargo no fija se fijan aquí, antes de ver un dato.
   con su número nuevo aquí, su línea en "Cambios de supuestos" del changelog
   y la columna `desvio_del_prerregistro` en `sí` en cada fila afectada de
   las salidas, con el supuesto que lo ampara.
-- Las tres decisiones pendientes del dueño (cabecera de esta sección) se
-  cierran **antes** de la primera corrida; no cuentan como desvío.
+- Las tres decisiones que la primera versión dejó propuestas (cabecera de
+  esta sección) se cerraron el 2026-10-14, antes de la primera corrida; no
+  cuentan como desvío.
 
 ## A-N1-10 · El criterio de lectura: tres rótulos fijos por el intervalo de la suma, y dos estados que no son rótulos
 
@@ -2662,8 +2672,9 @@ encargo no fija se fijan aquí, antes de ver un dato.
     en logaritmos y la marca de cada control: de aquí se recalculan los
     coeficientes byte a byte (A-D0-30, `test_salidas_publicadas.py`).
   - `serie_N1.csv`: la ficha de cada serie nueva o derivada (viviendas
-    terminadas, índice de la FHFA anual, CPI anual, valuación propia y línea
-    48, precios reales, coeficientes), con fuente, identificador, URL,
+    terminadas, índice de la FHFA anual, CPI anual, valuación propia y la
+    razón `FL103164106.Q` del gate, precios reales, coeficientes), con
+    fuente, identificador, URL,
     licencia, atribución, convención, ventana, validación, supuestos, fecha
     de corrida y el rótulo fijo.
   - `respuesta_oferta_descargas.csv`: el manifiesto, con las columnas de
