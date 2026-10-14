@@ -4709,3 +4709,140 @@ hacer con `FL103164106.Q`) las tomó el dueño el mismo día, en una segunda
 ronda; están en A-N1-5 y A-N1-8, y la cabecera de la sección N1 de
 `SUPUESTOS.md` las resume. El paso 2 (pipeline, gates, salidas y tests) no
 empieza hasta que apruebe el prerregistro final.
+
+---
+
+## N1. Fuentes de la familia "respuesta observada de la oferta al precio": paso 2 (2026-10-14)
+
+El prerregistro (`SUPUESTOS.md`, A-N1-1 a A-N1-12) se escribió y se aprobó
+antes de esto. Aquí va lo que el paso 2 leyó, bajó y corrió el 2026-10-14,
+desde una sesión de Claude Code en la nube cuya política de red solo dejó
+pasar a FRED. Lo que se leyó en el paso 0 de estas fuentes está en N0.16.
+
+### N1.1 Qué se leyó, desde dónde y cómo
+
+| Host | `robots.txt` | Estado el 2026-10-14 |
+| --- | --- | --- |
+| fred.stlouisfed.org | Releído: `User-agent: *`, `Crawl-delay: 1`; veda `/graph/graph-landing.php`, `/graph/image.php`, `/graph/fredgraph.png`, `/searchresults`, `/fred-glance-widget.php` y `/seriesBeta`; grupos aparte para GPTBot, ChatGPT-User y Google-Extended con `Crawl-delay: 2592000` | Cinco pedidos en total, uno por vez: el `robots.txt` (dos veces: con el lector de páginas de la sesión y con `python-requests`), la página de la serie `USSTHPI` (lector de páginas), `fredgraph.csv?id=CPIAUCNS` y `fredgraph.csv?id=USSTHPI` (`python-requests`, con la pausa de dos segundos de `fuentes_precios._pedir`). El pedido a `series/BOGZ1FL103164106Q` (HTTP 404) está en N0.16.4. |
+| www.fhfa.gov | **No alcanzable desde la sesión:** el proxy de salida rechaza la conexión (`Tunnel connection failed: 403 Forbidden`) al propio `robots.txt` | Nada. El pipeline lo registra como "sin crudo" y deja NO MEDIDO lo que depende de él. Leído el 2026-10-07 (N0.16). |
+| www.census.gov | Ídem | Nada. Leído el 2026-10-07 (N0.1, N0.16). |
+| www.federalreserve.gov | Ídem (N0.16.4) | Nada. |
+| data.bls.gov | No se le pide nada, nunca (N0.16.3) | La copia a mano la baja el dueño en el navegador. |
+
+**FRED `USSTHPI`, verificado.** La pista del dueño ("en FRED el índice de la
+FHFA all-transactions para EE.UU. está como USSTHPI") se leyó en la página
+de la serie: título *"All-Transactions House Price Index for the United
+States (USSTHPI)"*, unidades *"Index 1980:Q1=100, Not Seasonally Adjusted"*,
+trimestral, fuente *"U.S. Federal Housing Finance Agency"*, publicación
+*"House Price Index"*, nota *"Estimated using sales prices and appraisal
+data"*, última observación 2026:Q2 = 719.87, actualizada el 25 de agosto de
+2026. El CSV bajado (`fredgraph.csv?id=USSTHPI`, 3713 bytes, SHA-256
+`c02d4187c8c9836d4049fe2005ab34129326e7538d2cd923173c2839ca25df16`) va de
+1975-01-01 = 60.04 a 2026-04-01 = 719.87, 206 trimestres: el mismo inicio y
+el mismo último valor que el CSV de la FHFA leído en N0.16.1. Es el gate de
+transporte de A-N1-4; el control alternativo contra el *purchase-only* no
+hizo falta. El CSV es contraste: queda fuera del repositorio, con su hash en
+`respuesta_oferta_descargas.csv`.
+
+**FRED `CPIAUCNS`, bajado.** `fredgraph.csv?id=CPIAUCNS`, 25093 bytes, SHA-256
+`cfab9b9be4a5d4f06253c4dcc3f7e0b28b1d58837e710dd7cb1fd54a49e7ad7c`, 1913-01
+= 9.800 a 2026-09 = 336.940, 1365 meses (un mes más que la lectura del
+2026-10-07, N0.16.3). Versionado en `data/raw/` como
+`fred_cpiaucns_2026-10-14.csv` (dato del BLS, dominio público; canal FRED,
+A-N1-6). Sin la copia a mano del BLS en esta sesión, el gate del deflactor
+no corrió y el CPI quedó NO MEDIDO.
+
+### N1.2 La copia a mano del CPI-U del BLS
+
+El dueño la bajó el 2026-10-14 en el navegador y la deja en
+`senales/data/privado/raw/` con el nombre `bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt>`
+(A-N1-11). La URL declarada en `configuracion.py` (`BLS_CPI_URL_COPIA`) es la
+página de la serie `CUUR0000SA0` en `data.bls.gov`; si la tabla se bajó desde
+otra dirección, se corrige ahí antes de correr. El pipeline la registra en el
+manifiesto la primera vez que la usa, con la fecha del nombre, los bytes y el
+SHA-256, `crudo_en_repo = no`. El lector admite la grilla del "SeriesReport"
+(Year, Jan…Dec, Annual, HALF1, HALF2) y el formato largo (Year, Period,
+Value, con M13 como promedio anual); si la copia trae la fila de promedio
+anual, el gate corre también año a año (A-N1-6). Esta sesión no tiene esa
+copia: no se verificó ningún formato real.
+
+### N1.3 Las notas incrustadas de la Data Series 140 — leídas
+
+Los xlsx versionados en N0 traen las notas como objetos incrustados:
+`xl/embeddings/Microsoft_Word_Document.docx` (oro, 20070 bytes) y
+`xl/embeddings/Microsoft_Word_97_-_2003_Document.doc` (plata, 38912 bytes).
+Se leyeron el 2026-10-14 sin red: el `.docx` como XML (`word/document.xml`,
+sin etiquetas); el `.doc` buscando tramos de texto legible en el contenedor
+binario, que dejó enteros los párrafos citados. Literal:
+
+- **Oro, "Unit Value ($/t)":** *"Unit value is the value in actual U.S.
+  dollars of 1 metric ton (t) of gold apparent consumption. Unit values were
+  estimated using average world market gold price for 1900–67 and the
+  Englehard's average gold price quotation of refined gold for 1968 to
+  current year as reported in the MP91 and the MYB."* ("MP91" es *Metal
+  Prices in the United States through 1991*; "MYB", el *Minerals
+  Yearbook*.)
+- **Oro, "World Production":** *"World gold production data for 1900–26 are
+  from reported estimates by Ridgeway (1929). World gold production data for
+  1927 to the most recent year are from the MYB [...]. Updated values for
+  world gold production for 1929–50 reflect revised estimates by the USGS
+  gold commodity specialist for some countries."*
+- **Plata, "Unit Value ($/t)":** *"Unit value is defined as the value of 1
+  metric ton (t) of silver apparent consumption. Unit value data for 1900–98
+  were from the MP98. Unit value data for 1999 to the most recent year were
+  from the MYB. Unit value data for 1900 to the most recent year represent
+  the average value per metric ton of silver of a minimum purity of 99.9
+  percent."*
+- **Plata, "World Production":** *"World production data for 1900 to the
+  most recent year represent the recoverable silver content of precious-metal
+  ores that were extracted from mines throughout the world. World production
+  data were from the MR and the MYB."*
+- **Las dos, "Unit Value (98$/t)":** *"The Consumer Price Index conversion
+  factor, with 1998 as the base year, is used to adjust unit value in current
+  U.S. dollars to the unit value in constant 1998 U.S. dollars."* No dice qué
+  índice de precios al consumidor. La columna sigue sin usarse (A-N1-3).
+
+Lo que esto cambia: nada del prerregistro. Confirma que el valor unitario es
+una cotización de EE.UU. (Engelhard desde 1968 en el oro), distinta del
+fixing de Londres del Pink Sheet, que es la razón del control de A-N1-3; y
+que la columna de 1998 se deflactó con un CPI no identificado. Las fichas de
+`serie_N1.csv` citan estas notas.
+
+### N1.4 La primera corrida (2026-10-14, desde la sesión)
+
+`python -m senales.respuesta_oferta --fecha-descarga 2026-10-14`, código de
+salida 2 (fuentes faltantes; las salidas se escriben igual). Entrada
+"2026-10-14 · respuesta_oferta" del changelog.
+
+- **Lo que corrió con datos reales:** el control de consistencia del valor
+  unitario de la DS140 contra el promedio anual del Pink Sheet (A-N1-3), con
+  los crudos versionados del 2026-10-07 y `precios_mensuales.csv`. **Oro: 63
+  años comparados, 1987 en disputa** (DS140 7.28 % por encima del Pink
+  Sheet; los otros 62 dentro de ±5 %). **Plata: 62 años, todos dentro,
+  diferencia máxima 1.80 %.** Es dato; la tolerancia no se toca; 1987 y 1988
+  quedan fuera de las dos ventanas (b) del oro cuando se calculen.
+- **Lo que no corrió:** los ocho pares. Los siete deflactados, por falta de
+  la copia del BLS (y, en viviendas, también del Censo y de la FHFA); las
+  acciones, por falta del paquete ZIP del Z.1 y del HTML de la B.103 (host
+  no alcanzable). `respuesta_oferta.csv` y `respuesta_oferta_insumos.csv`
+  quedaron vacíos; `respuesta_oferta_resumen.csv` y `serie_N1.csv` dicen el
+  motivo fila por fila.
+- **Lo que la corrida completa necesita en la máquina principal:** salida a
+  los cuatro hosts, la copia del BLS en `data/privado/raw/` y el paquete ZIP
+  del Z.1 (8.3 MB, se baja solo a `data/privado/raw/` si no está). El
+  comando y el orden están en el README, sección N1.
+
+### N1.5 Lo que sigue abierto
+
+- La corrida completa y su tabla "activo → ventana → rótulo → n": pendiente
+  de la máquina principal.
+- El formato real de la copia del BLS: el lector se escribió con la
+  documentación de la forma del "SeriesReport" y se probó con fixtures, no
+  con un archivo real del BLS.
+- La hoja real de terminadas del Censo (`comps_cust.xlsx`): el lector ubica
+  las hojas por nombre o por forma y se probó con fixtures con la estructura
+  que N0.16.2 describe; el archivo real no se leyó en esta sesión.
+- El nombre del miembro de la B.103 en el paquete ZIP: el paso 0 leyó
+  `S11_1_b.csv` (N0.16.4); el pipeline prueba ese nombre y, si no está,
+  busca el CSV que trae `FL103164106.Q` en el encabezado.
+- Qué índice de precios usa el USGS en la columna de 1998 de la DS140.
