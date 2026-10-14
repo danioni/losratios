@@ -11,6 +11,26 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-14 · A-N1-1 a A-N1-12 · Supuestos nuevos: el prerregistro de la
+  familia "respuesta observada de la oferta al precio" (N1); A-N0-12 pasa de
+  "pendiente" a "prerregistrado".** Decisión del dueño (encargo del
+  2026-10-14; `FUENTES.md`, N0.16.7). Fija, antes de descargar o cruzar un
+  solo precio, los pares (oro y plata contra el Pink Sheet 1960–2025 y contra
+  la *Data Series 140* 1900–2022 y 1971–2022, la plata hasta 2021; viviendas
+  terminadas de EE.UU. contra el índice all-transactions de la FHFA,
+  1976–2025; la tasa de emisión neta de las sociedades no financieras de
+  EE.UU. contra la valuación de la B.103, 1946–2025), el deflactor (FRED
+  `CPIAUCNS`, promedio anual), el método (mínimos cuadrados de Δlog de la
+  cantidad sobre Δlog del precio real de t a t−5, Newey-West con L = 4,
+  intervalos del 95 % por coeficiente y para la suma, n mínimo 30), los
+  gates y controles con sus tolerancias y los rótulos de lectura. BTC no
+  entra (cero por construcción). El paso 0 que pedía la definición de la
+  línea 48 de la B.103 no se pudo leer desde el entorno de la sesión
+  (N0.16.4) y queda abierto. Tres decisiones esperan al dueño antes de
+  correr (acciones: variable de cantidad y valuación sin deflactar; línea
+  48: marca de serie o de año). **No se descargó ni se calculó nada; no
+  cambia ningún valor publicado.**
+
 - **2026-10-14 · A-D0-8, A-D0-27 · Los crudos del Banco de Japón salen del
   repositorio y la atribución cita el sitio por su nombre.** Decisión del
   dueño, con la respuesta del Banco de Japón del 2026-10-14 (Public
