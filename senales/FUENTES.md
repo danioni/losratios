@@ -4624,17 +4624,40 @@ la construcción de viviendas, que tampoco estaba verificada. Leído el
   | 14:33 | `https://fred.stlouisfed.org/robots.txt` | Leído: `User-agent: *`, `Crawl-delay: 1`; veda `/graph/graph-landing.php`, `/graph/image.php`, `/graph/fredgraph.png`, `/searchresults`, `/fred-glance-widget.php` y `/seriesBeta`; grupos aparte para GPTBot, ChatGPT-User y Google-Extended con `Crawl-delay: 2592000`. Las mismas reglas de N0.1 para `*`. |
   | 14:34 | `https://fred.stlouisfed.org/series/BOGZ1FL103164106Q`, un solo pedido, por si el espejo de FRED trae las notas de la Junta sobre la serie | **HTTP 404.** El identificador sigue el patrón `BOGZ1` + mnemónico + frecuencia que N0.14 menciona para el espejo del Z.1; si esta serie no está espejada o lleva otro nombre, no se sabe. No se pidió nada más a FRED. |
 
-  Con eso, **la definición de la línea 48 queda sin leer y la diferencia
-  (223.82 contra 194.11 en 2025:Q4) sin explicar.** No se adivina: aquí no
-  se afirma qué patrimonio neto ni qué valor de las acciones usa la Junta en
-  esa línea, ni si es un cociente de otras dos series de la tabla. Es una
-  **pregunta abierta**: hay que abrir la guía desde una máquina con salida a
-  `www.federalreserve.gov` (la principal, por ejemplo) o en un navegador,
-  buscar `FL103164106` y registrar aquí lo que diga, con la cita literal.
-  Mientras tanto rige lo que decidió el dueño (N0.16.7 y A-N1-5): el
-  cociente propio es la valuación principal, porque sus dos componentes
-  están publicados y se reproducen; la línea 48 es control de consistencia
-  (marca, no detiene).
+  Con eso, desde la sesión la definición quedó sin leer y se registró como
+  pregunta abierta; **el dueño la resolvió el mismo día desde su máquina**
+  (punto siguiente).
+
+- **Resuelto el 2026-10-14 por el dueño: `FL103164106.Q` suma la inversión
+  extranjera directa al valor de las acciones.** Leyó la tabla B.103 de la
+  publicación del 12 de septiembre de 2024
+  (`https://www.federalreserve.gov/Releases/Z1/20240912/html/b103.htm`),
+  cuya nota al pie 2 dice, literal: *"Debt is calculated as the sum of debt
+  securities (line 31) and loans (line 35). Equity is total equity (line
+  43)."* En esa publicación, "total equity" (su línea 43) es la suma de
+  `LM103164105.Q` (sociedades no financieras; acciones; pasivo, a valor de
+  mercado) y `LM103192105.Q` (inversión extranjera directa en EE.UU., a
+  valor de mercado). Por lo tanto:
+
+  `FL103164106.Q = (LM103164105.Q + LM103192105.Q) / FL102090005.Q × 100`
+
+  **Comprobación del dueño con 2024:Q2** (miles de millones de USD, esa
+  publicación): (57122.6 + 12838.6) / 32494.2 = 69961.2 / 32494.2 =
+  215.30 %, igual a lo publicado (215.3). La aritmética se rehízo aquí y
+  cierra. Por eso 223.82 no coincide con 194.11 en 2025:Q4: la razón de la
+  Junta lleva la inversión extranjera directa en el numerador y el cociente
+  propio no. **Comprobación con 2025:Q4: pendiente.** Pide `LM103192105.Q`,
+  `FL102090005.Q` y `FL103164106.Q` del CSV de la B.103, que no está entre
+  las tablas versionadas (A-N0-14) y vive en el ZIP de `data/privado/` de
+  la máquina principal, que esta sesión no tiene; no se descargó nada. La
+  hace el gate de construcción de A-N1-5 en cada trimestre de la primera
+  corrida, y detiene la corrida si no cierra. Consecuencias para el
+  prerregistro: la razón de la Junta deja de ser control de la valuación
+  (mide otro perímetro) y pasa a gate de lectura del CSV; la valuación de
+  la regresión sigue siendo el cociente propio, sin inversión extranjera
+  directa, el mismo perímetro que la emisión neta `FA103164105.Q` (A-N1-5).
+  **De aquí en adelante se cita por código de serie, no por número de
+  línea:** las líneas cambian entre publicaciones (decisión del dueño).
 
 #### N0.16.5 El precio del oro y de la plata — ya verificado
 
@@ -4672,15 +4695,17 @@ elecciones:
 | Precio de viviendas | FHFA all-transactions, EE.UU., promedio anual del trimestral, desde 1975 Q1; ventana 1976–2025; el *expanded-data* queda fuera (datos con licencia); "FHFA HPI" se cita como marca, no como nombre propio |
 | Cantidad de viviendas | viviendas terminadas (Censo, desde 1968) |
 | Deflactor | FRED `CPIAUCNS` (CPI-U sin ajuste estacional), promedio anual del mensual; dato del BLS, canal FRED clase (b) con la reserva de A-R0-3; al BLS no se le pide nada; precio real = nominal / CPI del mismo año |
-| Valuación de acciones | el cociente propio `LM103164105.Q / FL102090005.Q` (principal: sus componentes están publicados y se reproducen); la línea 48 como control de consistencia (marca, no detiene) hasta que se lea su definición (N0.16.4) |
+| Cantidad de acciones | el nivel de la tasa de emisión neta de las sociedades no financieras (A-N0-7), que ya es Δlog del stock; en oro, plata y viviendas la variable es Δlog del flujo, y la asimetría se declara (A-N1-5, A-N1-8). Una sola especificación |
+| Valuación de acciones | el cociente propio `LM103164105.Q / FL102090005.Q`, sin inversión extranjera directa (el mismo perímetro que la emisión neta `FA103164105.Q`) y sin deflactar; `FL103164106.Q`, que suma `LM103192105.Q` (N0.16.4), es gate de construcción del pipeline con ±0.05 puntos y detiene la corrida si no cierra |
 | Precio del oro y la plata | las dos ventanas, y se publican las dos: Pink Sheet 1960–2025 (promedio anual del mensual) y *Data Series 140* 1900–2022 (plata, 1900–2021) con subventana desde 1971 |
 | Ventanas | oro y plata, como arriba; viviendas 1976–2025; acciones 1946–2025 |
 | Método | Δlog(cantidad_t) sobre Δlog(precio real_{t−k}), k = 0..5, mínimos cuadrados, errores de Newey-West con rezago máximo 4, intervalos del 95 % por coeficiente y para la suma; n mínimo 30; nada se cambia después de ver resultados |
 | Criterio de lectura | "responde", "no responde", "respuesta negativa", por el intervalo de la suma; rótulo fijo en toda salida |
 | BTC | no entra: la respuesta es cero por construcción, con el calendario como dato |
 
-Lo que el prerregistro deja pendiente del dueño antes de calcular (la
-variable de cantidad de las acciones, la valuación sin deflactar y qué hace
-la marca de la línea 48) está en la cabecera de la sección N1 de
-`SUPUESTOS.md`. El paso 2 (pipeline, gates, salidas y tests) no empieza
-hasta que lo apruebe.
+Las tres decisiones que la primera versión del prerregistro dejó propuestas
+(la variable de cantidad de las acciones, la valuación sin deflactar y qué
+hacer con `FL103164106.Q`) las tomó el dueño el mismo día, en una segunda
+ronda; están en A-N1-5 y A-N1-8, y la cabecera de la sección N1 de
+`SUPUESTOS.md` las resume. El paso 2 (pipeline, gates, salidas y tests) no
+empieza hasta que apruebe el prerregistro final.
