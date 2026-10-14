@@ -11,6 +11,30 @@ Cada línea registra un cambio que altera lo que la serie mide, no cómo se
 calcula. La justificación completa está en `SUPUESTOS.md`, bajo el número que se
 cita.
 
+- **2026-10-14 · A-D0-8, A-D0-27 · Los crudos del Banco de Japón salen del
+  repositorio y la atribución cita el sitio por su nombre.** Decisión del
+  dueño, con la respuesta del Banco de Japón del 2026-10-14 (Public
+  Relations Department): usar sus datos para calcular y graficar es "data
+  usage" y solo exige citar la fuente con el nombre del sitio ("Time-Series
+  Data Search", Bank of Japan); redistribuir los datos sin modificar exige
+  un Application Form que no se presentó. `boj_m2_2026-10-05.csv`,
+  `boj_m2_2026-10-07.csv`, `boj_balance_2026-10-05.csv` y
+  `boj_balance_2026-10-07.csv` dejan `data/raw/` y pasan a
+  `data/privado/raw/`, que git ignora; `denominador_descargas.csv` conserva
+  su URL, fecha, bytes y SHA-256, y sus cuatro filas pasan a
+  `crudo_en_repo = no`. En `serie_D0.csv`, la columna `atribucion` de las
+  cuatro series del BoJ pasa de "Bank of Japan, BOJ Time-Series Data Search"
+  a "Bank of Japan, Time-Series Data Search", y la columna `licencia` pasa de
+  "Reproducción con cita de la fuente, salvo fines comerciales (Banco de
+  Japón)" a "Uso de datos (cálculo y gráficos) con cita del sitio 'Bank of
+  Japan, Time-Series Data Search'; la redistribución sin modificar exige
+  autorización escrita del Banco de Japón (no solicitada)". El pipeline lee
+  esos crudos de
+  `data/privado/raw/`, y el test de salidas publicadas recalcula las series
+  de Japón desde ahí cuando están y se omite cuando no. **No cambia ningún
+  valor publicado.** Las copias que entraron al historial de git siguen ahí;
+  reescribirlo es decisión del dueño.
+
 - **2026-10-07 · A-N0-1 a A-N0-15 · Supuestos nuevos: la familia N0 (El Numerador),
   las series anuales de oferta de activos.** Decisión del dueño (`FUENTES.md`,
   N0.10.5). Nacen `numerador_series.csv`, `serie_N0.csv` y

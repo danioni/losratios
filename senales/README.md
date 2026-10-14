@@ -282,7 +282,7 @@ fuente · `2` un contraste, o el control del empalme, no cerró.
 | `data/raw/pink_sheet_edicion_2025-01-03.xlsx` | La edición del Pink Sheet del 3 de enero de 2025, la última sin redondear. Una sola copia, con nombre fijo: no se vuelve a descargar (A-R0-19). |
 | `data/raw/fmi_pcps_2026-10-04.xlsx` | La base mensual de precios de materias primas del FMI, contra la que se comparan el oro y la plata. Una sola copia, bajada a mano: el pipeline nunca la baja (A-R0-20). |
 | `data/raw/ATRIBUCION.md` | Atribución y licencia de esos crudos. |
-| `data/privado/` | **Fuera del repositorio.** Los crudos de Shiller y de FRED `NASDAQCOM`, y `ratios_internos.csv`, con todo lo que se calcula, se publique o no. |
+| `data/privado/` | **Fuera del repositorio.** Los crudos de Shiller y de FRED `NASDAQCOM`, los del Banco de Japón (A-D0-27), y `ratios_internos.csv`, con todo lo que se calcula, se publique o no. |
 
 **Un crudo viaja con el repositorio solo si su licencia permite redistribuirlo**
 (A-R0-15). De los otros viaja el manifiesto y el código: quien baje el mismo
@@ -491,9 +491,11 @@ MEDIDO en esa corrida y sigue con las demás.
 | `data/series/dinero_historico_descargas.csv` | El manifiesto de ese tramo: los dos volúmenes escaneados, el capítulo del Censo y el CSV de FRED con la serie del NBER, con URL, fecha y SHA-256. Ninguno viaja con el repositorio. |
 | `data/raw/transcripcion_junta_1892_1958/` | Las dos lecturas independientes de cada tabla, las resoluciones y las notas al pie literales (A-D0-19). |
 
-Los crudos del BCE, el BoJ, la OCDE y el BIS (China) se versionan en
-`data/raw/`; los ZIP de la Junta y las fuentes de contraste quedan fuera del
-repositorio, con su hash en el manifiesto (A-D0-27).
+Los crudos del BCE, la OCDE y el BIS (China) se versionan en `data/raw/`;
+los del BoJ (desde el 2026-10-14: el Banco de Japón exige un formulario para
+redistribuirlos), los ZIP de la Junta y las fuentes de contraste quedan fuera
+del repositorio, en `data/privado/raw/`, con su URL, fecha y SHA-256 en el
+manifiesto (A-D0-27).
 
 ### Cómo se valida
 
@@ -667,7 +669,7 @@ senales/
 ├── tests/
 ├── data/raw/               Descargas crudas que se pueden redistribuir, versionadas por fecha
 ├── data/series/            Series publicadas, manifiesto de descargas y changelog
-├── data/privado/           Crudos no abiertos y series que no se publican (ignorado por git)
+├── data/privado/           Crudos que no viajan con el repositorio y series que no se publican (ignorado por git)
 └── reportes/               Gráficos
 ```
 

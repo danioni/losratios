@@ -244,8 +244,10 @@ class Descarga:
     # se baja la página y se busca el enlace: no se asume que la URL es estable.
     patron_enlace: str | None = None
     # A-D0-27: la licencia es condición necesaria, no suficiente. Un crudo de más
-    # de 1 MB, o el de una fuente que solo sirve de contraste, no se versiona
-    # aunque se pueda: queda fuera del repositorio, con su hash en el manifiesto.
+    # de 1 MB, el de una fuente que solo sirve de contraste, o el de una fuente
+    # que exige un permiso aparte para redistribuirlo (el BoJ, FUENTES.md D0.5),
+    # no se versiona aunque se pueda: queda fuera del repositorio, con su hash
+    # en el manifiesto.
     versionar: bool = True
     # A-D0-29: el crudo no se pide nunca con un programa; lo deja una persona en el
     # directorio de crudos. El pipeline usa la copia más reciente y verifica su hash.
@@ -848,9 +850,18 @@ _ATRIBUCION_BCE = (
     "Source: ECB statistics (ECB Data Portal, {conjunto}). Los valores se publican sin "
     "cambios; toda serie derivada se rotula como cálculo propio (A-D0-7)."
 )
-_LICENCIA_BOJ = "Reproducción con cita de la fuente, salvo fines comerciales (Banco de Japón)"
+# Respuesta del BoJ del 2026-10-14 (FUENTES.md, D0.5 y D0.13): lo que vale para las
+# series derivadas y lo que no se pidió para el crudo.
+_LICENCIA_BOJ = (
+    "Uso de datos (cálculo y gráficos) con cita del sitio 'Bank of Japan, Time-Series Data "
+    "Search'; la redistribución sin modificar exige autorización escrita del Banco de Japón "
+    "(no solicitada)"
+)
+# Respuesta del BoJ del 2026-10-14 (FUENTES.md, D0.5): calcular y graficar con sus
+# datos es "data usage" y exige citar la fuente con el nombre del sitio, "Time-Series
+# Data Search", Bank of Japan. El crédito de la API es aparte (D0.13, punto 1).
 _ATRIBUCION_BOJ = (
-    "Fuente: Bank of Japan, BOJ Time-Series Data Search ({base}). Este servicio usa la API "
+    "Fuente: Bank of Japan, Time-Series Data Search ({base}). Este servicio usa la API "
     "de «BOJ Time-Series Data Search»; el Banco de Japón no garantiza su contenido. Los "
     "valores se publican sin cambios. Válido mientras el sitio no tenga vínculo comercial "
     "(A-D0-8)."
@@ -926,6 +937,10 @@ DESCARGA_BCE_BALANCE = _descarga_bce(
 _API_BOJ = "https://www.stat-search.boj.or.jp/api/v1/getDataCode?format=csv&lang=en"
 BOJ_CODIGO_M2 = "MAM1NAM2M2MO"
 BOJ_CODIGO_BALANCE = "MABJMTA"
+# Respuesta del BoJ del 2026-10-14 (FUENTES.md, D0.5 y D0.13): redistribuir sus
+# datos sin modificar exige un formulario de solicitud que no se presentó. Los
+# crudos quedan en data/privado/raw, con su URL, fecha y SHA-256 en el manifiesto
+# (A-D0-27); el pipeline los lee de ahí.
 DESCARGA_BOJ_M2 = Descarga(
     clave="boj_m2",
     descripcion="Banco de Japón, Money Stock (base MD02): M2 y series anteriores",
@@ -935,6 +950,7 @@ DESCARGA_BOJ_M2 = Descarga(
     "MAMS3ANM2C,MAMS3ENM2C,MAMS1ANM2C,MAMS1ENM2C",
     extension="csv",
     atribucion=_ATRIBUCION_BOJ.format(base="Money Stock, MD02"),
+    versionar=False,
 )
 DESCARGA_BOJ_BALANCE = Descarga(
     clave="boj_balance",
@@ -944,6 +960,7 @@ DESCARGA_BOJ_BALANCE = Descarga(
     url=_API_BOJ + "&db=BS01&code=MABJMTA,MABJMA5,MABJML1,MABJML11",
     extension="csv",
     atribucion=_ATRIBUCION_BOJ.format(base="Bank of Japan Accounts, BS01"),
+    versionar=False,
 )
 
 OCDE_AREA_CHINA = "CHN"

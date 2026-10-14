@@ -15,6 +15,7 @@ Qué se recalcula y desde dónde:
 | denominador_ratios.csv y denominador_pares.csv | precios_mensuales.csv, series.csv, denominador_dinero.csv y serie_D0.csv |
 | denominador_agregado.csv | denominador_dinero.csv, denominador_tipos_de_cambio.csv y serie_D0.csv |
 | crudos versionados | denominador_descargas.csv y descargas_ratios.csv (SHA-256) |
+| las series del BoJ en denominador_dinero.csv y denominador_balances.csv | boj_m2 y boj_balance de data/privado/raw, con el hash del manifiesto; solo si están en disco (A-D0-27) |
 | dinero_eeuu_historico.csv | las dos transcripciones de data/raw/transcripcion_junta_1892_1958/ y las filas de serie_D0.csv que dicen qué se publica |
 | numerador_series.csv | los crudos versionados de N0 (Coin Metrics, Data Series 140, tablas del Z.1, Censo), las lecturas a mano de configuracion.py y las filas de serie_N0.csv que dicen qué se publica |
 
@@ -22,11 +23,14 @@ Qué no se puede recalcular aquí, y por qué: precios_mensuales.csv y series.cs
 dependen de crudos que no viajan con el repositorio (Shiller y NASDAQCOM, A-R0-15)
 y de contrastes que se leen de la red (A-R0-12); denominador_dinero.csv,
 denominador_balances.csv, denominador_tipos_de_cambio.csv y serie_D0.csv
-dependen de los ZIP de la Junta y de las fuentes de contraste, que quedan fuera
-del repositorio (A-D0-27). De esos, el manifiesto publica URL, fecha y hash, y
-la corrida se rehace con `--fecha-descarga` si los crudos están en disco. Las
-filas de pares.csv de los pares que no se publican dependen de las series que
-no se publican, y tampoco se recalculan.
+dependen de los ZIP de la Junta, de los crudos del BoJ y de las fuentes de
+contraste, que quedan fuera del repositorio (A-D0-27). De esos, el manifiesto
+publica URL, fecha y hash, y la corrida se rehace con `--fecha-descarga` si los
+crudos están en disco. Los del BoJ son el único caso que este archivo
+recalcula: cuando están en data/privado/raw, las series de Japón tienen que
+salir de ellos; cuando no están (una clonación limpia), el test se omite y lo
+dice. Las filas de pares.csv de los pares que no se publican dependen de las
+series que no se publican, y tampoco se recalculan.
 """
 
 from __future__ import annotations
@@ -41,6 +45,7 @@ import pytest
 from senales import denominador, dinero_historico, liquidez_neta, numerador, ratios
 from senales.configuracion import (
     ARCHIVO_D0_AGREGADO,
+    ARCHIVO_D0_BALANCES,
     ARCHIVO_D0_CAMBIO,
     ARCHIVO_D0_DESCARGAS,
     ARCHIVO_D0_DINERO,
@@ -55,13 +60,24 @@ from senales.configuracion import (
     ARCHIVO_PARES,
     ARCHIVO_RATIOS,
     ARCHIVO_SERIE,
+    BOJ_CODIGO_BALANCE,
+    BOJ_CODIGO_M2,
+    BOJ_CODIGO_M2CD_1967_1999,
+    BOJ_CODIGO_M2CD_1998_2008,
+    CLAVE_M2CD_1967_1999,
+    CLAVE_M2CD_1998_2008,
     COLUMNAS_D0_AGREGADO,
+    COLUMNAS_D0_BALANCES,
+    COLUMNAS_D0_DINERO,
     COLUMNAS_N0_SERIES,
     COLUMNAS_DINERO_HISTORICO,
     COLUMNAS_PARES,
     COLUMNAS_RATIOS,
     COLUMNAS_SERIE,
+    DESCARGA_BOJ_BALANCE,
+    DESCARGA_BOJ_M2,
     DIR_CRUDO,
+    DIR_CRUDO_PRIVADO,
     DIR_TRANSCRIPCION_JUNTA,
     FORMATO_D0,
     FORMATO_N0,
@@ -71,6 +87,7 @@ from senales.configuracion import (
     SERIE_TGA,
     SERIE_WALCL,
 )
+from senales.fuentes_denominador import leer_csv_boj
 from senales.fuentes_fred import leer_csv_crudo
 from senales.nucleo import FORMATO_FLOTANTE, escribir_csv_determinista
 
@@ -178,6 +195,54 @@ def test_los_crudos_versionados_coinciden_con_su_manifiesto(manifiesto):
         )
         assert candidatos, f"falta el crudo de {fila.fuente} del {fila.fecha_descarga}"
         assert hashlib.sha256(candidatos[0].read_bytes()).hexdigest() == fila.sha256, candidatos[0].name
+
+
+def _crudo_privado_del_manifiesto(descarga) -> Path:
+    """La última descarga de esa fuente según el manifiesto de D0, si su crudo está en data/privado/raw.
+
+    El crudo no viaja con el repositorio (A-D0-27): en una clonación limpia no
+    está, y el test se omite diciendo por qué. Si está, tiene que ser el del
+    manifiesto, byte a byte.
+    """
+    filas = pd.read_csv(ARCHIVO_D0_DESCARGAS, dtype=str, keep_default_na=False)
+    propias = filas.loc[filas["fuente"] == descarga.clave].sort_values("fecha_descarga", kind="stable")
+    assert not propias.empty, f"el manifiesto no tiene ninguna descarga de {descarga.clave}"
+    fila = propias.iloc[-1]
+    assert fila["crudo_en_repo"] == "no", f"{descarga.clave} del {fila['fecha_descarga']}: el manifiesto lo da como versionado"
+    ruta = DIR_CRUDO_PRIVADO / f"{descarga.clave}_{fila['fecha_descarga']}.{descarga.extension}"
+    if not ruta.exists():
+        pytest.skip(f"{ruta.name} no está en data/privado/raw: el crudo del BoJ no viaja con el repositorio (A-D0-27)")
+    assert hashlib.sha256(ruta.read_bytes()).hexdigest() == fila["sha256"], f"{ruta.name} no es el crudo del manifiesto"
+    return ruta
+
+
+def test_las_series_de_japon_salen_de_los_crudos_del_boj_cuando_estan(tmp_path):
+    """A-D0-27: las series del BoJ publicadas salen de los crudos de data/privado/raw, si están.
+
+    Se recalculan las filas de esas cuatro series en denominador_dinero.csv y
+    denominador_balances.csv con el código de la rama, desde la última descarga
+    que registra el manifiesto, y se comparan byte a byte con las publicadas.
+    """
+    m2 = _crudo_privado_del_manifiesto(DESCARGA_BOJ_M2)
+    balance = _crudo_privado_del_manifiesto(DESCARGA_BOJ_BALANCE)
+    series = {
+        CLAVE_M2CD_1967_1999: denominador.SerieConstruida(leer_csv_boj(m2, BOJ_CODIGO_M2CD_1967_1999)),
+        CLAVE_M2CD_1998_2008: denominador.SerieConstruida(leer_csv_boj(m2, BOJ_CODIGO_M2CD_1998_2008)),
+        "m2_japon": denominador.SerieConstruida(leer_csv_boj(m2, BOJ_CODIGO_M2)),
+        "balance_boj": denominador.SerieConstruida(leer_csv_boj(balance, BOJ_CODIGO_BALANCE)),
+    }
+    fichas = pd.read_csv(ARCHIVO_D0_FICHAS, dtype=str, keep_default_na=False)
+    publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"]) & set(series)
+    assert publicadas == set(series)
+    claves = {clave.encode() for clave in series}
+    for archivo, tabla, columnas in (
+        (ARCHIVO_D0_DINERO, denominador.tabla_dinero(series, publicadas), COLUMNAS_D0_DINERO),
+        (ARCHIVO_D0_BALANCES, denominador.tabla_balances(series, publicadas), COLUMNAS_D0_BALANCES),
+    ):
+        recalculadas = _escribir(tmp_path, archivo.name, tabla, columnas, FORMATO_D0).splitlines()[1:]
+        publicadas_en_csv = [linea for linea in _bytes(archivo).splitlines()[1:] if linea.split(b",")[1] in claves]
+        assert recalculadas, archivo.name
+        assert recalculadas == publicadas_en_csv, archivo.name
 
 
 def test_el_dinero_historico_sale_de_las_dos_transcripciones(tmp_path):
