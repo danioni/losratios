@@ -4609,6 +4609,33 @@ la construcción de viviendas, que tampoco estaba verificada. Leído el
 - Otra candidata de la misma tabla: la deuda como porcentaje del valor de
   mercado de las acciones (línea 49, `FL104104016.Q`: 18.27 % en 2025:Q4).
 
+- **Lectura del 2026-10-14 (paso 0 de N1): la definición de la línea 48 no
+  se pudo leer.** El encargo pedía leer en la guía de las cuentas
+  financieras de la Junta (*Financial Accounts Guide*, la ayuda en línea del
+  Z.1 que describe cada serie por su mnemónico) cómo se construye
+  `FL103164106.Q` y por qué no coincide con el cociente propio. Desde el
+  entorno de esta sesión (contenedor de Claude Code en la nube, con
+  política de red por lista de hosts) no se pudo llegar al host:
+
+  | Hora (UTC) | Pedido | Resultado |
+  | --- | --- | --- |
+  | 14:32 | `https://www.federalreserve.gov/robots.txt`, con curl | El proxy de salida rechazó la conexión (`CONNECT tunnel failed, response 403`, "organization policy"). No llegó ningún byte. |
+  | 14:33 | El mismo `robots.txt`, con el lector de páginas de la sesión | `getaddrinfo ENOTFOUND www.federalreserve.gov`: el nombre no resuelve desde aquí. |
+  | 14:33 | `https://fred.stlouisfed.org/robots.txt` | Leído: `User-agent: *`, `Crawl-delay: 1`; veda `/graph/graph-landing.php`, `/graph/image.php`, `/graph/fredgraph.png`, `/searchresults`, `/fred-glance-widget.php` y `/seriesBeta`; grupos aparte para GPTBot, ChatGPT-User y Google-Extended con `Crawl-delay: 2592000`. Las mismas reglas de N0.1 para `*`. |
+  | 14:34 | `https://fred.stlouisfed.org/series/BOGZ1FL103164106Q`, un solo pedido, por si el espejo de FRED trae las notas de la Junta sobre la serie | **HTTP 404.** El identificador sigue el patrón `BOGZ1` + mnemónico + frecuencia que N0.14 menciona para el espejo del Z.1; si esta serie no está espejada o lleva otro nombre, no se sabe. No se pidió nada más a FRED. |
+
+  Con eso, **la definición de la línea 48 queda sin leer y la diferencia
+  (223.82 contra 194.11 en 2025:Q4) sin explicar.** No se adivina: aquí no
+  se afirma qué patrimonio neto ni qué valor de las acciones usa la Junta en
+  esa línea, ni si es un cociente de otras dos series de la tabla. Es una
+  **pregunta abierta**: hay que abrir la guía desde una máquina con salida a
+  `www.federalreserve.gov` (la principal, por ejemplo) o en un navegador,
+  buscar `FL103164106` y registrar aquí lo que diga, con la cita literal.
+  Mientras tanto rige lo que decidió el dueño (N0.16.7 y A-N1-5): el
+  cociente propio es la valuación principal, porque sus dos componentes
+  están publicados y se reproducen; la línea 48 es control de consistencia
+  (marca, no detiene).
+
 #### N0.16.5 El precio del oro y de la plata — ya verificado
 
 - Pink Sheet (sección 4.5), mensual desde 1960-01, CC BY 4.0; el promedio
@@ -4632,3 +4659,28 @@ antes de bajar o cruzar un solo precio.
 | Ventanas | oro y plata: 1900–2022 y 1971–2022 con la DS140, o 1960–2025 con el Pink Sheet; viviendas: 1976–2025; acciones: 1946–2025 | se fijan antes de calcular |
 | Método | regresión en logaritmos de la variación de la cantidad sobre la variación del precio real con rezagos de 0 a 5 años, errores robustos a autocorrelación, intervalos del 95 % por coeficiente y para la suma | lo que dijo el dueño en N0.10.5 |
 | Criterio de lectura | "responde" si el intervalo del 95 % de la suma de los coeficientes excluye el cero y es positivo; "no responde" si lo incluye; nunca un número único | rótulo fijo: "asociación observada, no elasticidad causal: precio y cantidad se determinan juntos" |
+
+#### N0.16.7 Lo que decidió el dueño (2026-10-14) y dónde está el prerregistro
+
+Eligió entre las opciones de N0.16.6 y lo escribió como encargo. El
+prerregistro está en `SUPUESTOS.md`, A-N1-1 a A-N1-12, en un commit propio
+anterior a toda descarga o cruce de precios; nada se calculó. Resumen de las
+elecciones:
+
+| Decisión | Elección |
+| --- | --- |
+| Precio de viviendas | FHFA all-transactions, EE.UU., promedio anual del trimestral, desde 1975 Q1; ventana 1976–2025; el *expanded-data* queda fuera (datos con licencia); "FHFA HPI" se cita como marca, no como nombre propio |
+| Cantidad de viviendas | viviendas terminadas (Censo, desde 1968) |
+| Deflactor | FRED `CPIAUCNS` (CPI-U sin ajuste estacional), promedio anual del mensual; dato del BLS, canal FRED clase (b) con la reserva de A-R0-3; al BLS no se le pide nada; precio real = nominal / CPI del mismo año |
+| Valuación de acciones | el cociente propio `LM103164105.Q / FL102090005.Q` (principal: sus componentes están publicados y se reproducen); la línea 48 como control de consistencia (marca, no detiene) hasta que se lea su definición (N0.16.4) |
+| Precio del oro y la plata | las dos ventanas, y se publican las dos: Pink Sheet 1960–2025 (promedio anual del mensual) y *Data Series 140* 1900–2022 (plata, 1900–2021) con subventana desde 1971 |
+| Ventanas | oro y plata, como arriba; viviendas 1976–2025; acciones 1946–2025 |
+| Método | Δlog(cantidad_t) sobre Δlog(precio real_{t−k}), k = 0..5, mínimos cuadrados, errores de Newey-West con rezago máximo 4, intervalos del 95 % por coeficiente y para la suma; n mínimo 30; nada se cambia después de ver resultados |
+| Criterio de lectura | "responde", "no responde", "respuesta negativa", por el intervalo de la suma; rótulo fijo en toda salida |
+| BTC | no entra: la respuesta es cero por construcción, con el calendario como dato |
+
+Lo que el prerregistro deja pendiente del dueño antes de calcular (la
+variable de cantidad de las acciones, la valuación sin deflactar y qué hace
+la marca de la línea 48) está en la cabecera de la sección N1 de
+`SUPUESTOS.md`. El paso 2 (pipeline, gates, salidas y tests) no empieza
+hasta que lo apruebe.
