@@ -24,12 +24,15 @@ cita.
   cantidad sobre Δlog del precio real de t a t−5, Newey-West con L = 4,
   intervalos del 95 % por coeficiente y para la suma, n mínimo 30), los
   gates y controles con sus tolerancias y los rótulos de lectura. BTC no
-  entra (cero por construcción). El paso 0 que pedía la definición de la
-  línea 48 de la B.103 no se pudo leer desde el entorno de la sesión
-  (N0.16.4) y queda abierto. Tres decisiones esperan al dueño antes de
-  correr (acciones: variable de cantidad y valuación sin deflactar; línea
-  48: marca de serie o de año). **No se descargó ni se calculó nada; no
-  cambia ningún valor publicado.**
+  entra (cero por construcción). El paso 0, la definición de
+  `FL103164106.Q`, lo resolvió el dueño el mismo día con la nota 2 de la
+  tabla B.103 (N0.16.4): la razón suma la inversión extranjera directa
+  (`LM103192105.Q`) al valor de las acciones, y por eso pasa a ser gate de
+  construcción del pipeline (±0.05 puntos por trimestre, detiene la
+  corrida) y no control de la valuación. Acciones: la cantidad es el nivel
+  de la tasa de emisión neta (ya es Δlog del stock) y la valuación,
+  `LM103164105.Q / FL102090005.Q`, no se deflacta. **No se descargó ni se
+  calculó nada; no cambia ningún valor publicado.**
 
 - **2026-10-14 · A-D0-8, A-D0-27 · Los crudos del Banco de Japón salen del
   repositorio y la atribución cita el sitio por su nombre.** Decisión del
