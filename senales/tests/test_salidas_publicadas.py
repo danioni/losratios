@@ -42,7 +42,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from senales import denominador, dinero_historico, liquidez_neta, numerador, ratios
+from senales import denominador, dinero_historico, liquidez_neta, numerador, ratios, respuesta_oferta
 from senales.configuracion import (
     ARCHIVO_D0_AGREGADO,
     ARCHIVO_D0_BALANCES,
@@ -57,6 +57,10 @@ from senales.configuracion import (
     ARCHIVO_N0_DESCARGAS,
     ARCHIVO_N0_FICHAS,
     ARCHIVO_N0_SERIES,
+    ARCHIVO_N1_COEFICIENTES,
+    ARCHIVO_N1_DESCARGAS,
+    ARCHIVO_N1_INSUMOS,
+    ARCHIVO_N1_RESUMEN,
     ARCHIVO_PARES,
     ARCHIVO_RATIOS,
     ARCHIVO_SERIE,
@@ -70,6 +74,7 @@ from senales.configuracion import (
     COLUMNAS_D0_BALANCES,
     COLUMNAS_D0_DINERO,
     COLUMNAS_N0_SERIES,
+    COLUMNAS_N1_COEFICIENTES,
     COLUMNAS_DINERO_HISTORICO,
     COLUMNAS_PARES,
     COLUMNAS_RATIOS,
@@ -81,6 +86,8 @@ from senales.configuracion import (
     DIR_TRANSCRIPCION_JUNTA,
     FORMATO_D0,
     FORMATO_N0,
+    FORMATO_N1_COEFICIENTES,
+    PARES_N1,
     FORMATO_RATIOS,
     PARES,
     SERIE_RRP,
@@ -181,9 +188,11 @@ def test_agregado_sale_de_dinero_y_tipos_de_cambio(tmp_path):
     assert _escribir(tmp_path, "a.csv", agregado, COLUMNAS_D0_AGREGADO, FORMATO_D0) == _bytes(ARCHIVO_D0_AGREGADO)
 
 
-@pytest.mark.parametrize("manifiesto", [ARCHIVO_D0_DESCARGAS, ARCHIVO_DESCARGAS, ARCHIVO_N0_DESCARGAS])
+@pytest.mark.parametrize("manifiesto", [ARCHIVO_D0_DESCARGAS, ARCHIVO_DESCARGAS, ARCHIVO_N0_DESCARGAS, ARCHIVO_N1_DESCARGAS])
 def test_los_crudos_versionados_coinciden_con_su_manifiesto(manifiesto):
     """Cada crudo que viaja con el repositorio tiene el hash que publicó su manifiesto."""
+    if not manifiesto.exists():
+        pytest.skip(f"{manifiesto.name} todavía no existe")
     filas = pd.read_csv(manifiesto, dtype=str, keep_default_na=False)
     versionados = filas.loc[filas["crudo_en_repo"] == "sí"]
     assert not versionados.empty
@@ -277,3 +286,65 @@ def test_las_series_de_n0_salen_de_sus_crudos(tmp_path):
     publicadas = set(fichas.loc[fichas["publicada"] == "sí", "serie"])
     tabla = numerador.tabla_series(construido, validaciones, publicadas)
     assert _escribir(tmp_path, "n.csv", tabla, COLUMNAS_N0_SERIES, FORMATO_N0) == _bytes(ARCHIVO_N0_SERIES)
+
+
+@pytest.mark.parametrize("manifiesto", [ARCHIVO_D0_DESCARGAS, ARCHIVO_DESCARGAS, ARCHIVO_N0_DESCARGAS, ARCHIVO_N1_DESCARGAS])
+def test_los_crudos_privados_que_estan_en_disco_coinciden_con_su_manifiesto(manifiesto):
+    """A-N1-11: cada crudo de data/privado/raw que esté en disco tiene el hash que publicó su manifiesto.
+
+    Los crudos que no viajan con el repositorio (los ZIP de la Junta, el BoJ,
+    el HTML del Z.1, la copia del BLS) no están en una clonación limpia y
+    entonces no hay nada que comprobar. Cuando están, un byte distinto (por
+    ejemplo, finales de línea convertidos por Windows, como pasó el 2026-10-14
+    con las copias del BoJ) los deja fuera: el pipeline no los usa y este test
+    falla con el nombre del archivo.
+    """
+    if not manifiesto.exists():
+        pytest.skip(f"{manifiesto.name} todavía no existe")
+    filas = pd.read_csv(manifiesto, dtype=str, keep_default_na=False)
+    privados = filas.loc[filas["crudo_en_repo"] == "no"]
+    fallos, comprobados = [], 0
+    for fila in privados.itertuples():
+        for ruta in sorted(DIR_CRUDO_PRIVADO.glob(f"{fila.fuente}_{fila.fecha_descarga}.*")):
+            comprobados += 1
+            if hashlib.sha256(ruta.read_bytes()).hexdigest() != fila.sha256:
+                fallos.append(ruta.name)
+    assert not fallos, f"crudos de data/privado/raw que no son los del manifiesto {manifiesto.name}: {fallos}"
+    if privados.empty or not comprobados:
+        pytest.skip(f"ningún crudo privado de {manifiesto.name} está en data/privado/raw")
+
+
+def test_los_coeficientes_de_n1_salen_de_sus_insumos_publicados(tmp_path):
+    """A-N1-11, A-D0-30: respuesta_oferta.csv se recalcula, byte a byte, desde respuesta_oferta_insumos.csv.
+
+    La regresión es aritmética pura de Python (A-N1-8): dos máquinas dan los
+    mismos bytes a partir de los mismos insumos. El resumen lleva además los
+    motivos de lo NO MEDIDO, que dependen de la corrida y no se recalculan aquí;
+    de él se comprueban la suma, el intervalo, el n y el rótulo de cada par
+    estimado.
+    """
+    if not ARCHIVO_N1_INSUMOS.exists() or not ARCHIVO_N1_COEFICIENTES.exists():
+        pytest.skip("la familia N1 todavía no tiene salidas publicadas")
+    insumos = pd.read_csv(ARCHIVO_N1_INSUMOS, dtype=str, keep_default_na=False)
+    coeficientes = pd.read_csv(ARCHIVO_N1_COEFICIENTES, dtype=str, keep_default_na=False)
+    resumen = pd.read_csv(ARCHIVO_N1_RESUMEN, dtype=str, keep_default_na=False)
+    fechas = set(resumen["fecha_corrida"])
+    assert len(fechas) == 1, fechas
+    fecha = pd.Timestamp(fechas.pop()).date()
+    resultados = []
+    for par in PARES_N1:
+        propios = insumos.loc[(insumos["activo"] == par.activo) & (insumos["ventana"] == par.ventana)].copy()
+        fila_resumen = resumen.loc[(resumen["activo"] == par.activo) & (resumen["ventana"] == par.ventana)].iloc[0]
+        if propios.empty or fila_resumen["estado"] != "estimación":
+            continue
+        propios["anio"] = propios["anio"].astype(int)
+        for columna in ("y", "dlog_precio_real"):
+            propios[columna] = [float(v) if v != "" else None for v in propios[columna]]
+        estimacion = respuesta_oferta.estimar(propios, par.inicio)
+        assert estimacion is not None and estimacion.beta, par.clave
+        resultados.append(respuesta_oferta.ResultadoPar(par, "estimación", "", propios, estimacion))
+        assert int(fila_resumen["n"]) == estimacion.n and fila_resumen["rotulo"] == respuesta_oferta.rotulo_de(estimacion.suma, estimacion.error_suma), par.clave
+        for columna, valor in (("suma", estimacion.suma), ("error_estandar", estimacion.error_suma)):
+            assert f"{round(valor, 6):.6f}" == fila_resumen[columna], (par.clave, columna)
+    tabla = respuesta_oferta.tabla_coeficientes(resultados, fecha)
+    assert _escribir(tmp_path, "c.csv", tabla, COLUMNAS_N1_COEFICIENTES, FORMATO_N1_COEFICIENTES) == _bytes(ARCHIVO_N1_COEFICIENTES)

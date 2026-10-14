@@ -649,6 +649,106 @@ y la deuda la Junta es el único compilador; para las viviendas, el Censo.
 - **BTC: el año en curso no se publica como anual.** Las dos filas "a la
   fecha" llevan la fecha de la descarga.
 
+## Fase N1 · Respuesta observada de la oferta al precio
+
+Para cada par (activo, ventana) del prerregistro (`SUPUESTOS.md`, A-N1-1 a
+A-N1-12, escrito antes de descargar o cruzar un precio), cómo covaría la
+variación anual de la cantidad ofrecida con la variación anual del precio real
+del mismo año y de los cinco anteriores. **Rótulo fijo en toda salida:
+"asociación observada, no elasticidad causal: precio y cantidad se determinan
+juntos."** Lo que se leyó está en `FUENTES.md`, N0.16 y N1.
+
+### Qué se estima
+
+| Activo | Cantidad | Precio | Ventana(s) | Fuente de la cantidad / del precio |
+| --- | --- | --- | --- | --- |
+| Oro, plata | Δlog de la producción minera mundial | precio real: (a) Pink Sheet, promedio anual del mensual; (b) DS140, valor unitario anual; ambos sobre el CPI-U | (a) 1960–2025; (b) 1900–2022 y 1971–2022 (plata, hasta 2021) | `numerador_series.csv` (N0) / `precios_mensuales.csv` (R) y los xlsx de la DS140 |
+| Viviendas de EE.UU. | Δlog de las viviendas terminadas | índice all-transactions de la FHFA, promedio anual, sobre el CPI-U | 1976–2025 | Censo (`comps_cust.xlsx`) / FHFA, con FRED `USSTHPI` como gate de transporte |
+| Acciones de EE.UU. | tasa de emisión neta de las sociedades no financieras, en nivel (ya es Δlog del stock) | valuación `LM103164105.Q / FL102090005.Q`, promedio anual, sin deflactar | 1946–2025 | `numerador_series.csv` (N0) / Z.1, tabla B.103 |
+| BTC | no entra | — | — | cero por construcción (A-N0-2, A-N1-7) |
+| Deuda de EE.UU. | no entra | — | — | NO MEDIDO: sin precio comparable (A-N0-12) |
+
+Método (A-N1-8): `y_t = α + Σ_{k=0}^{5} β_k · Δlog p_{t−k} + ε_t`, mínimos
+cuadrados ordinarios, errores de Newey-West (Bartlett, L = 4), intervalos del
+95 % por coeficiente y para la suma; n mínimo 30, si no "evidencia
+insuficiente". Lectura (A-N1-10), solo por el intervalo de la suma:
+"responde", "no responde" o "respuesta negativa". Nada cambia después de ver
+un resultado (A-N1-9).
+
+### Cómo correr
+
+Desde `senales/`:
+
+```
+python -m senales.respuesta_oferta                              # baja, valida, estima, escribe las salidas y el changelog
+python -m senales.respuesta_oferta --fecha-descarga 2026-10-14  # rehace una corrida con los crudos de ese día
+python -m senales.respuesta_oferta --sin-graficos
+```
+
+Antes de pedirle algo a un sitio, el pipeline lee su `robots.txt` (A-D0-29).
+Lo que necesita en disco antes de la primera corrida completa:
+
+| Qué | Dónde | Por qué |
+| --- | --- | --- |
+| La copia a mano del CPI-U del BLS | `data/privado/raw/bls_cpi_u_<AAAA-MM-DD>.xlsx` (o `.csv`, `.txt`), bajada en el navegador desde la URL de `BLS_CPI_URL_COPIA` en `configuracion.py` | el BLS no admite programas; es el gate del deflactor (A-N1-6). Sin ella, los tres pares deflactados quedan NO MEDIDO |
+| Los xlsx de la Data Series 140 | ya versionados por N0 en `data/raw/` | su hash se verifica contra `numerador_descargas.csv` |
+| `numerador_series.csv` y `precios_mensuales.csv` | ya publicados | las cantidades y el Pink Sheet salen de ahí (A-D0-30) |
+
+El resto se baja solo: el CSV de la FHFA y el xlsx de terminadas del Censo
+(a `data/raw/`), `CPIAUCNS` de FRED (a `data/raw/`), el paquete ZIP del Z.1
+(8.3 MB, a `data/privado/raw/`, del que se extrae la B.103 a `data/raw/`), y
+los contrastes (`USSTHPI` de FRED y el HTML de la B.103, a
+`data/privado/raw/`). Códigos de salida: 0 todo bien; 1 el gate de
+construcción de la B.103 no cerró y la corrida se detuvo sin escribir; 2
+alguna fuente faltó y sus pares quedaron NO MEDIDO (las salidas se escriben
+igual).
+
+### Salidas
+
+| Archivo | Contenido |
+| --- | --- |
+| `data/series/respuesta_oferta.csv` | una fila por activo, ventana y rezago k: coeficiente, error estándar, intervalo del 95 %, n, fecha de corrida, rótulo fijo, `desvio_del_prerregistro` |
+| `data/series/respuesta_oferta_resumen.csv` | una fila por activo y ventana (más BTC y deuda): suma de los seis coeficientes, su error e intervalo, n, primer y último año, años excluidos, rótulo de lectura, estado y motivo |
+| `data/series/respuesta_oferta_insumos.csv` | una fila por activo, ventana y año: cantidad, precio nominal, CPI, precio real, `y`, Δlog del precio real, marcas de control, exclusiones y citas. De aquí se recalcula `respuesta_oferta.csv` byte a byte |
+| `data/series/serie_N1.csv` | la ficha de cada insumo y de cada par: qué mide, fuente, licencia, convención, validación, supuestos, ventana, años |
+| `data/series/respuesta_oferta_descargas.csv` | el manifiesto: URL, fecha, bytes y SHA-256 de cada crudo, de fuente o de contraste |
+| `reportes/respuesta_oferta_<par>.png` | un gráfico por par estimado: los seis coeficientes con su intervalo y la suma |
+
+### Cómo se valida
+
+- **CPI-U:** gate contra la copia a mano del BLS, mes a mes (±0.0005) y, si
+  la copia trae el promedio anual, año a año (±0.001). Sin copia o sin
+  cerrar, el CPI y los tres pares deflactados quedan NO MEDIDO (A-N1-6).
+- **FHFA:** gate de transporte contra FRED `USSTHPI`, trimestre a trimestre,
+  medio paso de dos decimales (A-N1-4).
+- **Viviendas terminadas:** gate por construcción, la suma de los doce meses
+  sin ajustar contra la hoja anual del mismo archivo (A-N1-4).
+- **B.103:** gate de construcción, `(LM103164105 + LM103192105) / FL102090005
+  × 100` reproduce `FL103164106` en cada trimestre con ±0.05 puntos, o la
+  corrida se detiene; y gate de transporte del CSV contra el HTML, medio paso
+  de lo que publica el HTML (A-N1-5).
+- **DS140:** control contra el promedio anual del Pink Sheet, ±5 %; marca el
+  año y lo excluye de las ventanas (b). En la primera corrida el oro quedó en
+  disputa en 1987 (A-N1-3).
+- **Lo marcado por un control no entra a la regresión:** ni el año en
+  disputa ni el siguiente, en el precio (FMI, A-R0-20; DS140) y en la
+  cantidad (BGS, A-N0-4). Los años excluidos van en el resumen.
+- Cada crudo que se lee, en `data/raw/` o en `data/privado/raw/`, tiene que
+  tener el SHA-256 de su manifiesto; si no, no se usa y
+  `test_salidas_publicadas.py` falla con el nombre del archivo (A-N1-11).
+
+### Lo que estas series no dicen
+
+- **No son elasticidades causales.** Precio y cantidad se determinan juntos;
+  el coeficiente describe una covariación con rezagos, nada más (A-N1-1).
+- **Las acciones no son comparables en unidades** con los otros pares: su
+  cantidad es la tasa de emisión neta en nivel, no Δlog de un flujo, y su
+  precio es una valuación sin deflactar (A-N1-5).
+- **"no responde" no quiere decir rígido:** quiere decir que con estos datos,
+  esta ventana y este método el intervalo de la suma incluye el cero (A-N1-10).
+- **El último año de producción del USGS es estimado** y entra con su estado;
+  la edición siguiente lo revisa y el coeficiente cambia (A-N1-12).
+
 ## Estructura
 
 ```
@@ -665,7 +765,9 @@ senales/
 │   ├── denominador.py      Fase D0 — punto de entrada
 │   ├── dinero_historico.py Fase D0 — el dinero de EE.UU. antes de 1959, desde las transcripciones
 │   ├── fuentes_numerador.py Fase N0 — lectura de Coin Metrics, el USGS, el Z.1 y el Censo
-│   └── numerador.py        Fase N0 — punto de entrada
+│   ├── numerador.py        Fase N0 — punto de entrada
+│   ├── fuentes_respuesta_oferta.py Fase N1 — lectura de la FHFA, el Censo, el BLS, la DS140 y la B.103
+│   └── respuesta_oferta.py Fase N1 — punto de entrada
 ├── tests/
 ├── data/raw/               Descargas crudas que se pueden redistribuir, versionadas por fecha
 ├── data/series/            Series publicadas, manifiesto de descargas y changelog
