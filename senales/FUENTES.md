@@ -2203,6 +2203,16 @@ D0.10.6 proponía publicar y no se transcribió; y por qué la Junta imprimió
   I y II): quien publique un servicio que use la API tiene que **avisar por
   correo** al Departamento de Investigación y Estadística y mostrar un crédito
   con un texto fijo. El aviso no define "fines comerciales".
+- **Respuesta del Banco de Japón (2026-10-14, Public Relations Department).**
+  Usar sus datos para calcular y graficar es "data usage" y solo exige citar
+  la fuente con el nombre del sitio: "Time-Series Data Search", Bank of
+  Japan. Redistribuir los datos sin modificar exige presentar un Application
+  Form, que no se presentó. Consecuencias: la columna `atribucion` de
+  `serie_D0.csv` cita "Bank of Japan, Time-Series Data Search" (A-D0-8), y
+  los crudos `boj_m2_*.csv` y `boj_balance_*.csv` salen del repositorio y
+  viven en `data/privado/raw/`, con su URL, fecha y SHA-256 en
+  `denominador_descargas.csv` (A-D0-27). La cláusula no comercial y el
+  crédito de la API (D0.13, punto 1) siguen como estaban.
 - **Muestra: 2026-08 = 12963895; 2020-03 = 10442899.**
 - Contraste: el comunicado del BoJ de agosto de 2026
   (`https://www.boj.or.jp/en/statistics/money/ms/ms2608.pdf`) da 1296.4
@@ -3222,7 +3232,7 @@ D0.10.11: vale lo que dice `SUPUESTOS.md`.
 | A-D0-5 | El M2 de la Eurozona de 1980-01 a 1997-08 es una estimación del BCE | estimación |
 | A-D0-6 | El M2 de Japón empieza en 2003-04; M2+CDs es otra serie y no se empalma | dato; supuesto no empalmar |
 | A-D0-7 | BCE: el dato se publica tal cual y con fuente; toda derivada se rotula como cálculo propio | supuesto de licencia |
-| A-D0-8 | BoJ: uso bajo la cláusula no comercial, con aviso y crédito por la API | supuesto condicional |
+| A-D0-8 | BoJ: uso bajo la cláusula no comercial, con aviso y crédito por la API; desde el 2026-10-14, cita con el nombre del sitio y el crudo fuera del repositorio | supuesto condicional |
 | A-D0-9 | China, con el PBoC como fuente: NO MEDIDO. Alternativa: M2 desde la OCDE y balance desde el BIS, con el PBoC como contraste a mano | no medido; supuesto condicional la alternativa |
 | A-D0-10 | El agregado en USD es una serie derivada; tipo de cambio del H.10, promedio o fin de mes según la convención de cada serie | supuesto |
 | A-D0-11 | El agregado a tipo de cambio constante usa el del primer mes común | supuesto |
@@ -3244,7 +3254,8 @@ D0.10.11: vale lo que dice `SUPUESTOS.md`.
 
 ### D0.13 Permisos, avisos y preguntas
 
-Ninguno se envió.
+El Banco de Japón respondió el 2026-10-14 (punto 1). De los demás no hay nada
+enviado ni registrado.
 
 1. **Banco de Japón: aviso por usar la API.** Sus instrucciones piden avisar
    por correo cuando se publica un servicio que la usa, y mostrar un crédito
@@ -3273,6 +3284,15 @@ Ninguno se envió.
    siempre que los usuarios del servicio puedan encontrarlo con facilidad.
    El sitio lo muestra junto a las dos series de Japón y en el pie, con ese
    texto exacto (`src/lib/creditos.ts` de eldenominador).
+
+   **Respuesta del Banco de Japón, 2026-10-14** (Public Relations
+   Department): usar los datos para calcular y graficar es "data usage" y
+   solo exige citar la fuente con el nombre del sitio ("Time-Series Data
+   Search", Bank of Japan); redistribuir los datos sin modificar exige
+   presentar un Application Form, que no se presentó. Lo que cambió con eso:
+   D0.5, A-D0-8, A-D0-27 y la columna `atribucion` de `serie_D0.csv`. De la
+   pregunta sobre "fines comerciales" y del aviso por la API no hay nada
+   registrado aquí: siguen abiertos (D0.14, puntos 2 y 17).
 2. **NBER: permiso para publicar las series 14144 de la Macrohistory
    Database.** La página de la base da `data@nber.org` para reportar errores;
    la de los libros tiene un formulario de permisos. Destraba la alternativa
@@ -3310,7 +3330,8 @@ Ninguno se envió.
 ### D0.14 Lo que sigue abierto
 
 1. **Las decisiones de D0.10.** Ninguna está tomada.
-2. **Los avisos y preguntas de D0.13.** Ninguno se envió.
+2. **Los avisos y preguntas de D0.13.** El Banco de Japón respondió el
+   2026-10-14 (D0.13, punto 1); del resto no hay nada enviado ni registrado.
 3. **El retiro del programa de descarga de la Junta.** Los ZIP de XML siguen
    en las páginas de cada publicación, pero la Junta anuncia más cambios para
    2027. Si los retira, la vía que queda es la API de FRED, que pide clave.

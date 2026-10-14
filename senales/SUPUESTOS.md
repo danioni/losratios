@@ -1458,6 +1458,16 @@ por correo al publicar un servicio que la use y mostrar un crédito. El aviso
 es un paso previo a desplegar el sitio con estas series; el crédito va en la
 columna `atribucion` de `serie_D0.csv`.
 
+**Respuesta del Banco de Japón, 2026-10-14** (Public Relations Department;
+`FUENTES.md`, D0.5 y D0.13). Usar sus datos para calcular y graficar es
+"data usage" y solo exige citar la fuente con el nombre del sitio:
+"Time-Series Data Search", Bank of Japan. Redistribuir los datos sin
+modificar exige presentar un Application Form, que no se presentó. Dos
+consecuencias: la columna `atribucion` cita "Bank of Japan, Time-Series Data
+Search" (antes decía "BOJ Time-Series Data Search"), y los crudos del BoJ
+salen del repositorio (A-D0-27). La condición no comercial y el crédito de
+la API no cambian.
+
 ## A-D0-9 · China entra por la OCDE y el BIS, con el rótulo de la fuente, fuera del agregado y sin ninguna descarga del PBoC
 
 **Estado: supuesto condicional.** Decisión del dueño del 2026-10-05.
@@ -1750,8 +1760,20 @@ hacia atrás (`FUENTES.md`, D0.4 y D0.5) y las series del BIS llegan con rezago.
 A-R0-15 pone la condición de licencia; esta agrega dos. Los ZIP de la Junta
 (entre 1.4 y 9 MB) y las fuentes que solo se leen para comparar quedan fuera
 del repositorio, con su URL, fecha y SHA-256 en `denominador_descargas.csv`.
-Los CSV del BCE, del BoJ, de la OCDE y del BIS (China) se versionan en
-`data/raw/`, con su atribución en `data/raw/ATRIBUCION.md`.
+Los CSV del BCE, de la OCDE y del BIS (China) se versionan en `data/raw/`,
+con su atribución en `data/raw/ATRIBUCION.md`.
+
+**Los crudos del BoJ salieron del repositorio el 2026-10-14** (decisión del
+dueño, con la respuesta del Banco de Japón de ese día: redistribuir sus datos
+sin modificar exige un Application Form que no se presentó; A-D0-8). La
+licencia (b) es condición necesaria, no suficiente: si la fuente exige un
+permiso aparte para redistribuir el crudo, el crudo no se versiona. Los
+cuatro archivos (`boj_m2` y `boj_balance` del 2026-10-05 y del 2026-10-07)
+viven en `data/privado/raw/`, como los ZIP de la Junta; el manifiesto
+conserva su URL, fecha, bytes y SHA-256 con `crudo_en_repo = no`, y el test
+de salidas publicadas recalcula las series de Japón desde ahí cuando están.
+Las copias que ya entraron al historial de git siguen ahí: reescribirlo es
+una decisión del dueño, pendiente.
 
 **Los bytes de un crudo son los de la fuente, sin conversión** (decisión del
 dueño del 2026-10-07). Todo `data/raw/` lleva `-text` en `.gitattributes`:
