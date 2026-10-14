@@ -3014,3 +3014,418 @@ PENDIENTES_N0: tuple[PendienteN0, ...] = (
     PendienteN0("viviendas_eeuu_respuesta_oferta_precio", "Viviendas de EE.UU.: respuesta observada de la oferta al precio", FAMILIA_ELASTICIDAD, MIDE_ELASTICIDAD, _PENDIENTE_RESPUESTA, "Censo (construcción) e índice de precios de la FHFA, por leer", ("A-N0-12",)),
     PendienteN0("acciones_eeuu_respuesta_oferta_precio", "Acciones de EE.UU.: respuesta observada de la oferta al precio", FAMILIA_ELASTICIDAD, MIDE_ELASTICIDAD, _PENDIENTE_RESPUESTA, "Z.1 (emisión neta) y una medida de valuación por definir", ("A-N0-12",)),
 )
+
+
+# ---------------------------------------------------------------------------
+# Fase N1: respuesta observada de la oferta al precio. El prerregistro completo
+# está en SUPUESTOS.md, A-N1-1 a A-N1-12 (escrito el 2026-10-14 antes de
+# descargar o cruzar un solo precio); lo que se leyó de cada fuente, en
+# FUENTES.md, N0.16 y sección N1. Nada de aquí se cambia después de ver un
+# resultado (A-N1-9).
+# ---------------------------------------------------------------------------
+
+FAMILIA_RESPUESTA = "respuesta observada de la oferta al precio"
+MIDE_RESPUESTA = "asociación observada entre la variación de la cantidad y la variación del precio real"
+MIDE_INSUMO_PRECIO = "precio anual (insumo)"
+MIDE_INSUMO_CANTIDAD = "cantidad anual (insumo)"
+
+# A-N1-1: rótulo obligatorio en toda salida. Literal, sin verbos de acción.
+ROTULO_FIJO_N1 = "asociación observada, no elasticidad causal: precio y cantidad se determinan juntos"
+# A-N1-10: los tres rótulos de lectura, por el intervalo del 95 % de la suma.
+ROTULO_RESPONDE = "responde"
+ROTULO_NO_RESPONDE = "no responde"
+ROTULO_RESPUESTA_NEGATIVA = "respuesta negativa"
+ESTADO_EVIDENCIA_INSUFICIENTE = "evidencia insuficiente"
+ROTULO_BTC_N1 = "no aplica: emisión fijada por el protocolo; respuesta cero por construcción"
+
+# A-N1-8: la especificación, fijada por el dueño y no elegida con los datos.
+N1_REZAGO_MAXIMO = 5  # k = 0..5
+N1_NEWEY_WEST_L = 4  # rezago máximo del núcleo de Bartlett
+N1_N_MINIMO = 30  # observaciones utilizables después de los rezagos y las exclusiones
+N1_NIVEL = 0.975  # cuantil normal de los intervalos del 95 %
+N1_DECIMALES = 6
+FORMATO_N1_COEFICIENTES = f"%.{N1_DECIMALES}f"
+FORMATO_N1 = "%.12g"
+EPSILON_REVISION_N1 = 0.0005
+
+# Nota 1 del USGS (Mineral Commodity Summaries): 1 t = 32150.7 onzas troy
+# (FUENTES.md, N0.4.1). Convierte el valor unitario de la DS140 a USD por onza.
+ONZAS_TROY_POR_TONELADA = 32150.7
+
+# --- Descargas (A-N1-11) ---------------------------------------------------------
+
+_LICENCIA_FHFA = "Dominio público (FHFA; política del sitio, sección 10, Copyright and Trademark Notice)"
+_ATRIBUCION_FHFA = (
+    "Federal Housing Finance Agency, House Price Index, all-transactions, United States, quarterly, "
+    "not seasonally adjusted (\"FHFA HPI\" es marca registrada de la FHFA). Obra de una agencia federal "
+    "de EE.UU., dominio público. Los valores trimestrales se publican sin cambios; el promedio anual es "
+    "cálculo propio."
+)
+DESCARGA_FHFA_HPI_AT = Descarga(
+    clave="fhfa_hpi_at_eeuu",
+    descripcion=(
+        "FHFA, House Price Index all-transactions, EE.UU. y divisiones censales, trimestral desde 1975 Q1, "
+        "sin ajuste estacional (CSV sin encabezado: área, año, trimestre, índice)"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_FHFA,
+    url="https://www.fhfa.gov/hpi/download/quarterly_datasets/hpi_at_us_and_census.csv",
+    extension="csv",
+    atribucion=_ATRIBUCION_FHFA,
+)
+FHFA_AREA_EEUU = "USA"
+# A-N1-4: la copia de la misma serie en FRED, gate de transporte del CSV de la
+# FHFA. Verificado el 2026-10-14 en la página de FRED: "All-Transactions House
+# Price Index for the United States (USSTHPI)", trimestral, sin ajuste
+# estacional, fuente FHFA, 2026:Q2 = 719.87 (igual al CSV, N0.16.1).
+FRED_ID_FHFA = "USSTHPI"
+CONTRASTE_FRED_FHFA = _contraste(
+    "fred_ussthpi",
+    f"FRED {FRED_ID_FHFA}: índice all-transactions de la FHFA para EE.UU., trimestral (emisor: FHFA); "
+    "gate de transporte del CSV de la FHFA",
+    URL_CSV.format(id=FRED_ID_FHFA),
+    "csv",
+)
+
+DESCARGA_CENSO_TERMINADAS = Descarga(
+    clave="censo_viviendas_terminadas",
+    descripcion=(
+        "Census Bureau, New Residential Construction: New Privately-Owned Housing Units Completed, "
+        "EE.UU., miles de unidades; hojas anual y mensual sin ajustar"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_CENSO,
+    url="https://www.census.gov/construction/nrc/xls/comps_cust.xlsx",
+    extension="xlsx",
+    atribucion=_ATRIBUCION_CENSO.format(producto="New Residential Construction, Housing Units Completed"),
+)
+
+# A-N1-6: el deflactor. El dato es del BLS (obra federal, dominio público); el
+# canal es FRED, clase (b) con la reserva de A-R0-3. Al BLS no se le pide nada.
+FRED_ID_CPI = "CPIAUCNS"
+DESCARGA_FRED_CPI = Descarga(
+    clave="fred_cpiaucns",
+    descripcion=(
+        f"FRED {FRED_ID_CPI}: CPI-U, todos los ítems, promedio de ciudades de EE.UU., sin ajuste "
+        "estacional, 1982-84 = 100, mensual desde 1913-01 (dato del BLS; canal FRED)"
+    ),
+    clase_licencia=CLASE_NO_COMERCIAL,
+    licencia="Dato del BLS (dominio público, obra federal); canal FRED, clase (b) con la reserva de A-R0-3",
+    url=URL_CSV.format(id=FRED_ID_CPI),
+    extension="csv",
+    atribucion=(
+        "U.S. Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers: All Items in U.S. "
+        "City Average (CPIAUCNS), obtenido de FRED, Federal Reserve Bank of St. Louis. Los valores "
+        "mensuales se publican sin cambios; el promedio anual es cálculo propio."
+    ),
+)
+# A-N1-6: la segunda lectura del CPI es una copia bajada a mano del BLS por una
+# persona en el navegador (el BLS no admite programas, N0.16.3), guardada en
+# data/privado/raw como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt>. La URL la
+# declaró el dueño; el pipeline nunca la pide. Si el dueño bajó la tabla desde
+# otra URL, se corrige aquí antes de correr.
+BLS_CPI_SERIE = "CUUR0000SA0"
+BLS_CPI_URL_COPIA = f"https://data.bls.gov/timeseries/{BLS_CPI_SERIE}"
+DESCARGA_BLS_CPI_COPIA = Descarga(
+    clave="bls_cpi_u",
+    descripcion=(
+        f"BLS, CPI-U todos los ítems, promedio de ciudades, sin ajuste estacional ({BLS_CPI_SERIE}): tabla "
+        "bajada a mano en el navegador; segunda lectura del deflactor (gate de A-N1-6)"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia="Dominio público (obra del gobierno federal de EE.UU., 17 U.S.C. § 105)",
+    url=BLS_CPI_URL_COPIA,
+    extension="xlsx",
+    atribucion="U.S. Bureau of Labor Statistics, Consumer Price Index. Solo contraste del deflactor.",
+    versionar=False,  # decisión del dueño del 2026-10-14: data/privado/raw, con su hash en el manifiesto
+    manual=True,
+)
+BLS_CPI_EXTENSIONES = ("xlsx", "csv", "txt")
+
+# A-N1-5: la tabla B.103 del Z.1, extraída del mismo paquete ZIP que usa N0.
+# Candidatos del nombre del miembro: el que leyó el paso 0 (N0.16.4) y los
+# que seguirían la convención de los demás; si ninguno está, se busca el CSV
+# que trae FL103164106.Q.
+Z1_B103_MIEMBROS = ("csv/S11_1_b.csv", "csv/b103.csv", "csv/B103.csv")
+Z1_B103_SERIES = ("LM103164105", "LM103192105", "FL102090005", "FL103164106")
+DESCARGA_Z1_B103 = Descarga(
+    clave="z1_b103",
+    descripcion=(
+        f"Junta de la Reserva Federal, {_Z1}, tabla B.103 (Balance sheet of nonfinancial corporate business): "
+        f"CSV extraído del paquete z1_csv_files.zip (bytes sin cambios)"
+    ),
+    clase_licencia=CLASE_ABIERTA,
+    licencia=_LICENCIA_JUNTA,
+    url=f"{DESCARGA_Z1_ZIP.url}#{Z1_B103_MIEMBROS[0]}",
+    extension="csv",
+    atribucion=_ATRIBUCION_JUNTA.format(publicacion=_Z1),
+)
+CONTRASTE_Z1_HTML_B103 = _contraste(
+    "z1_html_b103",
+    f"Junta de la Reserva Federal, {_Z1}, tabla B.103 en HTML: gate de transporte del CSV",
+    Z1_URL_BASE + "html/b103.htm",
+    "htm",
+)
+
+DESCARGAS_N1_FUENTE = (DESCARGA_FHFA_HPI_AT, DESCARGA_CENSO_TERMINADAS, DESCARGA_FRED_CPI)
+DESCARGAS_N1_CONTRASTE = (CONTRASTE_FRED_FHFA, CONTRASTE_Z1_HTML_B103)
+
+# --- Tolerancias (A-N1-3 a A-N1-6), fijadas en el prerregistro --------------------
+
+# A-N1-4: la FHFA publica el índice con dos decimales; medio paso.
+TOLERANCIA_FHFA_FRED = 0.005
+# A-N1-6: el BLS publica el CPI-U al milésimo; medio paso mes a mes, y un paso
+# año a año (dos redondeos al milésimo).
+TOLERANCIA_CPI_MENSUAL = 0.0005
+TOLERANCIA_CPI_ANUAL = 0.001
+# A-N1-5: gate de construcción del pipeline, decisión del dueño del 2026-10-14:
+# (LM103164105 + LM103192105) / FL102090005 × 100 reproduce FL103164106 con
+# ±0.05 puntos porcentuales (redondeo). Si no cierra, la corrida se detiene.
+TOLERANCIA_B103_IDENTIDAD_PP = 0.05
+# A-N1-3: control de consistencia del valor unitario de la DS140 contra el
+# promedio anual del Pink Sheet, en los años en que las dos existen. Marca y
+# excluye el año de la ventana (b); no detiene. Fijada en el prerregistro.
+TOLERANCIA_DS140_PINK_SHEET_PCT = 5.0
+# A-N1-4: la tolerancia del gate de las terminadas es por construcción: doce
+# veces medio paso de la hoja mensual más medio paso de la hoja anual. Se
+# calcula de la precisión del archivo en cada corrida.
+MINIMO_COMPARACIONES_N1 = MINIMO_COMPARACIONES_GATE
+
+# --- Pares y ventanas (A-N1-2, A-N1-3, A-N1-4, A-N1-5) ----------------------------
+
+PRECIO_PINK_SHEET = "pink_sheet"
+PRECIO_DS140 = "ds140"
+PRECIO_FHFA = "fhfa"
+PRECIO_VALUACION = "valuacion"
+
+
+@dataclass(frozen=True)
+class ParN1:
+    """Un par (activo, ventana) de la familia: qué cantidad, qué precio y qué años."""
+
+    clave: str
+    activo: str
+    activo_clave: str  # oro, plata, viviendas, acciones
+    ventana: str  # como se publica
+    inicio: int  # acota los años de las variables en diferencias (A-N1-8)
+    fin: int
+    precio: str
+    deflactar: bool
+    supuestos: tuple[str, ...]
+    cantidad_serie: str  # serie de numerador_series.csv o serie nueva de N1
+    cantidad_nombre: str
+    precio_nombre: str
+
+
+_SUP_METALES_N1 = ("A-N1-1", "A-N1-2", "A-N1-3", "A-N1-6", "A-N1-8", "A-N1-9", "A-N1-10")
+_SUP_VIVIENDAS_N1 = ("A-N1-1", "A-N1-2", "A-N1-4", "A-N1-6", "A-N1-8", "A-N1-9", "A-N1-10")
+_SUP_ACCIONES_N1 = ("A-N1-1", "A-N1-2", "A-N1-5", "A-N1-8", "A-N1-9", "A-N1-10")
+
+SERIE_TERMINADAS = "viviendas_eeuu_terminadas_miles"
+SERIE_TASA_ACCIONES = "acciones_eeuu_emision_neta_no_financieras_pct_vm"
+
+
+def _pares_metal(metal: str, nombre: str, fin_ds140: int) -> tuple[ParN1, ...]:
+    cantidad = f"{metal}_produccion_mundial_t"
+    return (
+        ParN1(f"{metal}_pink_sheet", nombre, metal, "(a) Pink Sheet 1960–2025", 1960, 2025, PRECIO_PINK_SHEET, True, _SUP_METALES_N1, cantidad, "producción minera mundial (USGS)", "Pink Sheet, promedio anual del mensual, USD por onza troy"),
+        ParN1(f"{metal}_ds140_1900", nombre, metal, f"(b) DS140 1900–{fin_ds140}", 1900, fin_ds140, PRECIO_DS140, True, _SUP_METALES_N1, cantidad, "producción minera mundial (USGS)", "Data Series 140, valor unitario anual, USD por onza troy"),
+        ParN1(f"{metal}_ds140_1971", nombre, metal, f"(b) DS140 1971–{fin_ds140}", 1971, fin_ds140, PRECIO_DS140, True, _SUP_METALES_N1, cantidad, "producción minera mundial (USGS)", "Data Series 140, valor unitario anual, USD por onza troy"),
+    )
+
+
+PARES_N1: tuple[ParN1, ...] = (
+    *_pares_metal("oro", "Oro", 2022),
+    *_pares_metal("plata", "Plata", 2021),
+    ParN1(
+        "viviendas_eeuu_fhfa", "Viviendas de EE.UU.", "viviendas", "1976–2025", 1976, 2025, PRECIO_FHFA, True, _SUP_VIVIENDAS_N1,
+        SERIE_TERMINADAS, "viviendas terminadas (Censo)", "índice all-transactions de la FHFA, EE.UU., promedio anual del trimestral",
+    ),
+    ParN1(
+        "acciones_eeuu_valuacion", "Acciones de EE.UU.", "acciones", "1946–2025", 1946, 2025, PRECIO_VALUACION, False, _SUP_ACCIONES_N1,
+        SERIE_TASA_ACCIONES, "tasa de emisión neta de las sociedades no financieras, en nivel (Z.1)",
+        "valuación LM103164105.Q / FL102090005.Q, promedio anual del trimestral, sin deflactar",
+    ),
+)
+
+# --- Salidas ----------------------------------------------------------------------
+
+ARCHIVO_N1_COEFICIENTES = DIR_SERIES / "respuesta_oferta.csv"
+ARCHIVO_N1_RESUMEN = DIR_SERIES / "respuesta_oferta_resumen.csv"
+ARCHIVO_N1_INSUMOS = DIR_SERIES / "respuesta_oferta_insumos.csv"
+ARCHIVO_N1_FICHAS = DIR_SERIES / "serie_N1.csv"
+ARCHIVO_N1_DESCARGAS = DIR_SERIES / "respuesta_oferta_descargas.csv"
+PREFIJO_GRAFICO_N1 = "respuesta_oferta_"
+
+COLUMNAS_N1_COEFICIENTES = [
+    "activo", "ventana", "rezago", "coeficiente", "error_estandar", "intervalo_inferior", "intervalo_superior",
+    "n", "fecha_corrida", "rotulo_fijo", "desvio_del_prerregistro", "supuestos",
+]
+COLUMNAS_N1_RESUMEN = [
+    "activo", "ventana", "especificacion", "suma", "error_estandar", "intervalo_inferior", "intervalo_superior",
+    "n", "primer_anio", "ultimo_anio", "anios_excluidos", "rotulo", "estado", "motivo", "rotulo_fijo",
+    "desvio_del_prerregistro", "supuestos", "fecha_corrida",
+]
+COLUMNAS_N1_INSUMOS = [
+    "activo", "ventana", "anio", "cantidad", "unidad_cantidad", "estado_cantidad", "precio_nominal", "unidad_precio",
+    "cpi", "precio_real", "y", "dlog_precio_real", "control", "excluido", "motivo_exclusion", "cita_cantidad", "cita_precio",
+]
+COLUMNAS_N1_FICHAS = COLUMNAS_N0_FICHAS
+
+# --- Fichas (A-N1-11) ---------------------------------------------------------------
+
+SerieN1 = SerieN0  # la ficha de N1 dice lo mismo que la de N0: qué mide, de dónde sale y cómo se validó
+
+_EMISOR_FHFA = "Federal Housing Finance Agency"
+_EMISOR_BLS = "U.S. Bureau of Labor Statistics (canal: FRED)"
+_SUP_INSUMO_METALES = ("A-N1-2", "A-N1-3", "A-N1-11")
+_SUP_INSUMO_VIVIENDAS = ("A-N1-2", "A-N1-4", "A-N1-11")
+_SUP_INSUMO_CPI = ("A-N1-6", "A-N1-11")
+_SUP_INSUMO_ACCIONES = ("A-N1-2", "A-N1-5", "A-N1-11")
+
+INSUMOS_N1: tuple[SerieN1, ...] = (
+    SerieN1(
+        SERIE_TERMINADAS,
+        "Viviendas de EE.UU.: viviendas terminadas en el año (Censo)",
+        FAMILIA_VIVIENDAS,
+        MIDE_FLUJO,
+        "miles de viviendas",
+        "New Privately-Owned Housing Units Completed, total de EE.UU., hoja anual del archivo del Censo; gate por construcción contra la suma de la hoja mensual sin ajustar (A-N1-4)",
+        _EMISOR_CENSO,
+        DESCARGA_CENSO_TERMINADAS,
+        "comps_cust.xlsx, hoja anual, columna Total",
+        _SUP_INSUMO_VIVIENDAS,
+    ),
+    SerieN1(
+        "viviendas_eeuu_precio_fhfa_at_promedio_anual",
+        "Viviendas de EE.UU.: índice de precios all-transactions de la FHFA, promedio anual",
+        FAMILIA_VIVIENDAS,
+        MIDE_INSUMO_PRECIO,
+        "índice, 1980 Q1 = 100",
+        "promedio simple de los cuatro trimestres del año (cálculo propio); nominal, sin ajuste estacional; solo años completos",
+        _EMISOR_FHFA,
+        DESCARGA_FHFA_HPI_AT,
+        f"área {FHFA_AREA_EEUU} del CSV; gate de transporte contra FRED {FRED_ID_FHFA}",
+        _SUP_INSUMO_VIVIENDAS,
+        nota="\"FHFA HPI\" es marca registrada: se cita como marca, no como nombre de la serie",
+    ),
+    SerieN1(
+        "cpi_u_eeuu_promedio_anual",
+        "EE.UU.: CPI-U, todos los ítems, sin ajuste estacional, promedio anual (deflactor de la familia)",
+        FAMILIA_RESPUESTA,
+        "deflactor (insumo)",
+        "índice, 1982-84 = 100",
+        "promedio simple de los doce meses del año (cálculo propio); solo años completos; gate contra la copia a mano del BLS (A-N1-6)",
+        _EMISOR_BLS,
+        DESCARGA_FRED_CPI,
+        f"FRED {FRED_ID_CPI}; BLS {BLS_CPI_SERIE}",
+        _SUP_INSUMO_CPI,
+    ),
+    SerieN1(
+        "oro_precio_pink_sheet_promedio_anual_usd_oz",
+        "Oro: precio del Pink Sheet, promedio anual del mensual",
+        FAMILIA_METALES,
+        MIDE_INSUMO_PRECIO,
+        "USD por onza troy",
+        "promedio simple de los doce meses de oro_usd_oz de precios_mensuales.csv (fase R, A-R0-19); un año con un mes en disputa (A-R0-20) queda excluido de la regresión",
+        "Banco Mundial (Pink Sheet), vía la fase R",
+        None,
+        "precios_mensuales.csv, oro_usd_oz",
+        _SUP_INSUMO_METALES,
+    ),
+    SerieN1(
+        "plata_precio_pink_sheet_promedio_anual_usd_oz",
+        "Plata: precio del Pink Sheet, promedio anual del mensual",
+        FAMILIA_METALES,
+        MIDE_INSUMO_PRECIO,
+        "USD por onza troy",
+        "promedio simple de los doce meses de plata_usd_oz de precios_mensuales.csv (fase R, A-R0-19); un año con un mes en disputa (A-R0-20) queda excluido de la regresión",
+        "Banco Mundial (Pink Sheet), vía la fase R",
+        None,
+        "precios_mensuales.csv, plata_usd_oz",
+        _SUP_INSUMO_METALES,
+    ),
+    SerieN1(
+        "oro_precio_ds140_valor_unitario_usd_oz",
+        "Oro: valor unitario anual de la Data Series 140, en USD por onza troy",
+        FAMILIA_METALES,
+        MIDE_INSUMO_PRECIO,
+        "USD por onza troy",
+        f"columna Unit value ($/t) de la DS140, dividida por {ONZAS_TROY_POR_TONELADA:g} oz/t (cálculo propio); dólares corrientes; control contra el Pink Sheet ±{TOLERANCIA_DS140_PINK_SHEET_PCT:g} % desde 1960 (A-N1-3)",
+        _EMISOR_USGS,
+        DESCARGA_USGS_DS140_ORO,
+        "DS140, columna Unit value ($/t)",
+        _SUP_INSUMO_METALES,
+    ),
+    SerieN1(
+        "plata_precio_ds140_valor_unitario_usd_oz",
+        "Plata: valor unitario anual de la Data Series 140, en USD por onza troy",
+        FAMILIA_METALES,
+        MIDE_INSUMO_PRECIO,
+        "USD por onza troy",
+        f"columna Unit value ($/t) de la DS140, dividida por {ONZAS_TROY_POR_TONELADA:g} oz/t (cálculo propio); dólares corrientes; control contra el Pink Sheet ±{TOLERANCIA_DS140_PINK_SHEET_PCT:g} % desde 1960 (A-N1-3)",
+        _EMISOR_USGS,
+        DESCARGA_USGS_DS140_PLATA,
+        "DS140, columna Unit value ($/t)",
+        _SUP_INSUMO_METALES,
+    ),
+    SerieN1(
+        "acciones_eeuu_valuacion_no_financieras_pct",
+        "Acciones de EE.UU.: valuación de las sociedades no financieras, acciones sobre patrimonio neto, promedio anual (cociente propio)",
+        FAMILIA_ACCIONES,
+        MIDE_INSUMO_PRECIO,
+        "% del patrimonio neto",
+        "LM103164105.Q / FL102090005.Q × 100 trimestre a trimestre y promedio simple de los cuatro trimestres (cálculo propio); sin inversión extranjera directa y sin deflactar (A-N1-5)",
+        _EMISOR_JUNTA_Z1,
+        DESCARGA_Z1_B103,
+        "LM103164105.Q / FL102090005.Q (B.103)",
+        _SUP_INSUMO_ACCIONES,
+    ),
+    SerieN1(
+        "acciones_eeuu_valuacion_junta_fl103164106_pct",
+        "Acciones de EE.UU.: razón de la Junta, acciones más inversión extranjera directa sobre patrimonio neto (gate de construcción)",
+        FAMILIA_ACCIONES,
+        "gate de construcción del pipeline (no se publica como serie)",
+        "% del patrimonio neto",
+        "FL103164106.Q, trimestral; (LM103164105 + LM103192105) / FL102090005 × 100 la reproduce con ±0.05 puntos, o la corrida se detiene (A-N1-5; FUENTES.md N0.16.4)",
+        _EMISOR_JUNTA_Z1,
+        DESCARGA_Z1_B103,
+        "FL103164106.Q (B.103)",
+        _SUP_INSUMO_ACCIONES,
+    ),
+)
+
+
+@dataclass(frozen=True)
+class FilaFijaN1:
+    """Una fila del resumen que no sale de ninguna regresión: BTC y la deuda (A-N1-7)."""
+
+    clave: str
+    activo: str
+    ventana: str
+    rotulo: str
+    estado: str
+    motivo: str
+    supuestos: tuple[str, ...]
+
+
+FILAS_FIJAS_N1: tuple[FilaFijaN1, ...] = (
+    FilaFijaN1(
+        "btc",
+        "BTC",
+        "no entra",
+        ROTULO_BTC_N1,
+        ESTADO_DATO,
+        "la emisión la fija el protocolo por la altura del bloque (Bitcoin Core, GetBlockSubsidy; A-N0-2); no hay cantidad que pueda responder al precio y no se estima nada",
+        ("A-N0-12", "A-N1-7"),
+    ),
+    FilaFijaN1(
+        "deuda_eeuu",
+        "Deuda de EE.UU.",
+        "no entra",
+        "",
+        ESTADO_NO_MEDIDO,
+        "NO MEDIDO: la deuda no tiene un precio comparable (A-N0-12)",
+        ("A-N0-12", "A-N1-7"),
+    ),
+)
