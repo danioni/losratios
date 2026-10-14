@@ -2220,6 +2220,9 @@ dueño del 2026-10-07.
   pasan primero por un paso 0 corto, con parada para mostrarlo.
 - Lo que el sitio llama `elasticity_*` (un cociente de variaciones a diez años
   sobre anclas interpoladas) no se reproduce.
+- **Prerregistrado el 2026-10-14** en A-N1-1 a A-N1-12, sin calcular. Tres
+  decisiones esperan al dueño antes de la primera corrida (cabecera de la
+  sección N1).
 
 ## A-N0-13 · Frecuencia anual, solo años completos, convención por serie y nombres "de EE.UU."
 
@@ -2270,3 +2273,432 @@ El umbral es 0.0005 en la unidad de cada serie, por (serie, año); el changelog
 lista hasta 40 revisiones y resume el resto. El Z.1 revisa la historia en cada
 publicación; el USGS revisa el último año en cada edición; el HVS reexpresa
 por vintage.
+
+---
+
+## Fase N1 · Respuesta observada de la oferta al precio: los supuestos A-N1-\*
+
+**Prerregistro del 2026-10-14. Estado de la familia: prerregistrada, sin
+calcular.** Este bloque se escribió antes de descargar o cruzar un solo
+precio, en un commit propio, como manda A-N0-12 y el punto 5 de N0.10.5
+(`FUENTES.md`). Las decisiones son del dueño (encargo del 2026-10-14; resumen
+en `FUENTES.md`, N0.16.7); lo que aquí se agrega para que la especificación
+quede cerrada antes de ver un dato se marca como "fijado en el prerregistro".
+El paso 0 que pedía el encargo (la definición de la línea 48 de la B.103)
+**no se pudo leer** desde el entorno de la sesión y queda como pregunta
+abierta (`FUENTES.md`, N0.16.4); el prerregistro lo contempla.
+
+**Pendiente del dueño antes de calcular.** Tres puntos donde el encargo y los
+datos ya leídos no cierran solos; se proponen y se esperan:
+
+1. **Acciones, variable de cantidad (A-N1-5).** La tasa de emisión neta toma
+   valores negativos (todos los años de 2015 a 2025 en las sociedades no
+   financieras, `FUENTES.md` N0.6.1), así que Δlog no existe. Se propone la
+   primera diferencia de la tasa.
+2. **Acciones, valuación sin deflactar (A-N1-5).** La valuación es un
+   cociente de dos valores nominales de la misma fecha; se propone no
+   dividirla por el CPI.
+3. **Línea 48: qué hace la marca del control (A-N1-5).** Con la diferencia
+   conocida (223.82 contra 194.11 en 2025:Q4), un control por año marcaría
+   cada año y, con la regla de `CLAUDE.md` (lo marcado sale de las métricas),
+   vaciaría la regresión. Se propone marcar la serie, no excluir años, con la
+   razón escrita.
+
+Si el dueño elige otra cosa, se cambia aquí antes de correr y queda en el
+changelog; si confirma, se corre tal cual. Ninguna de las tres se decide
+mirando un resultado: no hay ninguno.
+
+## A-N1-1 · Qué mide la familia: una asociación observada entre la variación de la cantidad y la variación del precio real, nunca una elasticidad causal
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-07 (N0.10.5) y del
+2026-10-14.
+
+- Para cada par (activo, ventana) se estima cómo covaría la variación anual
+  de la cantidad ofrecida con la variación anual del precio real del mismo
+  año y de los cinco anteriores. Es una **asociación observada**: precio y
+  cantidad se determinan juntos, y nada de lo que se publica identifica una
+  causa.
+- **Rótulo obligatorio en toda salida**, literal: "asociación observada, no
+  elasticidad causal: precio y cantidad se determinan juntos". Va en cada
+  fila de los CSV de resultados, en cada ficha y en el título de cada
+  gráfico.
+- Nunca un número único: cada coeficiente y la suma van con su intervalo del
+  95 %. El estado de todo coeficiente es **estimación**.
+- El sitio describe, no recomienda: los rótulos de lectura (A-N1-10) no
+  llevan verbos de acción ni la palabra "oportunidad".
+- `btc_elasticidad_oferta` (A-N0-12) no cambia: es otra magnitud (cero por
+  construcción, dato) y no sale de ninguna regresión (A-N1-7).
+
+## A-N1-2 · Los pares, sus variables y la frecuencia anual
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-14.
+
+| Activo | Cantidad | Precio nominal | Ventana(s) |
+| --- | --- | --- | --- |
+| Oro | `oro_produccion_mundial_t` (USGS, A-N0-3), toneladas | (a) Pink Sheet: promedio de los doce meses de `oro_usd_oz` de `precios_mensuales.csv` (fase R); (b) *Data Series 140*: valor unitario anual, USD por tonelada | (a) 1960–2025; (b) 1900–2022 y 1971–2022 |
+| Plata | `plata_produccion_mundial_t` (USGS, A-N0-3), toneladas | (a) ídem, `plata_usd_oz`; (b) *Data Series 140*: valor unitario anual | (a) 1960–2025; (b) 1900–2021 y 1971–2021 |
+| Viviendas de EE.UU. | viviendas terminadas, miles (Censo; serie nueva, A-N1-4) | índice all-transactions de la FHFA, EE.UU., promedio de los cuatro trimestres | 1976–2025 |
+| Acciones de EE.UU. | tasa de emisión neta de las sociedades no financieras, `acciones_eeuu_emision_neta_no_financieras_pct_vm` (A-N0-7) | valuación: `LM103164105.Q / FL102090005.Q`, promedio de los cuatro trimestres (A-N1-5) | 1946–2025 |
+
+- **Todo es anual.** Los promedios anuales (doce meses del Pink Sheet y del
+  CPI, cuatro trimestres de la FHFA y de la B.103) son promedios simples,
+  cálculo propio; se declaran en la ficha y en la cita de cada fila, y solo
+  se forman con años completos: doce meses o cuatro trimestres presentes. Un
+  año incompleto es un hueco.
+- **Los dos lados usan la misma convención temporal:** la cantidad del año
+  calendario t contra el promedio del año calendario t (y de los cinco
+  anteriores).
+- **El precio real** es el nominal dividido por el CPI del mismo año
+  (A-N1-6), salvo la valuación de las acciones (A-N1-5).
+- Los nombres siguen A-N0-13: "de EE.UU." para viviendas y acciones; "mundo"
+  solo la producción del USGS; ninguno dice "global".
+
+## A-N1-3 · Oro y plata: dos ventanas de precio, las dos se publican; los años con un mes en disputa quedan fuera
+
+**Estado: supuesto las reglas; dato las series que entran.** Decisión del
+dueño del 2026-10-14; las reglas de huecos y el control, fijados en el
+prerregistro.
+
+- **Cantidad:** la producción minera mundial publicada en
+  `numerador_series.csv` (A-N0-3), con el último año tal como lo publica el
+  USGS (hoy 2025, estimado, estado "estimación"): entra con su estado y la
+  fila de salida lo dice. Cuando una edición posterior lo revise, el
+  coeficiente cambia y se reporta como revisión (A-N1-12).
+- **Ventana (a), Pink Sheet 1960–2025:** el promedio simple de los doce meses
+  de `oro_usd_oz` y `plata_usd_oz` de `precios_mensuales.csv`, es decir, la
+  serie empalmada de la fase R (edición sin redondear hasta 2024-12, edición
+  vigente desde 2025-01, A-R0-19), cuyo nivel anual ya validó el gate de
+  A-R0-16 en 2021–2024. Los meses de la edición redondeada tienen error de
+  redondeo por debajo del umbral de A-R0-17 y entran. El cambio de
+  definición del oro de junio de 2025 (A-R0-7) se declara en la fila de 2025
+  y no la excluye.
+- **Un año con al menos un mes "en disputa" por el control del FMI (A-R0-20)
+  queda fuera de la regresión como hueco declarado,** porque lo marcado no
+  entra a ninguna métrica (`CLAUDE.md`). Hoy son diez meses por metal, de
+  1980 en adelante; la salida lista los años excluidos. Los meses "sin
+  comparar" (anteriores a 1980) entran.
+- **Ventana (b), *Data Series 140*:** la columna del valor unitario anual en
+  dólares corrientes por tonelada (oro 1900–2022,
+  `usgs_ds140_oro_2026-10-07.xlsx`; plata 1900–2021,
+  `usgs_ds140_plata_2026-10-07.xlsx`, versionados en `data/raw/` por
+  A-N0-14), leída del crudo tras verificar su SHA-256 contra
+  `numerador_descargas.csv`. La columna en dólares de 1998 **no se usa**: el
+  deflactor del USGS no está en la hoja (`FUENTES.md`, N0.16.3) y aquí el
+  deflactor es uno solo (A-N1-6). La convención del valor unitario (qué
+  cotización promedia) está en las notas incrustadas del archivo, que N0 no
+  leyó: el paso 2 las lee y la ficha las cita; si no se pueden leer, la ficha
+  dice "convención no leída".
+- **Subventana 1971–2022 (plata, 1971–2021):** la misma serie, acotada por
+  A-N1-8. Se publica junto con la completa; ninguna se descarta después de
+  ver el resultado.
+- **Control de consistencia del valor unitario, fijado ahora:** en los años
+  en que las dos existen (1960–2022 el oro, 1960–2021 la plata), el valor
+  unitario de la DS140 convertido a USD por onza troy (1 t = 32150.7 oz,
+  nota 1 del USGS, `FUENTES.md` N0.4.1) contra el promedio anual del Pink
+  Sheet, **±5 %** sobre el Pink Sheet. Marca el año como "en disputa entre
+  cotizaciones" y lo excluye de la ventana (b); no detiene nada. Lo que se
+  sabe al fijarlo: en 2021–2024 el Pink Sheet queda entre 0.012 % y 0.601 %
+  por debajo de la cotización anual del USGS (A-R0-16, A-R0-18); de 1960 a
+  2020 no se comparó nunca. El número se elige ahora y no se ajusta. Los
+  años anteriores a 1960 quedan "sin comparar" y entran.
+
+## A-N1-4 · Viviendas de EE.UU.: viviendas terminadas del Censo contra el índice all-transactions de la FHFA, 1976–2025
+
+**Estado: supuesto las reglas; dato las dos series.** Decisión del dueño del
+2026-10-14; gates y controles fijados en el prerregistro, antes de descargar.
+
+- **Cantidad:** "New Privately-Owned Housing Units Completed", total de
+  EE.UU., miles de unidades, hoja anual de `comps_cust.xlsx` (Censo, New
+  Residential Construction, `FUENTES.md` N0.16.2), desde 1968. Es un flujo
+  que entra al parque; se publica como serie nueva
+  (`viviendas_eeuu_terminadas_miles`) con ficha propia. Las iniciadas (desde
+  1959) no se usan: lo que entra al parque es lo terminado.
+- **Gate de transporte de las terminadas, por construcción:** la suma de los
+  doce meses de la hoja mensual sin ajustar del mismo archivo contra el valor
+  de la hoja anual, año por año; tolerancia = doce veces medio paso de la
+  última cifra publicada en la hoja mensual, más medio paso de la hoja anual
+  (con una cifra decimal en las dos, 0.65 mil). Mínimo tres años; si no
+  cierra, la serie queda "NO MEDIDO: sin validación externa" y el par no se
+  calcula. Es transporte dentro del mismo emisor: el Censo es el único
+  compilador.
+- **Precio:** el índice all-transactions de la FHFA para EE.UU. (`USA` en
+  `hpi_at_us_and_census.csv`, `FUENTES.md` N0.16.1), nominal, sin ajuste
+  estacional, promedio simple de los cuatro trimestres; primer año completo,
+  1975. El *expanded-data* queda fuera (datos de un proveedor con licencia).
+  "FHFA HPI" es marca registrada: se cita como marca, no se usa como nombre
+  de la serie.
+- **Gate de transporte del índice:** la copia de la misma serie en FRED (el
+  identificador se lee en el paso 2, en la página de FRED, un pedido), valor
+  por valor, con tolerancia de medio paso de la última cifra que publica la
+  FHFA (dos decimales: ±0.005). Es transporte, no segunda medición: la FHFA
+  es la única compiladora. Mínimo tres trimestres.
+- **Si FRED no tiene esa copia,** control de consistencia declarado, fijado
+  ahora: la variación anual del all-transactions contra la variación anual
+  del *purchase-only* mensual promediado por año (mismo emisor, otra
+  muestra), desde el primer año completo del purchase-only, **±3 puntos
+  porcentuales**; marca el año y lo excluye de la regresión. Se sabe que los
+  dos índices no miden lo mismo (el all-transactions incluye tasaciones de
+  refinanciaciones); el número se elige ahora, sin ver ninguna diferencia.
+- **Ventana 1976–2025:** por A-N1-8, la primera variación del precio es la
+  de 1976 (sobre el nivel de 1975) y el primer año utilizable es 1981.
+- Ni la calidad ni la composición de lo construido se corrigen: el índice es
+  de ventas repetidas y la cantidad son unidades. Lo dice la ficha.
+
+## A-N1-5 · Acciones de EE.UU.: la tasa de emisión neta de las sociedades no financieras contra la valuación de la B.103, 1946–2025
+
+**Estado: supuesto las reglas; dato las series; PENDIENTE del dueño los tres
+puntos marcados.** Decisión del dueño del 2026-10-14 sobre la valuación y la
+línea 48; el resto, propuesto en el prerregistro.
+
+- **Sector:** sociedades no financieras en los dos lados, porque la tabla
+  B.103 ("Balance sheet of nonfinancial corporate business") solo da la
+  valuación de ese sector. La cantidad es
+  `acciones_eeuu_emision_neta_no_financieras_pct_vm` (A-N0-7:
+  `FA103164105.Q` del año sobre `LM103164105.Q` del cuarto trimestre del año
+  anterior). El total de todos los sectores no se usa en esta familia.
+- **Variable de cantidad [PENDIENTE 1]:** la tasa toma valores negativos
+  (cuando las recompras superan a las emisiones; todos los años de 2015 a
+  2025, `FUENTES.md` N0.6.1), así que Δlog no está definido. Se propone **la
+  primera diferencia de la tasa**, en fracción: `y_t = tasa_t − tasa_{t−1}`.
+  Es el análogo más cercano de Δlog del flujo en los otros activos
+  (Δ(flujo / valor de mercado) ≈ Δflujo / valor de mercado). El coeficiente
+  se lee entonces en puntos porcentuales de la tasa por cada 1 % de
+  variación de la valuación, y **no es comparable en unidades** con el oro,
+  la plata o las viviendas; la lectura (signo e intervalo de la suma,
+  A-N1-10) es la misma. La alternativa, el nivel de la tasa (`y_t = tasa_t`),
+  queda escrita para que el dueño elija; la que elija rige antes de correr.
+- **Precio = valuación, cociente propio:** `LM103164105.Q` (valor de mercado
+  de las acciones, línea 45 de la B.103) sobre `FL102090005.Q` (patrimonio
+  neto, línea 47), por cien, trimestre a trimestre, y el promedio simple de
+  los cuatro trimestres del año; primer año completo, 1946 (los saldos
+  empiezan en 1945:Q4). Es la principal porque sus dos componentes están
+  publicados y se reproducen.
+- **Sin deflactar [PENDIENTE 2]:** la valuación es un cociente de dos
+  valores nominales de la misma fecha y no tiene unidad monetaria; dividirla
+  por el CPI le pondría una tendencia que no es suya. Se propone usar
+  Δlog(valuación) tal cual como "variación del precio real".
+- **La línea 48 (`FL103164106.Q`, "corporate equities as a percentage of net
+  worth") es control de consistencia, no fuente:** su definición no se pudo
+  leer (`FUENTES.md`, N0.16.4) y no reproduce el cociente propio (223.82
+  contra 194.11 en 2025:Q4). Comparación: línea 48 contra el cociente
+  propio, trimestre a trimestre, con tolerancia de medio paso de la cifra
+  publicada (±0.005 puntos). **El resultado ya se conoce en un trimestre: no
+  cierra.** Marca, no detiene.
+- **Qué hace la marca [PENDIENTE 3]:** la regla general (`CLAUDE.md`) saca
+  de las métricas lo que un control marca. Aplicada por año, con la
+  diferencia conocida, vaciaría la regresión y las acciones quedarían
+  "evidencia insuficiente" hasta leer la guía. Se propone que esta marca sea
+  **de serie, no de año**: la ficha y cada fila de salida de las acciones
+  dicen "la línea 48 de la Junta no reproduce el cociente propio; diferencia
+  sin explicar (N0.16.4)", y ningún año se excluye por ella, porque la
+  diferencia es de definición y no de transporte, y los dos componentes del
+  cociente pasan su propio gate. Cuando la guía se lea, el control se
+  reescribe con lo que diga (cambio de supuesto, en el changelog).
+- **Gate de transporte de la B.103 (como A-N0-9):** el CSV de la tabla
+  B.103 del paquete (`S11_1_b.csv` según N0.16.4) contra la tabla B.103 en
+  HTML del mismo emisor, para las tres series (`LM103164105`, `FL102090005`,
+  `FL103164106`), con medio paso de la última cifra que publique el HTML
+  por serie (±0.05 miles de millones en los saldos, como A-N0-9). Mínimo tres
+  comparaciones por serie; si no cierra, las acciones quedan NO MEDIDO en
+  esa corrida.
+- **Ventana 1946–2025:** por A-N1-8, la primera variación de la valuación es
+  la de 1947 y el primer año utilizable es 1952.
+- La limitación de A-N0-7 sigue: la emisión neta está en dólares, no en
+  acciones.
+
+## A-N1-6 · El deflactor es el CPI-U sin ajuste estacional, promedio anual del mensual, por el canal FRED; el BLS no recibe pedidos
+
+**Estado: dato la serie; supuesto el canal, el promedio y el gate.** Decisión
+del dueño del 2026-10-14.
+
+- Serie: FRED `CPIAUCNS` (CPI-U, todos los ítems, promedio de ciudades, sin
+  ajuste estacional, 1982-84 = 100), mensual desde 1913-01 (`FUENTES.md`,
+  N0.16.3). El dato es del BLS (obra federal, dominio público); el canal es
+  FRED, clase (b) con la reserva de A-R0-3. El promedio simple de los doce
+  meses es cálculo propio; solo años completos.
+- **El BLS no admite programas** (`robots.txt` vedado o "Access Denied",
+  N0.16): el pipeline no le pide nada, nunca. A FRED, un pedido por vez, con
+  pausa (`CLAUDE.md`), y con su `robots.txt` leído antes (A-D0-29).
+- **Precio real = precio nominal del año / CPI del mismo año.** La base del
+  índice no afecta a Δlog. Con la DS140 (desde 1900), el precio real existe
+  desde 1913.
+- **Gate del deflactor, contra una segunda lectura:** una copia de la tabla
+  del CPI-U del BLS bajada a mano por una persona en el navegador (como las
+  series del BCE, A-D0-29), guardada en `data/privado/raw/` con su URL,
+  fecha, bytes y SHA-256 en el manifiesto (`crudo_en_repo = no`, decisión
+  del dueño). Comparación mes a mes con tolerancia de medio paso de la
+  tercera cifra decimal (±0.0005, igualdad al milésimo) y, si la tabla del
+  BLS trae el promedio anual, también año a año con ±0.001 (dos redondeos al
+  milésimo). Mínimo tres años. **Sin copia, o si no cierra, el CPI queda NO
+  MEDIDO y con él los tres pares deflactados** (oro, plata, viviendas), que
+  salen como "NO MEDIDO: sin validación del deflactor"; las acciones no
+  dependen del CPI (A-N1-5) y se calculan igual.
+- Las otras tres opciones de N0.16.3 (una copia del BLS como fuente
+  principal, la columna en dólares de 1998 de la DS140, los deflactores del
+  BEA) no se usan.
+
+## A-N1-7 · BTC no entra en la familia: su respuesta al precio es cero por construcción, no por estimación; la deuda sigue NO MEDIDO
+
+**Estado: dato (BTC); no medido (deuda).** Decisión del dueño del 2026-10-07
+y del 2026-10-14.
+
+- La emisión de BTC la fija el protocolo por la altura del bloque (Bitcoin
+  Core, `GetBlockSubsidy`, A-N0-2): no hay ninguna cantidad que pueda
+  responder al precio, y por eso no se estima nada. El resumen de la familia
+  lleva una fila de BTC con rótulo "no aplica: emisión fijada por el
+  protocolo; respuesta cero por construcción", estado "dato", sin
+  coeficientes, sin n y con el calendario como fuente. No se grafica.
+- La deuda de EE.UU. no tiene un precio comparable (A-N0-12): fila "NO
+  MEDIDO" en el resumen, con el motivo.
+
+## A-N1-8 · El método: mínimos cuadrados de Δlog(cantidad_t) sobre Δlog(precio real) de t a t−5, errores de Newey-West con rezago máximo 4, intervalos del 95 %
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-14; los detalles que el
+encargo no fija se fijan aquí, antes de ver un dato.
+
+- **Ecuación, una por (activo, ventana):**
+  `Δlog q_t = α + Σ_{k=0}^{5} β_k · Δlog p_{t−k} + ε_t`,
+  con q la cantidad (A-N1-2; en las acciones, `y_t` de A-N1-5 en lugar de
+  Δlog q_t), p el precio real (A-N1-6; en las acciones, la valuación sin
+  deflactar) y Δlog x_t = ln x_t − ln x_{t−1}. Los seis rezagos entran
+  juntos en una sola regresión con constante; los coeficientes publicados
+  por rezago son los de esa regresión conjunta, no de seis regresiones.
+- **Estimación:** mínimos cuadrados ordinarios.
+- **Errores estándar:** robustos a heterocedasticidad y autocorrelación
+  (Newey y West, 1987), con núcleo de Bartlett y rezago máximo **L = 4**,
+  fijado por el dueño y no elegido con los datos: pesos `w_j = 1 − j/(L+1)`,
+  `S = Γ_0 + Σ_{j=1}^{4} w_j (Γ_j + Γ_j')` con
+  `Γ_j = Σ_t x_t e_t e_{t−j} x_{t−j}'`, y `V = (X'X)^{-1} S (X'X)^{-1}`, sin
+  corrección de muestra pequeña. Los rezagos del núcleo se cuentan sobre las
+  observaciones consecutivas de la muestra utilizada; un hueco no interrumpe
+  la cuenta (la ficha lo declara cuando los hay).
+- **Intervalos del 95 %:** `β_k ± z · ee(β_k)` y, para la suma
+  `Σβ = Σ_{k=0}^{5} β_k`, `Σβ ± z · √(1'V1)` con la matriz de covarianza
+  completa, donde `z = Φ^{-1}(0.975)` (cuantil normal, el asintótico del
+  estimador; `statistics.NormalDist().inv_cdf(0.975)` de la biblioteca
+  estándar). No se usa el cuantil t.
+- **Ventanas y años utilizables:** la ventana acota los años de las
+  variables en diferencias; la primera diferencia de la ventana usa el nivel
+  del año anterior al inicio cuando ese nivel existe como año completo. El
+  año t entra si existen Δlog q_t y Δlog p_{t−k} para los seis k, y no está
+  excluido por un control (A-N1-3, A-N1-4, A-N1-5). El primer t utilizable
+  es, como mínimo, el del primer Δlog p más cinco. Ningún valor se interpola
+  ni se arrastra: un hueco saca el año (eliminación por lista) y la salida
+  lista los años que faltan.
+- **n esperado si no hay huecos** (cálculo propio sobre los inicios leídos
+  en `FUENTES.md`; el n real lo fija la corrida y se publica):
+
+  | Activo | Ventana | Primer Δlog p | Primer t | Último t | n esperado |
+  | --- | --- | --- | --- | --- | --- |
+  | Oro | (a) Pink Sheet 1960–2025 | 1961 | 1966 | 2025 | 60, menos los años con un mes en disputa (hoy, hasta diez) |
+  | Oro | (b) DS140 1900–2022 | 1914 (el CPI empieza en 1913) | 1919 | 2022 | 104, menos lo que marque el control |
+  | Oro | (b) DS140 1971–2022 | 1971 | 1976 | 2022 | 47, ídem |
+  | Plata | (a) Pink Sheet 1960–2025 | 1961 | 1966 | 2025 | 60, menos los años con un mes en disputa (hoy, hasta diez) |
+  | Plata | (b) DS140 1900–2021 | 1914 | 1919 | 2021 | 103, menos lo que marque el control |
+  | Plata | (b) DS140 1971–2021 | 1971 | 1976 | 2021 | 46, ídem |
+  | Viviendas de EE.UU. | 1976–2025 | 1976 | 1981 | 2025 | 45 |
+  | Acciones de EE.UU. | 1946–2025 | 1947 | 1952 | 2025 | 74 |
+
+- **n mínimo = 30** observaciones utilizables después de los rezagos y las
+  exclusiones. Por debajo, el par y la ventana salen como **"evidencia
+  insuficiente"**, sin coeficientes publicados (las celdas quedan vacías, no
+  en cero).
+- Los coeficientes, los errores estándar y los intervalos se publican con
+  seis decimales.
+
+## A-N1-9 · Nada cambia después de ver los resultados; todo desvío es un cambio de supuesto visible
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-14.
+
+- Después de ver un resultado no se eliminan atípicos, no se cambian las
+  ventanas, los rezagos, el deflactor, la especificación, el núcleo ni L, no
+  se agregan variables ni controles, y no se ajusta ninguna tolerancia. Las
+  dos ventanas de oro y plata se publican las dos.
+- Un desvío del prerregistro solo puede entrar como **cambio de supuesto**:
+  con su número nuevo aquí, su línea en "Cambios de supuestos" del changelog
+  y la columna `desvio_del_prerregistro` en `sí` en cada fila afectada de
+  las salidas, con el supuesto que lo ampara.
+- Las tres decisiones pendientes del dueño (cabecera de esta sección) se
+  cierran **antes** de la primera corrida; no cuentan como desvío.
+
+## A-N1-10 · El criterio de lectura: tres rótulos fijos por el intervalo de la suma, y dos estados que no son rótulos
+
+**Estado: supuesto.** Decisión del dueño del 2026-10-14.
+
+| Rótulo | Condición, sobre el intervalo del 95 % de Σβ |
+| --- | --- |
+| **responde** | excluye el cero y es positivo (los dos extremos > 0) |
+| **no responde** | incluye el cero |
+| **respuesta negativa** | excluye el cero y es negativo (los dos extremos < 0); se publica igual |
+
+- El rótulo sale solo de la suma, nunca de un rezago aislado; los seis
+  coeficientes se publican para que se vea de dónde viene.
+- **"evidencia insuficiente"** (n < 30) y **"NO MEDIDO"** (un gate que no
+  cierra, un crudo que falta o que no coincide con su hash) no son rótulos de
+  lectura: son estados, y van con su motivo.
+- Los tres rótulos se escriben así, en minúscula, sin verbos de acción, y
+  siempre junto al rótulo fijo de A-N1-1. "no responde" no quiere decir que
+  la oferta sea rígida: quiere decir que con estos datos, esta ventana y
+  este método el intervalo incluye el cero.
+
+## A-N1-11 · Salidas, fichas, crudos y manifiesto de N1
+
+**Estado: supuesto.** Con A-R0-15, A-D0-27, A-D0-29, A-D0-30 y A-N0-14.
+
+- **Código:** `senales/senales/respuesta_oferta.py`, con `main()`; no toca
+  `src/`. Las descargas pasan por `fuentes_denominador.descargar`
+  (`robots.txt` antes de cada pedido); los de la FHFA y del Censo se leyeron
+  el 2026-10-07 (N0.16) y se vuelven a leer en cada corrida.
+- **Salidas en `data/series/`:**
+  - `respuesta_oferta.csv`: una fila por activo, ventana y rezago k:
+    coeficiente, error estándar, extremos del intervalo, n, fecha de corrida,
+    rótulo fijo, `desvio_del_prerregistro`.
+  - `respuesta_oferta_resumen.csv`: una fila por activo y ventana (más las
+    de BTC y de la deuda, A-N1-7): suma, error estándar, intervalo, n, años
+    excluidos, rótulo de lectura, estado, rótulo fijo, supuestos, fecha de
+    corrida.
+  - `respuesta_oferta_insumos.csv`: una fila por activo, ventana y año con
+    la cantidad, el precio nominal, el CPI, el precio real, las variaciones
+    en logaritmos y la marca de cada control: de aquí se recalculan los
+    coeficientes byte a byte (A-D0-30, `test_salidas_publicadas.py`).
+  - `serie_N1.csv`: la ficha de cada serie nueva o derivada (viviendas
+    terminadas, índice de la FHFA anual, CPI anual, valuación propia y línea
+    48, precios reales, coeficientes), con fuente, identificador, URL,
+    licencia, atribución, convención, ventana, validación, supuestos, fecha
+    de corrida y el rótulo fijo.
+  - `respuesta_oferta_descargas.csv`: el manifiesto, con las columnas de
+    `numerador_descargas.csv`.
+  - Gráficos en `reportes/`: por activo y ventana, los seis coeficientes con
+    su intervalo y la suma; título con el rótulo fijo.
+- **Crudos.** Se versionan en `data/raw/` (licencia que lo permite y menos
+  de 1 MB, A-D0-27): el CSV de la FHFA (dominio público, 43.679 bytes el
+  2026-10-07), el xlsx de viviendas terminadas del Censo (dominio público,
+  171.446 bytes), el CSV de `CPIAUCNS` de FRED (dato del BLS, dominio
+  público, por el canal de FRED como los tres CSV de S2, A-S2-10) y el CSV
+  de la tabla B.103 extraído del paquete ZIP del Z.1 con sus bytes exactos
+  (dominio público, como las cinco tablas de A-N0-14). Quedan fuera, con
+  URL, fecha, bytes y SHA-256 en el manifiesto y `crudo_en_repo = no`: el ZIP
+  del Z.1, el HTML de la B.103 y la copia a mano del BLS
+  (`data/privado/raw/`, decisión del dueño).
+- **El hash antes de usar.** El pipeline verifica el SHA-256 de cada crudo
+  que lee, en `data/raw/` y en `data/privado/raw/`, contra su manifiesto
+  antes de usarlo; si no coincide, no lo usa, la serie queda NO MEDIDO en esa
+  corrida y un test falla con el nombre del archivo. Motivo: el 2026-10-14
+  aparecieron copias locales del BoJ con finales de línea alterados por
+  Windows (A-D0-27).
+- Tests sin red con fixtures; idempotencia (dos corridas con los mismos
+  crudos dan los mismos bytes); una entrada por corrida en el changelog
+  (A-S2-11).
+
+## A-N1-12 · Un coeficiente que cambia entre corridas es una revisión y se reporta; el prerregistro no se reescribe
+
+**Estado: supuesto.** Con A-N0-15.
+
+Cada corrida recalcula todo desde los crudos del día. Si una fuente revisa un
+dato (el USGS su último año, la Junta su historia, el Censo o la FHFA los
+suyos), los coeficientes cambian: el changelog lista cada coeficiente, suma o
+rótulo que cambió respecto de lo publicado, con el umbral de 0.0005 en las
+unidades de cada columna, y la razón conocida. Un rótulo de lectura que
+cambia de una corrida a otra se dice en la entrada. Este bloque no se edita
+para que un resultado quede mejor; se edita solo por un cambio de supuesto
+numerado (A-N1-9).
