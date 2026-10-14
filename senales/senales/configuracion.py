@@ -3283,6 +3283,22 @@ _SUP_INSUMO_VIVIENDAS = ("A-N1-2", "A-N1-4", "A-N1-11")
 _SUP_INSUMO_CPI = ("A-N1-6", "A-N1-11")
 _SUP_INSUMO_ACCIONES = ("A-N1-2", "A-N1-5", "A-N1-11")
 
+# A-N1-3: la convención del valor unitario, leída el 2026-10-14 en las notas
+# incrustadas de los propios xlsx de la DS140 (un .docx dentro del archivo del
+# oro y un .doc dentro del de la plata; FUENTES.md, N1.3). Literal.
+NOTA_DS140_ORO = (
+    "convención, según las notas incrustadas del xlsx (Gold Worksheet Notes): \"Unit value is the value in actual U.S. "
+    "dollars of 1 metric ton (t) of gold apparent consumption. Unit values were estimated using average world market gold "
+    "price for 1900–67 and the Englehard's average gold price quotation of refined gold for 1968 to current year as reported "
+    "in the MP91 and the MYB.\" Es una cotización de EE.UU. desde 1968, no el fixing de Londres del Pink Sheet"
+)
+NOTA_DS140_PLATA = (
+    "convención, según las notas incrustadas del xlsx (Silver worksheet notes): \"Unit value is defined as the value of 1 "
+    "metric ton (t) of silver apparent consumption. Unit value data for 1900–98 were from the MP98. Unit value data for 1999 "
+    "to the most recent year were from the MYB. Unit value data for 1900 to the most recent year represent the average value "
+    "per metric ton of silver of a minimum purity of 99.9 percent.\""
+)
+
 INSUMOS_N1: tuple[SerieN1, ...] = (
     SerieN1(
         SERIE_TERMINADAS,
@@ -3356,6 +3372,7 @@ INSUMOS_N1: tuple[SerieN1, ...] = (
         DESCARGA_USGS_DS140_ORO,
         "DS140, columna Unit value ($/t)",
         _SUP_INSUMO_METALES,
+        nota=NOTA_DS140_ORO,
     ),
     SerieN1(
         "plata_precio_ds140_valor_unitario_usd_oz",
@@ -3368,6 +3385,7 @@ INSUMOS_N1: tuple[SerieN1, ...] = (
         DESCARGA_USGS_DS140_PLATA,
         "DS140, columna Unit value ($/t)",
         _SUP_INSUMO_METALES,
+        nota=NOTA_DS140_PLATA,
     ),
     SerieN1(
         "acciones_eeuu_valuacion_no_financieras_pct",
