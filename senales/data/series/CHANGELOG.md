@@ -385,6 +385,48 @@ cita.
   Junto con el cambio se agregaron tests que fallan si el identificador `WDTGAL`
   deja de estar declarado en millones.
 
+## 2026-10-14 · respuesta_oferta
+
+- Descargas:
+  - fred_cpiaucns: https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCNS, sha256 cfab9b9be4a5d4f06253c4dcc3f7e0b28b1d58837e710dd7cb1fd54a49e7ad7c, actualizada el 2026-10-14
+  - usgs_ds140_oro: https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-gold-2022.xlsx, sha256 025f3eb98adb606cc214b82caa70646b80cf9debdf6544dbafce361283c1c480, copia del 2026-10-07
+  - usgs_ds140_plata: https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/ds140-silver-2021.xlsx, sha256 e57b952a5fd469291341bf275fbaa1c20dfd0caa9b40f383a2a19076efa9e997, copia del 2026-10-07
+  - fred_ussthpi: https://fred.stlouisfed.org/graph/fredgraph.csv?id=USSTHPI, sha256 c02d4187c8c9836d4049fe2005ab34129326e7538d2cd923173c2839ca25df16, actualizada el 2026-08-25
+- Insumos:
+  - Viviendas de EE.UU.: viviendas terminadas en el año (Censo): no se usa: NO MEDIDO: sin crudo de la fuente en esta corrida: no se pudo leer https://www.census.gov/robots.txt: HTTPSConnectionPool(host='www.census.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', 
+  - Viviendas de EE.UU.: índice de precios all-transactions de la FHFA, promedio anual: no se usa: NO MEDIDO: sin crudo de la fuente en esta corrida: no se pudo leer https://www.fhfa.gov/robots.txt: HTTPSConnectionPool(host='www.fhfa.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', OSEr
+  - EE.UU.: CPI-U, todos los ítems, sin ajuste estacional, promedio anual (deflactor de la familia): no se usa: NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta; 1913 a 2024, 112 valores
+  - Oro: precio del Pink Sheet, promedio anual del mensual: se usa: dato; 1960 a 2025, 66 valores
+  - Plata: precio del Pink Sheet, promedio anual del mensual: se usa: dato; 1960 a 2025, 66 valores
+  - Oro: valor unitario anual de la Data Series 140, en USD por onza troy: se usa: dato; 1900 a 2022, 123 valores
+  - Plata: valor unitario anual de la Data Series 140, en USD por onza troy: se usa: dato; 1900 a 2021, 122 valores
+  - Acciones de EE.UU.: valuación de las sociedades no financieras, acciones sobre patrimonio neto, promedio anual (cociente propio): no se usa: NO MEDIDO: sin crudo de la fuente en esta corrida: no se pudo leer https://www.federalreserve.gov/robots.txt: HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to con
+  - Acciones de EE.UU.: razón de la Junta, acciones más inversión extranjera directa sobre patrimonio neto (gate de construcción): no se usa: NO MEDIDO: sin crudo de la fuente en esta corrida: no se pudo leer https://www.federalreserve.gov/robots.txt: HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to con
+- Validación:
+  - oro_precio_ds140_valor_unitario_usd_oz: control contra el promedio anual del Pink Sheet (otra cotización del mismo metal) cerró: 63 comparaciones, tolerancia ±5 %, diferencia máxima 7.2842; en disputa (control): 1987
+  - plata_precio_ds140_valor_unitario_usd_oz: control contra el promedio anual del Pink Sheet (otra cotización del mismo metal) cerró: 62 comparaciones, tolerancia ±5 %, diferencia máxima 1.8041
+- Resultados (activo → ventana → rótulo → n; sin interpretar):
+  - Oro → (a) Pink Sheet 1960–2025 → NO MEDIDO → n = —; NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta
+  - Oro → (b) DS140 1900–2022 → NO MEDIDO → n = —; NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta
+  - Oro → (b) DS140 1971–2022 → NO MEDIDO → n = —; NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta
+  - Plata → (a) Pink Sheet 1960–2025 → NO MEDIDO → n = —; NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta
+  - Plata → (b) DS140 1900–2021 → NO MEDIDO → n = —; NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta
+  - Plata → (b) DS140 1971–2021 → NO MEDIDO → n = —; NO MEDIDO: sin validación del deflactor: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a correr (A-N1-6). Sin ella, el CPI y los tres pares deflacta
+  - Viviendas de EE.UU. → 1976–2025 → NO MEDIDO → n = —; NO MEDIDO: sin crudo de la fuente en esta corrida: no se pudo leer https://www.census.gov/robots.txt: HTTPSConnectionPool(host='www.census.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', 
+  - Acciones de EE.UU. → 1946–2025 → NO MEDIDO → n = —; NO MEDIDO: sin crudo de la fuente en esta corrida: no se pudo leer https://www.federalreserve.gov/robots.txt: HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to con
+  - BTC → no entra → no aplica: emisión fijada por el protocolo; respuesta cero por construcción → n = —; la emisión la fija el protocolo por la altura del bloque (Bitcoin Core, GetBlockSubsidy; A-N0-2); no hay cantidad que pueda responder al precio y no se estima nada
+  - Deuda de EE.UU. → no entra → NO MEDIDO → n = —; NO MEDIDO: la deuda no tiene un precio comparable (A-N0-12)
+- Revisiones respecto de la corrida anterior: ninguna
+- Rótulo fijo: asociación observada, no elasticidad causal: precio y cantidad se determinan juntos
+- Nota: prerregistro A-N1-1 a A-N1-12, fijado antes de descargar o cruzar un precio; ningún parámetro se eligió con los datos (A-N1-9)
+- Nota: las series de cantidad salen de numerador_series.csv (fase N0) y el Pink Sheet mensual de precios_mensuales.csv (fase R); los crudos nuevos y sus hashes están en respuesta_oferta_descargas.csv (A-N1-11)
+- Nota: sin crudo de fhfa_hpi_at_eeuu: no se pudo leer https://www.fhfa.gov/robots.txt: HTTPSConnectionPool(host='www.fhfa.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbi
+- Nota: sin crudo de censo_viviendas_terminadas: no se pudo leer https://www.census.gov/robots.txt: HTTPSConnectionPool(host='www.census.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 F
+- Nota: sin crudo de z1_csv_files: no se pudo leer https://www.federalreserve.gov/robots.txt: HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connecti
+- Nota: sin crudo de z1_b103: no se pudo leer https://www.federalreserve.gov/robots.txt: HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connecti
+- Nota: sin crudo de bls_cpi_u: bls_cpi_u: no hay una copia del BLS bajada a mano en data/privado/raw con fecha hasta 2026-10-14. Abrir https://data.bls.gov/timeseries/CUUR0000SA0 en un navegador, guardar la tabla como bls_cpi_u_<AAAA-MM-DD>.<xlsx|csv|txt> ahí, y volver a
+- Nota: sin crudo de z1_html_b103: no se pudo leer https://www.federalreserve.gov/robots.txt: HTTPSConnectionPool(host='www.federalreserve.gov', port=443): Max retries exceeded with url: /robots.txt (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connecti
+
 ## 2026-10-07 · ratios D0
 
 - Pares contra M2 de EE.UU.:
